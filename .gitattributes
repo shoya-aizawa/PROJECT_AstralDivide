@@ -1,0 +1,23 @@
+# すべてのテキストファイルで改行コードを自動調整
+* text=auto
+
+# バッチファイルはWindows向けにCRLFに統一
+*.bat eol=crlf
+
+# PowerShellスクリプトはLFに統一（Windows、Linux共通）
+*.ps1 eol=lf
+
+# 音楽ファイルをバイナリとして扱う
+# Gitの差分比較から除外され、リポジトリが軽量になります
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.m4a binary
+*.zip binary
+
+# 画像ファイルをバイナリとして扱う
+*.png binary
+*.bmp binary
+
+# 開発ツールもバイナリとして扱う
+*.exe binary

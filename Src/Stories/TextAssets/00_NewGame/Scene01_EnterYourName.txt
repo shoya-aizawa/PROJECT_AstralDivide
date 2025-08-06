@@ -1,0 +1,9 @@
+
+
+{pos:24:98}{type:slow}名を刻むか？{/type}
+
+{delay:800}
+
+{pos:25:98}{type:normal}汝の名を{cyan}星{/cyan}に託せ。{/type}
+
+{delay:500}

@@ -1,0 +1,16 @@
+# Windows自動生成ファイル
+desktop.ini
+Thumbs.db
+ehthumbs.db
+
+# Google Driveが吐くゴミ
+*.tmp.driveupload
+*.tmp.drivedownload
+
+# VSCode設定
+.vscode/
+
+# 一時ファイル・ログ
+*.log
+*.bak
+*~
