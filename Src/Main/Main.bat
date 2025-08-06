@@ -26,25 +26,28 @@ chcp %1 >nul
 :: Setting Environment
 
 :: System Initialization
-call "%cd%\Systems\InitializeModule.bat"
+call "%src_systems_dir%\InitializeModule.bat"
 
 
 :: Detect Save Data
-call "%cd_systems%\SaveSys\SaveDataDetectSystem.bat"
+call "%src_savesys_dir%\SaveDataDetectSystem.bat"
 
 
 :: カラーシステム
 :: ここに将来的にMarkup言語のようなカラーコードを実装する予定
 
-call "Show_ANSI_Colors.bat"
+call "%src_debug_dir%\Show_ANSI_Colors.bat"
 
 
 :: Display Boot Complete
-call "%cd_systems_display%\BootCompleteDisplay.bat"
+call "%src_display_dir%\BootCompleteDisplay.bat"
 
 
 :: Launch Music System
-start "LaunchMusic" /b cmdwiz playsound %cd_sounds%\starfallhill20min.wav
+rem start "LaunchMusic" /b cmdwiz playsound %cd_sounds%\starfallhill20min.wav
+
+start "TitleMusic" /b "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 50
+
 
 :: Debug Mode Check
 if not defined DEBUG_STATE set DEBUG_STATE=0

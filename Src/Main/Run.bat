@@ -1,27 +1,32 @@
+::    +=================================================================+
+::    | Run.bat                                                         |
+::    | aka : "Launcher"                                                |
+::    | This is Launcher for start the RPG game.                        |
+::    | In addition to starting Main.bat,                               |
+::    | checks the environment and set up the necessary configurations. |
+::    +=================================================================+
 
-:: VsCodeのターミナルから実行できるようにするためのコード
-:: This code is for running the batch file from the terminal in VsCode.
 @if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof
-
+@for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
+@reg add "HKCU\Console" /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 @echo off
-prompt $G
+@prompt $G
 
-:: Run.bat
-:: aka : "Launcher"
-:: This is Launcher for start the RPG game.
-:: In addition to starting Main.bat,
-:: it also checks the environment and sets up the necessary configurations.
-
-
+:: if exist .WIP files(work in progress),goto Set_Encording
+:: else goto Set_Path
 
 :Set_Encoding
+:: (!) ONLY AT FIRST TIME LAUNCH (!)
 :: Ask the user to set the language and system encoding.
 :: In the future, call ArgumentsCheck.bat here,
 :: I plan to check the listed arguments
 :: For example, if the user wants to use Japanese, set the encoding to 65001.
 :: If the user wants to use English, set the encoding to 437.
-
+:: Developer HegdeHog is JAP XD
 chcp 65001 >nul
+
+:Set_Path
+call "%cd%\Src\Systems\SettingPath.bat"
 
 :Check_Environment
 :: Localize to preventing variable scope pollution (dev now not needed)
@@ -29,8 +34,9 @@ setlocal
 :: Check user environment
 :: e.g. : check display size, can u use powershell, etc.
 
+
 :: TEST(20250726)
-call "%cd%\Systems\Debug\Screen Environment Detection.bat"
+call "%src_debug_dir%\Screen Environment Detection.bat"
 
 
 endlocal
@@ -42,7 +48,7 @@ endlocal
 :StartProgram
 :: Start Main.bat with the specified encoding.
 :: For now, I'll set the encoding to 65001. (for Japanese)
-start "RPGGAME2024" /max cmd /c Main.bat 65001
+start "RPGGAME2024" /max cmd /c %src_main_dir%\Main.bat 65001
 set launch_time=%time%
 
 :: in the future,
