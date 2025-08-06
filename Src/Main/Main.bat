@@ -46,7 +46,8 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 :: Launch Music System
 rem start "LaunchMusic" /b cmdwiz playsound %cd_sounds%\starfallhill20min.wav
 
-start "TitleMusic" /b "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 50
+start "" /b "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 50
+
 
 
 :: Debug Mode Check
