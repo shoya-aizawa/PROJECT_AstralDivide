@@ -1,5 +1,5 @@
 @echo on
-cmdwiz fullscreen 1
+%tools_dir%\cmdwiz.exe fullscreen 1
 
 :: Main.bat
 :: This is the main entry point for the RPG game.
@@ -44,12 +44,8 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 
 
 :: Launch Music System
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_dir%\BattleMusic.wav" repeat 70
 
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" stop 50 "TitleMusic"
-
-cls
-tasklist
-pause
 
 :: Debug Mode Check
 if not defined DEBUG_STATE set DEBUG_STATE=0

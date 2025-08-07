@@ -15,9 +15,9 @@
 @echo off
 setlocal
 if /I "%2"=="stop" (
-   powershell -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0Play_BGM.ps1" -Mode stop
+   start /min powershell -Sta -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0Play_BGM.ps1" -Mode stop
 ) else (
-   powershell -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden ^
-      -Command "Start-Process -WindowStyle Hidden -FilePath 'powershell' -ArgumentList '-ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File """%~dp0Play_BGM.ps1""" -Path """%~1""" -Mode %2 -Volume %3'" >nul
+   start /min powershell -Sta -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0Play_BGM.ps1" -Path "%~1" -Mode %2 -Volume %3
 )
 endlocal
+exit /b 0
