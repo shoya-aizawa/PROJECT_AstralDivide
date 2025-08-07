@@ -1,5 +1,23 @@
+::------------------------------------------------------------------------------
+:: Play_BGM.bat
+:: Launches Play_BGM.ps1 to play, loop, or stop a .wav file in the background.
+::
+:: Arguments
+::   %1  Path   - Full path to the .wav file to play. Ignored when Mode is stop.
+::   %2  Mode   - play | repeat | stop
+::   %3  Volume - Optional volume level (0-100). Defaults to 50.
+::
+:: Examples
+::   call "%src_BGM_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" play 75
+::   call "%src_BGM_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 50
+::   call "%src_BGM_dir%\Play_BGM.bat" "" stop
+::------------------------------------------------------------------------------
 @echo off
 setlocal
-powershell -ExecutionPolicy Bypass -NoLogo -NoProfile ^
-   -Command "Import-Module '%~dp0BGMPlayer.psm1'; Invoke-BGM -Path '%~1' -Mode '%~2' -Volume %~3"
+if /I "%2"=="stop" (
+   powershell -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File "%~dp0Play_BGM.ps1" -Mode stop
+) else (
+   powershell -ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden ^
+      -Command "Start-Process -WindowStyle Hidden -FilePath 'powershell' -ArgumentList '-ExecutionPolicy Bypass -NoLogo -NoProfile -WindowStyle Hidden -File """%~dp0Play_BGM.ps1""" -Path """%~1""" -Mode %2 -Volume %3'" >nul
+)
 endlocal
