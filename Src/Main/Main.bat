@@ -44,7 +44,7 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 
 
 :: Launch Music System
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_dir%\BattleMusic.wav" repeat 70
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 50
 
 
 :: Debug Mode Check

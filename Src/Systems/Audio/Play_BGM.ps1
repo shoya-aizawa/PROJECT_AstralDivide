@@ -14,17 +14,11 @@
     Integer volume level from 0 to 100. Defaults to 50 if not provided.
 
 .EXAMPLE
-    call "<path>\Play_BGM.bat" "C:\Music\Battle.wav" play 75
-.EXAMPLE
-    call "<path>\Play_BGM.bat" "C:\Music\Theme.wav" repeat 50
-.EXAMPLE
-    call "<path>\Play_BGM.bat" "" stop
-
-.USAGE
-    call "Play_BGM.bat" "<wav_path>" play <volume>
-    call "Play_BGM.bat" "<wav_path>" repeat <volume>
+    call "Play_BGM.bat" ".wav" play <volume>
+    call "Play_BGM.bat" ".wav" repeat <volume>
     call "Play_BGM.bat" "" stop
 #>
+
 param(
     [string]$Path,
     [ValidateSet('play','repeat','stop')][string]$Mode = 'play',

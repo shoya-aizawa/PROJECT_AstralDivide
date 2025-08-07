@@ -36,7 +36,7 @@ setlocal
 
 
 :: TEST(20250726)
-call "%src_debug_dir%\Screen Environment Detection.bat"
+call "%src_environment_dir%\ScreenEnvironmentDetection.bat"
 
 
 endlocal

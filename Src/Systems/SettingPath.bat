@@ -37,6 +37,7 @@ set "src_systems_dir=%src_dir%\Systems"
    set "src_display_dir=%src_systems_dir%\Display"
       set "src_display_mod_dir=%src_display_dir%\Modules"
       set "src_display_tpl_dir=%src_display_dir%\Templates"
+   set "src_environment_dir=%src_systems_dir%\Environment"
    set "src_savesys_dir=%src_systems_dir%\SaveSys"
 
 ::_____Test/Tools/[DEV]_______________________
@@ -59,9 +60,6 @@ rem //timeout /t 1
 ::  if the "Assets" folder is renamed to "Resource", updating only the assets_dir assignment will automatically update all related paths.
 
 
-for /f "usebackq delims=" %%L in (`tree /f /a`) do (
-   echo %%L
-   %root_dir%Tools\cmdwiz.exe delay 1
-)
-echo [OK] Path variable setting completed successfully.
-timeout /t 1
+:: in the futuer, errorcheck handle here.
+echo %esc%[92m[OK]%esc%[0m Path variable setting completed successfully.
+timeout /t 1 > nul
