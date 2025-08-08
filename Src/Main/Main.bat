@@ -1,6 +1,5 @@
 @echo on
 %tools_dir%\cmdwiz.exe fullscreen 1
-
 :: Main.bat
 :: This is the main entry point for the RPG game.
 :: aka : "HUB Terminal"
@@ -35,6 +34,7 @@ call "%src_savesys_dir%\SaveDataDetectSystem.bat"
 
 :: カラーシステム
 :: ここに将来的にMarkup言語のようなカラーコードを実装する予定
+:: 現在で言うと、Render系モジュール
 
 call "%src_debug_dir%\Show_ANSI_Colors.bat"
 
@@ -44,9 +44,14 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 
 
 :: Launch Music System
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 50
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
+
+pause
+
+call "%src_audio_dir%\Play_BGM.bat" "" stop
 
 
+pause
 :: Debug Mode Check
 if not defined DEBUG_STATE set DEBUG_STATE=0
 
@@ -61,7 +66,7 @@ if not defined DEBUG_STATE set DEBUG_STATE=0
     )
 
     :: Call Main Menu Module (MMM)
-    call "%cd_systems%\MainMenuModule.bat" MainMenu
+    call "%src_display_dir%\MainMenuModule.bat" MainMenu
     
     :: Check return code from MMM
     if defined DEBUG_STATE if %DEBUG_STATE%==1 (
@@ -89,7 +94,7 @@ if not defined DEBUG_STATE set DEBUG_STATE=0
 :: コンティニュー処理
 
 :Start_Continue
-    call "%cd_systems_savesys%\SaveDataSelector.bat" CONTINUE
+    call "%src_savesys_dir%\SaveDataSelector.bat" CONTINUE
     if %errorlevel%==2000 (goto :Start_MainMenu)& rem セーブデータが見つからない場合はメインメニューに戻る
     if %errorlevel%==2031 (call :Start_ContinueGame 1)
     if %errorlevel%==2032 (call :Start_ContinueGame 2)
@@ -109,7 +114,7 @@ if not defined DEBUG_STATE set DEBUG_STATE=0
         timeout /t 2 >nul
     )
     
-    call "%cd_systems_savesys%\SaveDataSelector.bat" NEWGAME
+    call "%src_savesys_dir%\SaveDataSelector.bat" NEWGAME
     
     :: デバッグ情報：SDS返り値確認
     if defined DEBUG_STATE if %DEBUG_STATE%==1 (
@@ -167,10 +172,10 @@ goto :Label_Settings
 
 
     if "%2"=="CreateNew" (
-        call :JumpToEpisode Prologue
+        call :JumpToEpisode NewGame
     ) else (
         call :Label_OverwriteSaveAndStartNewGame %1
-        call :JumpToEpisode Prologue
+        call :JumpToEpisode NewGame
     )
 
 
@@ -184,7 +189,8 @@ goto :Scenario_Return
 
 :: ストーリー進行処理
 :JumpToEpisode
-    if "%~1"=="Prologue"       call "%cd_stories%\Prologue_ver.0.bat"
+    if "%~1"=="NewGame"        call "%src_scene_newgame_dir%\EnterYoueName.bat"
+    if "%~1"=="Prologue"       call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
     if "%~1"=="Episode_1"      call "%cd_stories%\Episode_01\EntryPoint.bat"
     if "%~1"=="Episode_2"      call "%cd_stories%\Episode_02\EntryPoint.bat"
 
@@ -215,8 +221,8 @@ goto :Start_Scenario
 
 
 :Label_PlayerStatus_Initialize
-    for /f "tokens=1,2 delims='='" %%a in (
-        %cd_playerdata%\Player_Status_Initialize.txt
+    for /f "eol=# tokens=1,2 delims='='" %%a in (
+        %src_playerdata_dir%\Player_Status_Initialize.txt
     ) do (
         set "%%a=%%b"
     ) & rem ここではplayer_変数が初期化
@@ -255,49 +261,7 @@ goto :Start_Scenario
     exit /b 0
 
 
-::
-:Label_Continue
-    set continue=true
-    call "%cd_systems%\Display\SelectSaveData.bat"
-    if %errorlevel%==31 (goto :Label_MainMenu)
-    if %errorlevel%==32 (call :Label_ContinueGame 1)
-    if %errorlevel%==33 (call :Label_ContinueGame 2)
-    if %errorlevel%==34 (call :Label_ContinueGame 3)
-    if %errorlevel%==35 (exit /b 35)
-
-
-
-:Label_ContinueGame
-    call :Label_IsSelectedSaveData %1
-    call :Label_LoadSaveData %1
-    exit /b 35
-
-:Label_NewGame
-    set newgame=true
-    call "%cd_systems%\Display\SelectSaveData.bat"
-    if %errorlevel%==31 (goto :Label_MainMenu)
-    if %errorlevel%==42 (call :Label_StartNewGame 1 CreateNew)
-    if %errorlevel%==43 (call :Label_StartNewGame 2 CreateNew)
-    if %errorlevel%==44 (call :Label_StartNewGame 3 CreateNew)
-    if %errorlevel%==45 (exit /b 45)
-    if %errorlevel%==52 (call :Label_StartNewGame 1 Overwrite)
-    if %errorlevel%==53 (call :Label_StartNewGame 2 Overwrite)
-    if %errorlevel%==54 (call :Label_StartNewGame 3 Overwrite)
-    if %errorlevel%==55 (exit /b 55)
-
-
-
-:Label_StartNewGame
-    call :Label_IsSelectedSaveData %1
-    call :Label_PlayerStatus_Initialize
-    if "%2"=="CreateNew" (
-        exit /b 45
-    ) else if "%2"=="Overwrite" (
-        call :Label_OverwriteSaveAndStartNewGame %1
-        exit /b 55
-    )
-
-::
+::Settings
 :Label_Settings
 goto :OPTION
 

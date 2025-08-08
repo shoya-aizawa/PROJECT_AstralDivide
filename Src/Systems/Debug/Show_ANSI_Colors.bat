@@ -13,7 +13,7 @@ echo.
 
 :: 列見出し（背景色）
 
-cmdwiz print "      "
+%tools_dir%\cmdwiz.exe print "      "
 for %%b in (40 41 42 43 44 45 46 47 100 101 102 103 104 105 106 107) do (
    set "code=%%b  "
    set "code=!code:~0,4!"
@@ -36,6 +36,6 @@ endlocal
 
 echo %ESC%[32m[OK]%ESC%[0m ANSI Colors Displayed
 
-cmdwiz delay 900
+%tools_dir%\cmdwiz.exe delay 900
 
 exit /b 0

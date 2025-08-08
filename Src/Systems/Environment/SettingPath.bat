@@ -4,11 +4,11 @@ if defined PROJECT_ROOT (
 ) else (
    rem %~dp0 = location of this script (…\Src\Main\)
    rem Expand two levels up to get the "Project Root"
-   for %%I in ("%~dp0\..\..") do set "root_dir=%%~fI\"
+   for %%I in ("%~dp0\..\..\..") do set "root_dir=%%~fI\"
 )
 
 ::_____Under Assets___________________________
-set "assets_dir=%root_dir%Assets"
+set "assets_dir=%root_dir%\Assets"
 set "assets_docs_dir=%assets_dir%\Docs"
 set "assets_images_dir=%assets_dir%\Images"
 set "assets_sounds_dir=%assets_dir%\Sounds"
@@ -17,8 +17,11 @@ set "assets_sounds_dir=%assets_dir%\Sounds"
    set "assets_sounds_fx_dir=%assets_sounds_dir%\_SoundEffect"
 
 ::_____Under Src______________________________
-set "src_dir=%root_dir%Src"
+set "src_dir=%root_dir%\Src"
 set "src_data_dir=%src_dir%\Data"
+   set "src_enemydata_dir=%src_data_dir%\EnemyData"
+   set "src_itemdata_dir=%src_data_dir%\ItemData"
+   set "src_playerdata_dir=%src_data_dir%\PlayerData"
 set "src_internet_dir=%src_dir%\Internet"
 set "src_main_dir=%src_dir%\Main"
 set "src_stories_dir=%src_dir%\Stories"
@@ -37,13 +40,13 @@ set "src_systems_dir=%src_dir%\Systems"
    set "src_display_dir=%src_systems_dir%\Display"
       set "src_display_mod_dir=%src_display_dir%\Modules"
       set "src_display_tpl_dir=%src_display_dir%\Templates"
-   set "src_environment_dir=%src_systems_dir%\Environment"
+   set "src_env_dir=%src_systems_dir%\Environment"
    set "src_savesys_dir=%src_systems_dir%\SaveSys"
 
 ::_____Test/Tools/[DEV]_______________________
-set "test_dir=%root_dir%Test"
-set "tools_dir=%root_dir%Tools"
-set "dev_dir=%root_dir%[DEV]"
+set "test_dir=%root_dir%\Test"
+set "tools_dir=%root_dir%\Tools"
+set "dev_dir=%root_dir%\[DEV]"
 
 rem //::_____Verification output (for debug)________
 rem //echo root_dir               = %root_dir%
@@ -63,3 +66,4 @@ rem //timeout /t 1
 :: in the futuer, errorcheck handle here.
 echo %esc%[92m[OK]%esc%[0m Path variable setting completed successfully.
 timeout /t 1 > nul
+cls

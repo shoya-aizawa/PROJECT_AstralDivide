@@ -139,7 +139,7 @@ set color_normal=0
     cls
 
     :: MainMenuDisplay.txtを表示
-    for /f "usebackq delims= eol=#" %%a in ("%cd_systems_display%\MainMenuDisplay.txt") do (echo %%a)
+    for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\MainMenuDisplay.txt") do (echo %%a)
 
     :: デバッグモード時の追加処理
     if %DEBUG_STATE%==1 (
@@ -217,8 +217,7 @@ set color_normal=0
 
 
 :Handle_Select
-    start "" /b cmdwiz playsound "%cd_sounds%\Enter.wav"
-    rem old code - call "%cd_sounds%\Play_SE.bat" "%cd_sounds%\Enter.wav" 50
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter.wav"
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
@@ -236,14 +235,12 @@ set color_normal=0
     exit /b %retcode%
 
 :Handle_Move_Down
-    start "" /b cmdwiz playsound "%cd_sounds%\Move.wav"
-    rem old code - call "%cd_sounds%\Play_SE.bat" "%cd_sounds%\Move.wav" 80
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Down
     exit /b 0
 
 :Handle_Move_Up
-    start "" /b cmdwiz playsound "%cd_sounds%\Move.wav"
-    rem old code - call "%cd_sounds%\Play_SE.bat" "%cd_sounds%\Move.wav" 80
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Up
     exit /b 0
 
@@ -385,13 +382,13 @@ set color_normal=0
     exit /b 0
 
 :Sequence_Rule_X
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Beep.wav 50
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Beep.wav"
     set hidden_sequence=X
     exit /b 0
 
 :Sequence_Rule_Y
     if "%hidden_sequence%"=="X" (
-        call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Beep.wav 50
+        start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Beep.wav"
         set hidden_sequence=XY
     ) else (
         set hidden_sequence=Y
@@ -400,7 +397,7 @@ set color_normal=0
 
 :Sequence_Rule_Z
     if "%hidden_sequence%"=="XY" (
-        call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Beep.wav 50
+        start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Beep.wav"
         set hidden_sequence=XYZ
     ) else (
         set hidden_sequence=Z
@@ -425,7 +422,7 @@ set color_normal=0
     :: PICKコマンド発動
     if /i "%hidden_sequence%"=="PICK" (
         set hidden_sequence=
-        call "%cd_systems%\Debug\InteractivePicker.bat" "MainMenu" "%current_selected_menu%"
+        call "%src_debug_dir%\InteractivePicker.bat" "MainMenu" "%current_selected_menu%"
         call :Refresh_Display
         exit /b 0
     )
@@ -433,7 +430,7 @@ set color_normal=0
     :: COORDコマンド発動
     if /i "%hidden_sequence%"=="COORD" (
         set hidden_sequence=
-        call "%cd_systems%\Debug\CoordinateDebugTool.bat" "MainMenu"
+        call "%src_debug_dir%\CoordinateDebugTool.bat" "MainMenu"
         call :Refresh_Display
         exit /b 0
     )
@@ -663,14 +660,14 @@ set color_normal=0
 
     :: 隠しコマンド判定（4文字コード）
     if "%hidden_sequence%"=="pick" (
-        call "%cd_systems%\Debug\InteractivePicker.bat" "MainMenu" "%current_selected_menu%"
+        call "%src_debug_dir%\InteractivePicker.bat" "MainMenu" "%current_selected_menu%"
         call :Refresh_Display
         set hidden_sequence=
         set key_log_count=0
         exit /b 0
     )
     if "%hidden_sequence%"=="coord" (
-        call "%cd_systems%\Debug\CoordinateDebugTool.bat" "MainMenu"
+        call "%src_debug_dir%\CoordinateDebugTool.bat" "MainMenu"
         call :Refresh_Display
         set hidden_sequence=
         set key_log_count=0
