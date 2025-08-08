@@ -41,7 +41,7 @@ set "char=!line:~%i%,1!"
 if not defined char goto :done
 <nul set /p="!char!"
 set /a i+=1
-cmdwiz delay !speed!
+%tools_dir%\cmdwiz.exe delay !speed!
 goto :main_loop
 
 :done

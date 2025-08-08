@@ -46,12 +46,6 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 :: Launch Music System
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
 
-pause
-
-call "%src_audio_dir%\Play_BGM.bat" "" stop
-
-
-pause
 :: Debug Mode Check
 if not defined DEBUG_STATE set DEBUG_STATE=0
 
@@ -164,7 +158,7 @@ goto :Label_Settings
 
 
     cls
-    taskkill /f /im cmdwiz.exe >nul 2>&1
+    call "%src_audio_dir%\Play_BGM.bat" "" stop
     echo おめでとうございます！ニューゲームを開始します。
     timeout /t 3
     call :Label_IsSelectedSaveData %1
@@ -189,7 +183,7 @@ goto :Scenario_Return
 
 :: ストーリー進行処理
 :JumpToEpisode
-    if "%~1"=="NewGame"        call "%src_scene_newgame_dir%\EnterYoueName.bat"
+    if "%~1"=="NewGame"        call "%src_scene_newgame_dir%\NewGame.bat"
     if "%~1"=="Prologue"       call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
     if "%~1"=="Episode_1"      call "%cd_stories%\Episode_01\EntryPoint.bat"
     if "%~1"=="Episode_2"      call "%cd_stories%\Episode_02\EntryPoint.bat"
@@ -317,7 +311,7 @@ exit 9009
 cls
 echo.+-------------------------------------------------++-------------------------------------------------+
 echo.%P%                                                 %P%%P%                                                 %P%
-echo.%P%      (A)        DELETE SAVE DATA                %P%%P%      (C)          ECHO ON                       %P%
+echo.%P%      (A)        DELETE SAVE DATA                %P%%P%       (C)          @ECHO ON                     %P%
 echo.%P%                                                 %P%%P%                                                 %P%
 echo.+-------------------------------------------------++-------------------------------------------------+
 echo.+-------------------------------------------------++-------------------------------------------------+
@@ -330,7 +324,7 @@ if %errorlevel%==1 (goto :Label_DeleteAllSaveData)
 if %errorlevel%==2 (exit /b 9000)
 if %errorlevel%==3 (@echo on & goto Label_Main)
 if %errorlevel%==4 (goto :Label_DevCommand)
-if %errorlevel%==5 (goto :Label_MainMenu)
+if %errorlevel%==5 (goto :Start_MainMenu)
 
 
 :Label_DeleteAllSaveData
@@ -357,7 +351,7 @@ if %errorlevel%==5 (goto :Label_MainMenu)
 
 
 :Exit
-    taskkill /f /im cmdwiz.exe >nul 2>&1
+    call "%src_audio_dir%\Play_BGM.bat" "" stop
     echo. %ESC%[92mGame has exited successfully. [E-0:EXIT]%ESC%[0m
     echo. %ESC%[92mThank you for playing!%ESC%[0m
     timeout /t 2 >nul

@@ -10,6 +10,8 @@
 @if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
 @prompt $G
+@chcp 65001 >nul
+@mode 90,35
 
 if not defined GAME_LAUNCHER (
    echo %esc%[31m[E1200]%esc%[0m Do not run this directly. Use %esc%[92m"AstralDivide.bat"%esc%[0m
@@ -28,36 +30,85 @@ if not exist "%PROJECT_ROOT%\Src\Main\Main.bat" (
 
 
 
-:Set_Encoding
-:: (!) ONLY AT FIRST TIME LAUNCH (!)
-:: Ask the user to set the language and system encoding.
-:: In the future, call ArgumentsCheck.bat here,
-:: I plan to check the listed arguments
-:: For example, if the user wants to use Japanese, set the encoding to 65001.
-:: If the user wants to use English, set the encoding to 437.
-:: Developer HegdeHog is JAP XD
+set "CFG_DIR=%PROJECT_ROOT%\Config"
+set "CFG_FILE=%CFG_DIR%\profile.env"
 
-:Set_Path
-:: Since the directory contains files with Japanese names, the encoding is set to 65001 during development.
-chcp 65001 >nul
+:: ====================================================================
+:: Bootstrap: load or create profile
+:: ====================================================================
+if exist "%CFG_FILE%" goto :HaveProfile
+goto :FirstRun
+
+:HaveProfile
+echo %esc%[92m[OK]%esc%[0m Welcome back! profile.env exists
+call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%" || goto :FailFirstRun
+
+:: --- Self-Repair defaults ---
+if not defined PROFILE_SCHEMA set "PROFILE_SCHEMA=1"
+if not defined CODEPAGE set "CODEPAGE=65001"
+if not defined LANGUAGE set "LANGUAGE=ja-JP"
+if /i not "%SAVE_MODE%"=="localappdata" if /i not "%SAVE_MODE%"=="portable" if /i not "%SAVE_MODE%"=="custom" set "SAVE_MODE=portable"
+if not defined SAVE_DIR (
+   if /i "%SAVE_MODE%"=="localappdata" (
+      set "SAVE_DIR=%LOCALAPPDATA%\HedgeHogSoft\AstralDivide\Saves"
+   ) else if /i "%SAVE_MODE%"=="portable" (
+      set "SAVE_DIR=%PROJECT_ROOT%\Saves"
+   ) else (
+      call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat" || goto :FailFirstRun
+      call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%" || goto :FailFirstRun
+   )
+)
+
+goto :ProfileReady
+
+:FirstRun
+echo %esc%[92m[WELCOME]%esc%[0m This is your first boot.
+timeout /t 2 >nul
+:: === First time: Language → Storage wizard (both persist to profile.env) ===
+call "%PROJECT_ROOT%\Src\Systems\Environment\SetupLanguage.bat"         || goto :FailFirstRun
+call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat"    || goto :FailFirstRun
+
+:: --- Re-sync from disk (the single source of truth) ---
+if not exist "%CFG_DIR%" md "%CFG_DIR%" 2>nul
+call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"  || goto :FailFirstRun
+:ProfileReady
+:: --- Ensure SAVE_DIR exists; create if missing (errorlevelを見ない) ---
+if not exist "%SAVE_DIR%" md "%SAVE_DIR%" 2>nul
+if not exist "%SAVE_DIR%" (
+   echo %esc%[31m[WARN]%esc%[0m SAVE_DIR="%SAVE_DIR%" を作成できませんでした。再設定します。
+   pause >nul
+   call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat" || goto :FailFirstRun
+   call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%" || goto :FailFirstRun
+   if not exist "%SAVE_DIR%" md "%SAVE_DIR%" 2>nul
+   if not exist "%SAVE_DIR%" goto :FailFirstRun
+)
+
+:: --- Write-back normalization（引用付きで安全に）---
+>"%CFG_FILE%" (
+   echo # Astral Divide profile
+   echo set "PROFILE_SCHEMA=%PROFILE_SCHEMA%"
+   echo set "CODEPAGE=%CODEPAGE%"
+   echo set "LANGUAGE=%LANGUAGE%"
+   echo set "SAVE_MODE=%SAVE_MODE%"
+   echo set "SAVE_DIR=%SAVE_DIR%"
+)
+
+
+timeout /t 10
+
+:Setting_Path
 call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
 
 :Check_Environment
-:: Localize to preventing variable scope pollution (dev now not needed)
 setlocal
-:: Check user environment
-:: e.g. : check display size, can u use powershell, etc.
 call "%src_env_dir%\ScreenEnvironmentDetection.bat"
 endlocal
 
 :Start_Program
 :: Start Main.bat with the specified encoding.
 :: For now, I'll set the encoding to 65001. (for Japanese)
-start "RPGGAME2024" /max cmd /c %src_main_dir%\Main.bat 65001
+start "RPGGAME2024" /max cmd /c "%src_main_dir%\Main.bat" 65001
 set launch_time=%time%
-:: in the future,
-:: Main.bat "Japanese" or "English"
-:: will be used to pass the encoding argument from Run.bat to Main.bat.
 
 
 :: ______________________________________________
@@ -86,9 +137,21 @@ echo [WD] Main.bat has exited!
 set /p command=""
 %command%
 
-if "%command%"=="re" (cls & goto :Set_Encoding)
+if "%command%"=="re" (cls & goto :Reconfigure)
 
 exit /b
+
+:FailFirstRun
+echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や権限をご確認ください。
+pause >nul
+exit /b 1300
+
+:Reconfigure
+:: Force re-run of both wizards, then reload profile and relaunch
+call "%PROJECT_ROOT%\Src\Systems\Environment\SetupLanguage.bat" || goto :FailFirstRun
+call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat" || goto :FailFirstRun
+call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"
+goto :Setting_Path
 
 rem ****************************共有：本プロジェクトの命名規則について****************************
 

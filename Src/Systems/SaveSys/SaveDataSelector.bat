@@ -85,8 +85,8 @@ exit /b 2099
     set save_data_found=0
     
     for /l %%i in (1,1,%max_available_slots%) do (
-        if exist "%cd_savedata%\SaveData_%%i.txt" (
-            for %%f in ("%cd_savedata%\SaveData_%%i.txt") do (
+        if exist "%saves_active_dir%\SaveData_%%i.txt" (
+            for %%f in ("%saves_active_dir%\SaveData_%%i.txt") do (
                 if %%~zf GTR 50 (
                     set save_data_found=1
                 )
@@ -207,7 +207,7 @@ exit /b 2099
 :Display_SaveDataSelector
     :: 初回表示時のみ全体描画
     cls
-    for /f "usebackq delims= eol=#" %%a in ("%cd_systems_display%\[DEV]SelectSaveDataDisplay.txt") do (echo %%a)
+    for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\[DEV]SelectSaveDataDisplay.txt") do (echo %%a)
     if %DEBUG_STATE%==1 (
         call :Display_Debug_Info
     )
@@ -453,7 +453,7 @@ exit /b 2099
     exit /b 0
 
 :Handle_Select
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Enter.wav 50
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter.wav"
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
@@ -462,7 +462,7 @@ exit /b 2099
     exit /b %retcode%
 
 :Handle_Back
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Cancel.wav 60
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Cancel.wav"
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
@@ -473,22 +473,22 @@ exit /b 2099
     exit /b %retcode%
 
 :Handle_Move_Left
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Move.wav 80
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Left_1
     exit /b 0
 
 :Handle_Move_Right
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Move.wav 80
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Right_1
     exit /b 0
 
 :Handle_Move_Down
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Move.wav 80
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Down_4
     exit /b 0
 
 :Handle_Move_Up
-    call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Move.wav 80
+    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Up_4
     exit /b 0
 
@@ -818,7 +818,7 @@ exit /b 2099
     )
 
     if %current_selected_slot% gtr %max_available_slots% (
-        echo %esc%[20;92H%esc%[41;97m このスロットは開発中です %esc%[0m
+        echo %esc%[20;92H%esc%[41;97m This slot is under development %esc%[0m
         timeout /t 1 >nul
         echo %esc%[20;92H%esc%[K
         exit /b 0
@@ -858,11 +858,11 @@ exit /b 2099
     echo %esc%[20;92H%esc%[K
 
     if %errorlevel%==1 (
-        call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Enter3.wav 50
+        start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter3.wav"
         set retcode=1
         exit /b 1
     ) else (
-        call "%cd_sounds%\Play_SE.bat" %cd_sounds%\Cancel.wav 60
+        start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Cancel.wav"
         set retcode=0
         exit /b 0
     )

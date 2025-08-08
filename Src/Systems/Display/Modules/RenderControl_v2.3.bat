@@ -35,9 +35,9 @@ if !errorlevel! == 0 (
     )
     set "CURRENT_CURSOR_Y=!Y!"
     set "CURRENT_CURSOR_X=!X!"
-    cmdwiz print "%ESC%[!Y!;!X!H"
+    %tools_dir%\cmdwiz.exe print "%ESC%[!Y!;!X!H"
     set "line=!line:*}=!"
-    call "%cd_stories%\RenderControl_v2.3.bat" "!line!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
 
@@ -49,11 +49,11 @@ if !errorlevel! == 0 (
 :: {delay:n} Supports both single and mixed use
 if "!line:~0,7!"=="{delay:" (
     for /f "tokens=2 delims=:{}" %%a in ("!line!") do (
-        cmdwiz delay %%a
+        %tools_dir%\cmdwiz.exe delay %%a
         set "line=!line:*}=!"
     )
     if defined line (
-        call "%cd_stories%\RenderControl_v2.3.bat" "!line!"
+        call "%~dp0RenderControl_v2.3.bat" "!line!"
     )
     exit /b 0
 )
@@ -70,7 +70,7 @@ echo !line! | findstr /b "{clear}" >nul
 if !errorlevel! == 0 (
     cls
     set "line=!line:*{clear}=!"
-    call "%cd_stories%\RenderControl_v2.3.bat" "!line!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
 
@@ -79,7 +79,7 @@ echo !line! | findstr /b "{player}" >nul
 if !errorlevel! == 0 (
     set "SPEAKER=%ESC%[36m[YOU]%ESC%[0m"
     set "line=!line:*{player}=!"
-    call "%cd_stories%\RenderControl_v2.3.bat" "!line!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
 
@@ -88,7 +88,7 @@ echo !line! | findstr /b "{heroine}" >nul
 if !errorlevel! == 0 (
     set "SPEAKER=%ESC%[91m[HER]%ESC%[0m"
     set "line=!line:*{heroine}=!"
-    call "%cd_stories%\RenderControl_v2.3.bat" "!line!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
 
@@ -97,7 +97,7 @@ echo !line! | findstr /b "{both}" >nul
 if !errorlevel! == 0 (
     set "SPEAKER=%ESC%[36m[BO%ESC%[91mTH]%ESC%[0m"
     set "line=!line:*{both}=!"
-    call "%cd_stories%\RenderControl_v2.3.bat" "!line!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
 
@@ -128,9 +128,9 @@ if !errorlevel! == 0 (
     rem --- Text part extraction (common processing) ---
     set "inner=!line:*}=!"
     set "inner=!inner:{/type}=!"
-    call "%cd_stories%\RenderMarkup_v2.3.bat" "!inner!" parsed
+    call "%~dp0RenderMarkup_v2.3.bat" "!inner!" parsed
     if defined SPEAKER <nul set /p="!SPEAKER! "
-    call "%cd_stories%\TypeWriter_v2.3.bat" "!parsed!" !type_speed!
+    call "%~dp0TypeWriter_v2.3.bat" "!parsed!" !type_speed!
     exit /b 0
 )
 
@@ -147,7 +147,7 @@ if !errorlevel! == 0 (
     rem Text part extraction
     set "inner=!line:*}=!"
     set "inner=!inner:{/shake}=!"
-    call "%cd_stories%\RenderMarkup_v2.3.bat" "!inner!" parsed
+    call "%~dp0RenderMarkup_v2.3.bat" "!inner!" parsed
 
     rem ==== SPEAKERが定義されていれば表示 ====
     if defined SPEAKER <nul set /p="!SPEAKER! "
@@ -172,7 +172,7 @@ if !errorlevel! == 0 (
         set /a sy=!cur_y! + !offset_y!
 
         <nul set /p="%ESC%[!sy!;!sx!H!parsed!"
-        cmdwiz delay 90
+        %tools_dir%\cmdwiz.exe delay 90
 
         set "last_sx=!sx!"
         set "last_sy=!sy!"
@@ -199,7 +199,7 @@ if !errorlevel! == 0 (
 
 :: === 通常台詞 ===
 
-call "%cd_stories%\RenderMarkup_v2.3.bat" "!line!" parsed
+call "%~dp0RenderMarkup_v2.3.bat" "!line!" parsed
 if defined SPEAKER <nul set /p=!SPEAKER!
 
 :: non tags
