@@ -1,263 +1,260 @@
-# Astral Divide Return/Error Code Standard (RECS) v1
+# ReturnCodeUtil.bat（RCU）仕様書 — RECS v1 Helper
 
-**Project:** PROJECT_AstralDivide (HedgeHogSoft)  
-**Doc Type:** Implementation Standard / .md  
-**Status:** Draft v1.0  
-**Date:** 2025-08-09 (JST)
-
----
-
-## 1. 目的（Why）
-- バッチファイルの**`ERRORLEVEL`**を基盤に、**正常フロー**と**異常（エラー）**を統一形式で返す。  
-- **人力で生数値を書かない**・**こまめにログ**・**即デコード**を実現し、運用（Run/Intercept/Debug）で読みやすくする。  
-- 将来の拡張（新モジュールやオンライン要素）に耐える。
-
-### 本仕様が解決する課題
-- 返却値の**衝突/乱立**、意味の**不明瞭**、**ログ欠如**、**即死時の追跡困難**。
+**Project:** PROJECT\_AstralDivide / HedgeHogSoft\
+**File:** `Src/Systems/Debug/ReturnCodeUtil.bat`（例）\
+**Status:** Draft v1.0（実装準拠）\
+**Purpose:** 統一戻り値（AD\_RC: `S DD RR CCC` → 8桁）を **生成／整形／返却／記録** する小型CLI
 
 ---
 
-## 2. 数値フォーマット（8桁固定）
+## 0. 要点（TL;DR）
 
-```
-S DD RR CCC   （例：10,101,001）
-│ │  │  └─ 詳細(0–999)：スロット番号や個別原因ID
-│ │  └──── 理由グループ(00–99)：I/O, Network, Selection など
-│ └─────── ドメイン(00–99)：MainMenu, SaveData, Audio…
-└───────── 区分(1桁)：1=正常フロー, 8=ユーザ中断, 9=障害
-```
-- 数式：`code = S*10,000,000 + DD*100,000 + RR*1,000 + CCC`
-- 32bit 符号付き整数の安全圏（< 2,147,483,647）。
-- **比較は必ず `EQU` / 明示条件**を用い、`if errorlevel N`（>=判定）は使わない。
-
-### 2.1 区分 `S`
-| 値 | 意味 |
-|---:|---|
-| **1** | 正常フロー（選択結果・通常遷移）|
-| **8** | ユーザ中断／キャンセル（戻る・Esc）|
-| **9** | エラー（失敗・致命・要復旧）|
-| 2/3/4 | 予約（情報/警告/リトライ推奨 など、将来拡張）|
-
-### 2.2 ドメイン `DD`（初期割当）
-| 値 | ドメイン | 例 |
-|---:|---|---|
-| **01** | MainMenu | タイトル/メインメニュー |
-| **02** | SaveData | セーブ選択/作成/読み込み |
-| **03** | Display | 画面描画/枠テンプレート |
-| **04** | Environment | 言語/コードページ/画面環境 |
-| **05** | Audio | BGM/SE 再生 |
-| **06** | Systems(Core) | 初期化/プロセス制御 |
-| **07** | Network | GAS/HTTP/Timeout |
-| **08** | Story | シーン/テキスト資源 |
-| **09** | Debug & Intercept | 監視/介入/ブレーク |
-| **10–19** | Tools/Reserved | 予備 |
-
-### 2.3 理由グループ `RR`（共通辞書）
-| 値 | 理由 | 典型例 |
-|---:|---|---|
-| **01** | Selection | ユーザ選択結果/分岐 |
-| **10** | I/O | ファイル/ディレクトリ/権限 |
-| **11** | Parse | 構文/フォーマット/パース失敗 |
-| **12** | Encode | 文字コード/URL/JSON |
-| **20** | Network | 通信/HTTP/タイムアウト |
-| **30** | Validation | 事前条件・環境検証不成立 |
-| **50** | Compat | 互換性/バージョン不一致 |
-| **90** | Other | 一時・分類不能 |
-
-### 2.4 `CCC`（詳細 ID）
-- ドメインや理由ごとの**詳細識別**（0–999）。
-- スロット番号等を割り当て可能（例：Slot2 → `002`）。
+- **ハイフン記法サブコマンド**：`-build` / `-decode` / `-return` / `-throw` / `-pretty` / `-trace`\
+  ※`/help` 受理、`/build` は内部で `-build` に正規化。
+- **区切り入力OK**：`-build 1 01 01 001` も `"1-01-01-001"` も可。
+- **“自己防衛シフト”**：ディスパッチャでは `shift` せず、各ハンドラ先頭で必要時のみ `shift`。
+- **戻り値規約**：`-return`/`-throw` は **終了コード＝AD\_RC**。それ以外は `0`（成功）/`3`（引数不正）。
+- **ログ**：`-trace` は `Logs\` へ追記。`LOG_MODE`（`daily|session|single`）で回転/分割を選択。
 
 ---
 
-## 3. 付帯メタ情報（任意）
-返却時に以下の環境変数を併送可能：
-- `AD_RC`：8桁コード（数値）。
-- `AD_RC_KIND=FLOW|CANCEL|ERR`（`S`から導出）。
-- `AD_RC_TAG`：任意の短いタグ（MainMenu/SaveData 等）。
-- `AD_RC_MSG`：短い説明文（英語/Japanese OK）。
+## 1. 使用方法（コマンド一覧）
 
-> Run/Debug/Intercept のログで**人間が即状況を理解**できるようにする。
+```
+ReturnCodeUtil.bat <command> [args...]
+
+build   S DD RR CCC | "S-DD-RR-CCC"   -> 8桁コードを標準出力（%CODE%にも格納）
+decode  CODE                          -> S= DD= RR= CCC= を標準出力
+return  S DD RR CCC [ctx...]          -> exit /b CODE     （終了コード＝8桁）
+throw   S DD RR CCC [ctx...]          -> 標準エラー出力 + exit /b CODE
+pretty  CODE                          -> 着色付きの要約表示（人間可読）
+trace   LEVEL TAG MSG...              -> Logs\*.log へ追記
+help                                  -> 使い方
+```
+
+### 1.1 エイリアス・互換
+
+- `-help` / `/help` … どちらもヘルプ表示
+- `/build` … 内部で `-build` として扱う（`set "cmd=!cmd:/=-!"` による正規化）
 
 ---
 
-## 4. ユーティリティ（標準ライブラリ）
-本仕様は**生数値の直書きを禁止**し、ラッパー経由で発行する。
+## 2. 引数仕様
 
-### 4.1 ファイル配置（提案）
+### 2.1 AD\_RC（8桁）構造
+
 ```
-Src/Systems/Debug/
-  ├─ rc.const.bat   （定数：S/DD/RR のシンボル）
-  └─ rcutil.bat     （BUILD/DECODE/THROW/RETURN/TRACE 等）
-```
-
-### 4.2 `rc.const.bat`（抜粋）
-```bat
-:: 区分
-set RC_S_FLOW=1
-set RC_S_CANCEL=8
-set RC_S_ERR=9
-
-:: ドメイン
-set RC_D_MENU=01
-set RC_D_SAVE=02
-set RC_D_DISPLAY=03
-set RC_D_ENV=04
-set RC_D_AUDIO=05
-set RC_D_SYS=06
-set RC_D_NET=07
-set RC_D_STORY=08
-set RC_D_DEBUG=09
-
-:: 理由グループ
-set RC_R_SELECT=01
-set RC_R_IO=10
-set RC_R_PARSE=11
-set RC_R_ENC=12
-set RC_R_NET=20
-set RC_R_VALID=30
-set RC_R_COMPAT=50
-set RC_R_OTHER=90
+S DD RR CCC
+1桁 2桁 2桁 3桁  → 連結して 8桁（例：1-01-01-001 → 10101001）
 ```
 
-### 4.3 `rcutil.bat`（インタフェース）
-| コマンド | 役割 | 引数 |
-|---|---|---|
-| `_BUILD` | 8桁生成 | `S DD RR CCC` → `%ERRORLEVEL%`/`AD_RC` |
-| `_DECODE` | 分解 | `<code>` → `AD_S/AD_DD/AD_RR/AD_CCC` |
-| `_NAME_DOM` | ドメイン名 | `<DD>` → `AD_DNAME` |
-| `_NAME_REASON` | 理由名 | `<RR>` → `AD_RNAME` |
-| `_LOG_INIT` | ログ初期化 | `[dir]` → `AD_LOG` |
-| `_TRACE` | 任意ログ追記 | `<LEVEL> <message...>` |
-| `_THROW` | 失敗発行＆ログ | `S DD RR CCC "MSG" ["CTX"]` → `exit /b code` |
-| `_RETURN` | 正常発行＆ログ | `S DD RR CCC "MSG"` → `exit /b code` |
-| `_PRETTY` | 整形表示 | `<code>`（人間可読） |
+- `S`（区分）: `1=FLOW`, `8=CANCEL`, `9=ERR`
+- `DD`（ドメイン例）: `01=MainMenu, 02=SaveData, 03=Display, 04=Environment, 05=Audio, 06=Systems, 07=Network, 08=Story, 09=Debug/Intercept`
+- `RR`（理由例）: `01=Selection, 10=I/O, 11=Parse, 12=Encode, 20=Network, 30=Validation, 50=Compat, 90=Other`
+- `CCC`（詳細）: `000–999`
 
-> 詳細実装はプロジェクトリポジトリに同梱。各モジュールは**この API のみ**使用する。
+### 2.2 入力形式
+
+- **分離形式**：`-build 1 01 01 001`
+- **結合形式**：`-build "1-01-01-001"`（ダッシュ区切り）\
+  → どちらもOK。`-decode` は `10101001` でも `"1-01-01-001"` でも可。
 
 ---
 
-## 5. 使い方（例）
-### 5.1 モジュール先頭で定数読み込み
+## 3. サブコマンド詳細
+
+### 3.1 `-build`
+
+- **役割**：`S DD RR CCC` から 8桁を生成して **標準出力**。環境変数 `CODE` にも格納。
+- **引数**：`S DD RR CCC` **または** `"S-DD-RR-CCC"`
+- **戻り値**：`0`（成功） / `3`（不正）
+- **内部**：`padnum` で `1|2|2|3` 桁にゼロ詰め → `CODE=%RC_S%%RC_DD%%RC_RR%%RC_CCC%`
+
+**例**
+
 ```bat
-call "%PROJECT_ROOT%\Src\Systems\Debug\rc.const.bat"
+> ReturnCodeUtil.bat -build 1 01 01 001
+10101001
+
+> ReturnCodeUtil.bat -build "9-06-30-021"
+90630021
 ```
 
-### 5.2 正常フロー（New Game 決定）
-```bat
-call "%PROJECT_ROOT%\Src\Systems\Debug\rcutil.bat" _RETURN ^
-  %RC_S_FLOW% %RC_D_MENU% %RC_R_SELECT% 001 "MainMenu:NewGame"
-```
-→ 返却コード：`10,101,001`
+> 実装メモ：現在 `echo %CODE%` が 2 行あるため、パイプ受けで 2 回出力になります。実運用では 1 行に整理推奨。
 
-### 5.3 エラー（Save Slot2 not found）
-```bat
-if not exist "%SAVE_DIR%\slot2.sav" (
-  call "%PROJECT_ROOT%\Src\Systems\Debug\rcutil.bat" _THROW ^
-    %RC_S_ERR% %RC_D_SAVE% %RC_R_IO% 004 "Save missing" "slot=2;path=%SAVE_DIR%\slot2.sav%"
-)
-```
-→ 返却コード：`90,210,004`
+### 3.2 `-decode`
 
-### 5.4 Run.bat 側で整形表示
+- **役割**：8桁コードを `S= DD= RR= CCC=` で表示
+- **引数**：`CODE`（`10101001` または `"1-01-01-001"`）
+- **戻り値**：`0` / `3`
+
+**例**
+
 ```bat
+> ReturnCodeUtil.bat -decode 90630021
+S=9 DD=06 RR=30 CCC=021
+```
+
+### 3.3 `-return`
+
+- **役割**：与えた `S DD RR CCC` を構成して `` で終了
+- **引数**：`S DD RR CCC [ctx...]`（`ctx` は呼び出し元のログ用途）
+- **戻り値**：**終了コード＝8桁**（`ERRORLEVEL` に反映）
+
+**例（呼び出し側）**
+
+```bat
+call ReturnCodeUtil.bat -return 1 02 01 051
+if "%errorlevel%"=="10201051" echo OK
+```
+
+### 3.4 `-throw`
+
+- **役割**：`-return` と同様だが、**標準エラーへ要約 1 行出力**してから終了
+- **引数/戻り**：`-return` と同様
+
+**例**
+
+```bat
+> ReturnCodeUtil.bat -throw 9 06 10 001 "pubkey missing"
+[RECS] THROW 90610001 pubkey missing   1>&2
+```
+
+### 3.5 `-pretty`
+
+- **役割**：コードを **色付き** で人間可読表示（STATUS / DOMAIN / REASON 名を併記）
+- **引数**：`CODE`
+- **戻り**：`0`
+
+**出力例**
+
+```
+OK  10101001 [MainMenu / Selection]
+ERR 90630021 [Systems / Validation]
+```
+
+> 色は ANSI（OK=緑, INTERRUPT=黄, ERROR=赤 など）
+
+### 3.6 `-trace`
+
+- **役割**：`Logs\*.log` へ 1 行追記（**タイムスタンプ + LEVEL + TAG + MSG…**）
+- **引数**：`LEVEL TAG MSG...`\
+  *MSG は未引用でも、内部で安全に連結して記録*
+- **戻り**：`0`
+
+**例**
+
+```bat
+set "LOG_MODE=daily" & set "LOG_PREFIX=ad"
+ReturnCodeUtil.bat -trace INFO Boot "Env ok / PS=Yes"
+ReturnCodeUtil.bat -trace WARN Save "slot=2 missing"
+ReturnCodeUtil.bat -trace ERR  Main "Unhandled state X"
+```
+
+---
+
+## 4. ログ仕様（`-trace` / `:init_log`）
+
+- **出力先**：`%~dp0..\..\..\Logs`
+- **モード**（環境変数 `LOG_MODE`）
+  - `daily`（既定） … `ad_YYYY-MM-DD.log`
+  - `session` … `ad_YYYY-MM-DD_HH-mm-ss.log`（起動毎に新規）
+  - `single` … `ad.log`（**5MB** 超で日時付きへローテ）
+- **任意環境変数**
+  - `LOG_PREFIX`：既定 `ad`
+  - 直接 `LOGFILE` を事前定義すれば完全固定も可
+- **レコード例**
+  ```
+  [2025/08/11 18:35:02.12] INFO SaveLoad start slot=2
+  ```
+
+---
+
+## 5. マップ辞書（`-pretty` 内部）
+
+- **Domain（DD）**\
+  `01=MainMenu, 02=SaveData, 03=Display, 04=Environment, 05=Audio, 06=Systems, 07=Network, 08=Story, 09=Debug/Intercept`
+- **Reason（RR）**\
+  `01=Selection, 10=I/O, 11=Parse, 12=Encode, 20=Network, 30=Validation, 50=Compat, 90=Other`
+
+---
+
+## 6. 例：典型フロー
+
+```bat
+rem --- 正常選択を返す
+call ReturnCodeUtil.bat -return 1 01 01 001  & rem NewGame 決定
+
+rem --- エラー整形表示（Run側）
 set "RC=%errorlevel%"
-call "%PROJECT_ROOT%\Src\Systems\Debug\rcutil.bat" _PRETTY %RC%
-rem 出力例:  ERR  SaveData  I/O  #004  (code=90210004)
+call ReturnCodeUtil.bat -pretty %RC%
+
+rem --- 任意トレース
+call ReturnCodeUtil.bat -trace INFO Main "Menu drawn A"
 ```
 
-### 5.5 こまめなトレース
+---
+
+## 7. 失敗時の規約
+
+- **入力検証失敗**（数値でない／桁不正） … `exit /b 3`
+- ``** の内部 **``** 失敗** … `exit /b 3`
+- **比較は等価判定**（`if "%errorlevel%"=="N"`）を前提。`if errorlevel N` の≧判定は使用しない。
+
+---
+
+## 8. 実装メモ（安全運用のための要点）
+
+- **自己防衛シフト**：各ハンドラ先頭で `if /i "%~1"=="-xxxx" shift`。
+- **パディング**：`padnum`（1/2/3 桁）でゼロ詰め確実化（事前展開衝突回避）。
+- **コード正規化**：`normalize_code` で `-` を除去→8桁チェック。
+- **ANSI**：`-pretty` の色は CMD の VT 対応環境を前提（`chcp 65001` 等）。
+
+---
+
+## 9. 推奨コーディングパターン（呼び出し側）
+
 ```bat
-call "%PROJECT_ROOT%\Src\Systems\Debug\rcutil.bat" _TRACE TRACE "MainMenu: frame A drawn"
+:: 戻り値をそのまま親へ伝搬
+call ReturnCodeUtil.bat -return 1 06 90 000 "bootstrap ok"
+exit /b %errorlevel%
+
+:: 異常時は throw で即終了
+call ReturnCodeUtil.bat -throw 9 06 10 001 "pubkey missing"
 ```
 
 ---
 
-## 6. 互換運用（外部/未規格終了コード）
-- 閾値ルール：`code < 10,000,000` は **外部 or 未規格**として扱う。  
-- Run 側で `90-06-90-xxx`（Systems/Other）等に**ラップ**し、ログ化してから上位へ伝搬する。
+## 10. 変更履歴（抜粋）
+
+- **v1.0 初版**
+  - ハイフンCLI／ディスパッチ無シフト化
+  - `-trace` の安全メッセージ組立
+  - ログモード：`daily/session/single`（`single` 5MBローテ）
 
 ---
 
-## 7. 命名・メッセージ規約
-- `AD_RC_TAG`：`MainMenu/SaveData/...` の**Camel/Pascal**推奨。  
-- `AD_RC_MSG`：**英語ベース + 補足日本語可**（ログ検索性を重視）。  
-- `CTX`：`key=value;key2=value2` の軽量 KV 文字列。
+## 付録A：コマンド別戻り規約（要約）
+
+| Command   | 成功時 | 失敗時 | 備考                          |
+| --------- | --- | --- | --------------------------- |
+| `-build`  | `0` | `3` | `CODE` へ格納、標準出力あり（※現状は二重出力） |
+| `-decode` | `0` | `3` | 入力は `8桁` or `S-DD-RR-CCC`   |
+| `-return` | ``  | `3` | 呼び出し元 `ERRORLEVEL` に直結      |
+| `-throw`  | ``  | `3` | 事前に標準エラーへ 1 行出力             |
+| `-pretty` | `0` | `3` | ANSI カラー                    |
+| `-trace`  | `0` | `0` | ログ初期化は自動（`LOG_MODE` で切替）    |
 
 ---
 
-## 8. マイグレーション方針（旧 1000/2000 台 → v1）
-- 旧：`1001(NewGame)` → 新：`1-01-01-001`（**10,101,001**）
-- 旧：`1002(Continue)` → 新：`1-01-01-002`
-- 旧：`1099(Exit)` → 新：`8-01-01-099`（キャンセル/戻る系に寄せる）
-- 旧：`2031(Continue Slot1)` → 新：`1-02-01-001`
-- 旧：`2051(New Slot1 Created)` → 新：`1-02-01-051` *（運用に合わせて `CCC` 採番を調整）*
+## 付録B：環境変数一覧
 
-> 置換は**rcutil ラッパー化**で一括機械化する（`exit /b`直書きを撤廃）。
+| 変数           | 既定       | 役割                         |
+| ------------ | -------- | -------------------------- |
+| `LOG_MODE`   | `daily`  | `daily / session / single` |
+| `LOG_PREFIX` | `ad`     | ログファイル接頭辞                  |
+| `LOGDIR`     | `…\Logs` | ログ格納ディレクトリ（自動生成）           |
+| `LOGFILE`    | *未定義*    | 完全指定したい場合は事前にフルパス設定        |
 
----
+> 本仕様は、提示の実装スニペットに準拠した **Markdown 原文** です。ゲーム本体・ランチャ各モジュールは **“生数値を書かず、必ず RCU 経由”** を徹底してください。
 
-## 9. ログ仕様
-- 既定パス：`Logs/ad_YYYY-MM-DD_HH-mm-ss.log`
-- レコード例：
-```
-[2025-08-09 01:23:45.678] OK   RC=10101001 S=1 DD=1 RR=1 CCC=1 MSG=MainMenu:NewGame
-[2025-08-09 01:23:46.012] ERR  RC=90210004 S=9 DD=2 RR=10 CCC=4 MSG=Save missing CTX=slot=2;path=C:\...\slot2.sav
-[2025-08-09 01:23:46.050] TRACE MainMenu: frame A drawn
-```
-
----
-
-## 10. テスト/レビュー チェックリスト
-- [ ] すべての `exit /b` が `_RETURN` or `_THROW` に置換されている。  
-- [ ] 主要分岐（Menu/Save/Display/Env/Audio/Systems/Network/Story/Debug）で**最低1件**の戻り値が規格化。  
-- [ ] Run 側が `_PRETTY` で**人間可読ログ**を出す。  
-- [ ] `code < 10,000,000` のラップ処理がある。  
-- [ ] 即死しうる箇所に `_TRACE` を適切に挿入。  
-- [ ] CI/ローカルで**異常系（S=9）**を少なくとも1件強制発火して確認。
-
----
-
-## 11. FAQ
-**Q. なぜ 8 桁？**  
-A. 32bit 整数の安全圏内で、外部終了コードと**帯域が被りにくい**から。分解/合成が `/` と `%` だけで高速。  
-
-**Q. ドメインや理由は増やせる？**  
-A. `DD`/`RR`は 00–99 の二桁。**先に予約表を更新**してから使用する。  
-
-**Q. “警告”や“リトライ推奨”は？**  
-A. `S=2/3/4` を将来利用。現時点は `S=1/8/9` に集約。
-
----
-
-## 12. 変更履歴
-- **v1.0 (2025-08-09)** 初版（8桁固定／ラッパー API／ログ規約／互換運用）。
-
----
-
-## 13. 付録：実装スニペット
-### 13.1 BUILD/DECODE の参考実装
-```bat
-:_BUILD
-set "S=%~1" & set "DD=%~2" & set "RR=%~3" & set "CCC=%~4"
-set /a _RC=S*10000000 + DD*100000 + RR*1000 + CCC
-endlocal & set "AD_RC=%_RC%" & exit /b %_RC%
-
-:_DECODE
-set "C=%~1"
-set /a S  =  C / 10000000
-set /a DD = (C / 100000) %% 100
-set /a RR = (C / 1000)    %% 100
-set /a CCC=  C %% 1000
-endlocal & (
-  set "AD_S=%S%"
-  set "AD_DD=%DD%"
-  set "AD_RR=%RR%"
-  set "AD_CCC=%CCC%"
-) & exit /b 0
-```
-
----
-
-### 署名
-Author: HedgeHog（仕様合意ドラフト） / Reviewer: ChatGPT（提案と整形）

@@ -1,19 +1,18 @@
-@echo on
+@echo off
 chcp 65001 >nul
 setlocal EnableExtensions EnableDelayedExpansion
 
-:: rcutil.bat - RECS v1 command-line helper
+:: ReturnCodeUtil.bat(RCU)  -  RECS v1 helper
 :: Hyphen flags: -build / -decode / -return / -throw / -pretty / -trace
-:: Legacy aliases kept: _BUILD/_DECODE/_RETURN/_THROW/_PRETTY/_TRACE
 
 if "%~1"=="" (call :usage & exit /b 1)
 
 set "cmd=%~1"
 set "cmd=!cmd:/=-!" & rem /build も -build として扱う
-if /i "!cmd!"=="-h"       (call :usage & exit /b 0)
-if /i "!cmd!"=="--help"   (call :usage & exit /b 0)
+if /i "!cmd!"=="-help"  (call :usage & exit /b 0)
+if /i "!cmd!"=="/help"  (call :usage & exit /b 0)
 
-shift /1
+:: 提案: （dispatcherでは shift しない）
 if /i "%cmd%"=="-build"  goto :build
 if /i "%cmd%"=="-decode" goto :decode
 if /i "%cmd%"=="-return" goto :return
@@ -26,27 +25,31 @@ call :usage
 exit /b 2
 
 :build
-rem Args: S DD RR CCC  または  "S-DD-RR-CCC"
+rem Args: [-build] S DD RR CCC  または  "S-DD-RR-CCC"
+if /i "%~1"=="-build" shift
+setlocal
 if "%~2"=="" (
   set "spec=%~1"
   set "spec=%spec:"=%"
-  for /f "tokens=1-4 delims=-" %%a in ("%spec%") do (set "S=%%a"&set "DD=%%b"&set "RR=%%c"&set "CCC=%%d"&goto :_build_go)
-  >&2 echo [RECS] -build needs S-DD-RR-CCC or 4 tokens
-  exit /b 3
+  for /f "tokens=1-4 delims=-" %%a in ("%spec%") do (
+    set "RC_S=%%a" & set "RC_DD=%%b" & set "RC_RR=%%c" & set "RC_CCC=%%d"
+  )
 ) else (
-  set "S=%~1"&set "DD=%~2"&set "RR=%~3"&set "CCC=%~4"
+  set "RC_S=%~1" & set "RC_DD=%~2" & set "RC_RR=%~3" & set "RC_CCC=%~4"
 )
-:_build_go
-call :padnum %S%  1 S  || exit /b 3
-call :padnum %DD% 2 DD || exit /b 3
-call :padnum %RR% 2 RR || exit /b 3
-call :padnum %CCC% 3 CCC || exit /b 3
-set "CODE=%S%%DD%%RR%%CCC%"
+call :padnum %RC_S%  1 RC_S  || (endlocal & exit /b 3)
+call :padnum %RC_DD% 2 RC_DD || (endlocal & exit /b 3)
+call :padnum %RC_RR% 2 RC_RR || (endlocal & exit /b 3)
+call :padnum %RC_CCC% 3 RC_CCC || (endlocal & exit /b 3)
+set "CODE=%RC_S%%RC_DD%%RC_RR%%RC_CCC%"
+echo %CODE%
+endlocal & set "CODE=%CODE%"
 echo %CODE%
 exit /b 0
 
 :decode
-rem Arg: 8-digit code or "S-DD-RR-CCC"
+rem Arg: [-decode] 8-digit code or "S-DD-RR-CCC"
+if /i "%~1"=="-decode" shift
 set "CODE=%~1"
 call :normalize_code "%CODE%" CODE || (>&2 echo [RECS] invalid code & exit /b 3)
 set "S=%CODE:~0,1%"
@@ -57,21 +60,25 @@ echo S=%S% DD=%DD% RR=%RR% CCC=%CCC%
 exit /b 0
 
 :return
-rem Args: S DD RR CCC [ctx...]
-call :build %1 %2 %3 %4 >nul || exit /b 3
-set "CODE=%S%%DD%%RR%%CCC%"
-rem ここで必要なら :trace を噛ませてもよい
-exit /b %CODE%
+rem Args: [-return] S DD RR CCC [ctx...]
+if /i "%~1"=="-return" shift
+setlocal
+call :build %1 %2 %3 %4 >nul || (endlocal & exit /b 3)
+set "RC_CODE=%CODE%"
+endlocal & exit /b %RC_CODE%
 
 :throw
-rem Args: S DD RR CCC [ctx...]
-call :build %1 %2 %3 %4 >nul || exit /b 3
-set "CODE=%S%%DD%%RR%%CCC%"
->&2 echo [RECS] THROW %CODE% %*
-exit /b %CODE%
+rem Args: [-throw] S DD RR CCC [ctx...]
+if /i "%~1"=="-throw" shift
+setlocal
+call :build %1 %2 %3 %4 >nul || (endlocal & exit /b 3)
+set "RC_CODE=%CODE%"
+>&2 echo [RECS] THROW %RC_CODE% %*
+endlocal & exit /b %RC_CODE%
 
 :pretty
-rem Arg: 8-digit code or "S-DD-RR-CCC"
+rem Arg: [-pretty] 8-digit code or "S-DD-RR-CCC"
+if /i "%~1"=="-pretty" shift
 set "CODE=%~1"
 call :normalize_code "%CODE%" CODE || (>&2 echo [RECS] invalid code & exit /b 3)
 set "S=%CODE:~0,1%"&set "DD=%CODE:~1,2%"&set "RR=%CODE:~3,2%"&set "CCC=%CODE:~5,3%"
@@ -86,23 +93,54 @@ echo %ESC%[%COLOR%m%STAT%%ESC%[0m %CODE% [%DOMAIN% / %REASON%]
 exit /b 0
 
 :trace
-rem Args: LEVEL TAG MSG...
-set "LEVEL=%~1" & set "TAG=%~2"
-shift /1 & shift /1
-set "MSG=%*"
+rem Args: [-trace] LEVEL TAG MSG...
+if /i "%~1"=="-trace" shift
+
+rem 1) LEVEL / TAG を確定
+set "LEVEL=%~1"
+set "TAG=%~2"
+
+rem 2) 残りを安全に収集（%*は使わない）
+set "MSG="
+:__trace_collect
+shift /1
+if "%~1"=="" goto :__trace_emit
+if defined MSG (set "MSG=%MSG% %~1") else set "MSG=%~1"
+goto :__trace_collect
+
+:__trace_emit
 if not defined LOGFILE call :init_log
 >>"%LOGFILE%" echo [%DATE% %TIME%] %LEVEL% %TAG% %MSG%
 exit /b 0
+
+
 
 :padnum
 rem %1=value %2=width(1|2|3) %3=outvar
 set "val=%~1" & set "w=%~2" & set "ov=%~3"
 if "%val%"=="" exit /b 1
 for /f "delims=0123456789" %%x in ("%val%") do exit /b 1
-if "%w%"=="1" (set "tmp=0%val%"   & set "%ov%=%tmp:~-1%" & exit /b 0)
-if "%w%"=="2" (set "tmp=00%val%"  & set "%ov%=%tmp:~-2%" & exit /b 0)
-if "%w%"=="3" (set "tmp=000%val%" & set "%ov%=%tmp:~-3%" & exit /b 0)
+
+if "%w%"=="1" goto :pad1
+if "%w%"=="2" goto :pad2
+if "%w%"=="3" goto :pad3
 exit /b 1
+
+:pad1
+set "_pad=0%val%"
+set "%ov%=%_pad:~-1%"
+exit /b 0
+
+:pad2
+set "_pad=00%val%"
+set "%ov%=%_pad:~-2%"
+exit /b 0
+
+:pad3
+set "_pad=000%val%"
+set "%ov%=%_pad:~-3%"
+exit /b 0
+
 
 :normalize_code
 rem 入力: %1(8桁 or S-DD-RR-CCC), 出力変数名: %2
@@ -147,14 +185,43 @@ exit /b 0
 
 :init_log
 set "LOGDIR=%~dp0..\..\..\Logs"
-if not exist "%LOGDIR%" md "%LOGDIR%" >nul 2>&1
-set "LOGFILE=%LOGDIR%\ad_%DATE:/=-%_%TIME::=-%.log"
+md "%LOGDIR%" >nul 2>&1
+
+rem --- mode: daily | session | single (default: daily)
+if not defined LOG_MODE set "LOG_MODE=daily"
+
+rem --- tags (ロケール依存の記号を安全化)
+set "DATE_TAG=%DATE:/=-%"
+set "TIME_TAG=%TIME::=-%"
+set "TIME_TAG=%TIME_TAG:.=-%"
+set "TIME_TAG=%TIME_TAG: =0%"
+
+rem --- prefix も任意で変えられるように（未指定なら ad）
+if not defined LOG_PREFIX set "LOG_PREFIX=ad"
+
+if /i "%LOG_MODE%"=="session" (
+  set "LOGFILE=%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%_%TIME_TAG%.log"
+) else if /i "%LOG_MODE%"=="single" (
+  set "LOGFILE=%LOGDIR%\%LOG_PREFIX%.log"
+) else (
+  rem daily
+  set "LOGFILE=%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%.log"
+)
+
+rem --- 単一ファイルモードの簡易ローテーション（5MB超えたら退避）
+if /i "%LOG_MODE%"=="single" if exist "%LOGFILE%" (
+  for %%A in ("%LOGFILE%") do set "SZ=%%~zA"
+  if defined SZ if %SZ% GEQ 5242880 (
+     move /y "%LOGFILE%" "%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%_%TIME_TAG%.log" >nul
+  )
+)
 exit /b 0
+
 
 :usage
 echo.
-echo rcutil.bat  -  RECS v1 helper (hyphen CLI)
-echo   -build  S DD RR CCC ^| "S-DD-RR-CCC"   ^> 8-digit code (stdout)
+echo ReturnCodeUtil.bat(RCU)  -  RECS v1 helper (hyphen CLI)
+echo   -build  S DD RR CCC ^| "S-DD-RR-CCC"    ^> 8-digit code (stdout)
 echo   -decode CODE                           ^> S= DD= RR= CCC=
 echo   -return S DD RR CCC                    ^> exit /b CODE
 echo   -throw  S DD RR CCC [ctx...]           ^> ^&2 log + exit /b CODE
