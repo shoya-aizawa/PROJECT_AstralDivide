@@ -12,4 +12,4 @@ for /f "usebackq eol=# tokens=* delims=" %%L in ("%ENV_FILE%") do (
    %%L
 )
 echo %esc%[92m[OK]%esc%[0m profile.env file has been loaded
-exit /b
+exit /b 0

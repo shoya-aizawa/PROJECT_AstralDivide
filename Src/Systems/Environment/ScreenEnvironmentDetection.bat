@@ -77,7 +77,7 @@ echo %esc%[93m               Detection complete.               %esc%[0m
 echo %esc%[93m   ===========================================   %esc%[0m
 echo.
 timeout /t 1 >nul
-exit /b 0
+exit /b 10690000
 
 
 

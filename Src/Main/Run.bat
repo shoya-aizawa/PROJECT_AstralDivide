@@ -6,152 +6,131 @@
 ::    | checks the environment and set up the necessary configurations. |
 ::    +=================================================================+
 
-@echo off
+:: rem !) this file alredy restarted by [@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof] command. (!
+:: rem !) so, can't recording return value by use exit /b options. if want to use, a separate log file must be generated.   (!
+
+::
 @if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof
+@echo off
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
 @prompt $G
 @chcp 65001 >nul
 @mode 90,35
-
-if not defined GAME_LAUNCHER (
-   echo %esc%[31m[E1200]%esc%[0m Do not run this directly. Use %esc%[92m"AstralDivide.bat"%esc%[0m
-   pause >nul
-   exit /b 1200
-   rem TODO : The error code is tentative
-)& rem !Startup Protection!
-
-set "PROJECT_ROOT=%~1"
-if not exist "%PROJECT_ROOT%\Src\Main\Main.bat" (
-   echo %esc%[31m[E1201]%esc%[0m Invalid PROJECT_ROOT: "%PROJECT_ROOT%"
-   pause >nul
-   exit /b 1201
-   rem TODO : The error code is tentative
-)& rem !Failed to get root folder!
+::
 
 
 
-set "CFG_DIR=%PROJECT_ROOT%\Config"
-set "CFG_FILE=%CFG_DIR%\profile.env"
+rem TODO: 理想処理フロー
+rem !!!! Flow -1  :  未実装
 
-:: ====================================================================
-:: Bootstrap: load or create profile
-:: ====================================================================
-if exist "%CFG_FILE%" goto :HaveProfile
-goto :FirstRun
+rem **** Flow 0   :  実装済み
 
-:HaveProfile
-echo %esc%[92m[OK]%esc%[0m Welcome back! profile.env exists
-call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%" || goto :FailFirstRun
+rem ???? Flow 1   :  仮実装済み
 
-:: --- Self-Repair defaults ---
-if not defined PROFILE_SCHEMA set "PROFILE_SCHEMA=1"
-if not defined CODEPAGE set "CODEPAGE=65001"
-if not defined LANGUAGE set "LANGUAGE=ja-JP"
-if /i not "%SAVE_MODE%"=="localappdata" if /i not "%SAVE_MODE%"=="portable" if /i not "%SAVE_MODE%"=="custom" set "SAVE_MODE=portable"
-if not defined SAVE_DIR (
-   if /i "%SAVE_MODE%"=="localappdata" (
-      set "SAVE_DIR=%LOCALAPPDATA%\HedgeHogSoft\AstralDivide\Saves"
-   ) else if /i "%SAVE_MODE%"=="portable" (
-      set "SAVE_DIR=%PROJECT_ROOT%\Saves"
-   ) else (
-      call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat" || goto :FailFirstRun
-      call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%" || goto :FailFirstRun
-   )
-)
+rem ???? Flow 2   :  仮実装済み
 
-goto :ProfileReady
+rem ???? Flow 3   :  仮実装済み
 
-:FirstRun
-echo %esc%[92m[WELCOME]%esc%[0m This is your first boot.
-timeout /t 2 >nul
-:: === First time: Language → Storage wizard (both persist to profile.env) ===
-call "%PROJECT_ROOT%\Src\Systems\Environment\SetupLanguage.bat"         || goto :FailFirstRun
-call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat"    || goto :FailFirstRun
+rem !!!! Flow 4   :  未実装
 
-:: --- Re-sync from disk (the single source of truth) ---
-if not exist "%CFG_DIR%" md "%CFG_DIR%" 2>nul
-call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"  || goto :FailFirstRun
-:ProfileReady
-:: --- Ensure SAVE_DIR exists; create if missing (errorlevelを見ない) ---
-if not exist "%SAVE_DIR%" md "%SAVE_DIR%" 2>nul
-if not exist "%SAVE_DIR%" (
-   echo %esc%[31m[WARN]%esc%[0m SAVE_DIR="%SAVE_DIR%" を作成できませんでした。再設定します。
-   pause >nul
-   call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat" || goto :FailFirstRun
-   call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%" || goto :FailFirstRun
-   if not exist "%SAVE_DIR%" md "%SAVE_DIR%" 2>nul
-   if not exist "%SAVE_DIR%" goto :FailFirstRun
-)
+rem ???? Flow 5   :  仮実装済み
 
-:: --- Write-back normalization（引用付きで安全に）---
->"%CFG_FILE%" (
-   echo # Astral Divide profile
-   echo set "PROFILE_SCHEMA=%PROFILE_SCHEMA%"
-   echo set "CODEPAGE=%CODEPAGE%"
-   echo set "LANGUAGE=%LANGUAGE%"
-   echo set "SAVE_MODE=%SAVE_MODE%"
-   echo set "SAVE_DIR=%SAVE_DIR%"
-)
+rem ???? Flow 6   :  仮実装済み
 
+rem !!!! Flow 7   :  未実装
+::==============================================================================================================
+rem -1) AD_RC initialization (load constants)
+rem TODO: if not defined RC_S_FLOW call "%PROJECT_ROOT%\Src\Systems\Debug\Rc.Const.bat" || (set "AD_RC=90690001" & goto :FailRun)
 
-timeout /t 10
+::
 
-:Setting_Path
-call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
+rem 0) Mode Interpretation (Default=RUN) (*RUN*|DEBUG|INTERCEPT)
+set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
+if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
+if /i "%~1"=="-mode" if /i "%~2"=="intercept" set "BUILD_PROFILE=dev" & set "INTERCEPT_MODE=1"
 
-:Check_Environment
-setlocal
-call "%src_env_dir%\ScreenEnvironmentDetection.bat"
-endlocal
+::
 
-:Start_Program
-:: Start Main.bat with the specified encoding.
-:: For now, I'll set the encoding to 65001. (for Japanese)
-start "RPGGAME2024" /max cmd /c "%src_main_dir%\Main.bat" 65001
+rem 1) LaunchGuard
+call "%PROJECT_ROOT%\Src\Systems\Launcher\LaunchGuard.bat" "%PROJECT_ROOT%"
+call :_gate_ok "LaunchGuard" || goto :FailFirstRun
+::
+
+rem 2) Bootstrap
+call "%PROJECT_ROOT%\Src\Systems\Bootstrap\Bootstrap_Init.bat" "%PROJECT_ROOT%"
+if not %errorlevel% equ 10690000 goto :FailFirstRun
+
+::
+
+rem 3) Environment_Check (PowerShell availability/screen/VT)
+call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%PROJECT_ROOT%"
+if not %errorlevel% equ 10690000 goto :FailFirstRun
+
+::
+
+rem 4) Signature Verification (Fail-Fast)
+rem TODO call "%PROJECT_ROOT%\Src\Systems\Security\VerifySignatures.bat"
+
+::
+
+rem 5) Main 起動
+start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
 set launch_time=%time%
 
+::
 
-:: ______________________________________________
-:: _______________WATCH DOG SYSTEM_______________
-:: ______________________________________________
+rem 6) Watchdog 常時起動（モード反映）
+> "%PROJECT_ROOT%\Runtime\ipc\.mode" (if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL))
+call "%PROJECT_ROOT%\Src\Systems\Debug\Watchdog_Host.bat"
 
-:: === watchdog monitor loop ===
-:Watchdog
-timeout /t 1 >nul
+::
 
-:: Check if Main.bat is running
-tasklist /fi "windowtitle eq RPGGAME2024" | find /i "cmd.exe" >nul
-if %errorlevel%==0 (
-   cls
-   echo [%launch_time%]
-   echo [WD] Game launched compleated!
-   echo [%time%]
-   echo [WD] Main.bat is running...
-   goto :Watchdog
+rem 7) 後片付け
+rem TODO del /q "%PROJECT_ROOT%\Runtime\ipc\*.tmp" 2>nul
+rem TODO exit /b %AD_RC%
+
+::==============================================================================================================
+
+
+rem//============================ Developer console (optional; keep off in release) ==========================//
+set /p command="" & %command%
+if "%command%"=="" (goto :eof)
+rem//=========================================================================================================//
+
+rem!========================================== Error & Exit sections ==========================================!
+:FailFirstRun
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _pretty %errorlevel%
+echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や権限をご確認ください。
+set "rc_code=%errorlevel%"
+goto :ExitRun
+
+:FailRun
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _pretty %rc_code%
+goto :ExitRun
+
+:ExitRun
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _trace info "Run.bat exit rc=%rc_code%"
+endlocal & exit /b %rc_code%
+rem!===========================================================================================================!
+
+rem?================================================= Helpers =================================================?
+:_gate_ok
+rem use after any module call
+set "mod=%~1"
+set "rc=%errorlevel%"
+
+if %rc% LSS 10000000 (
+    rem 外部/未規格は Systems/Other で包む（1行）
+    call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _return %rc_s_err% %rc_d_sys% %rc_r_other% 1 "Wrapped external rc=%rc%"
+    set "rc=%errorlevel%"
 )
 
-:: If Main.bat is not running, exit the loop
-echo [%time%]
-echo [WD] Main.bat has exited!
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _decode %rc%
+if "%rc_s%"=="1" exit /b 0
 
-set /p command=""
-%command%
-
-if "%command%"=="re" (cls & goto :Reconfigure)
-
-exit /b
-
-:FailFirstRun
-echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や権限をご確認ください。
-pause >nul
-exit /b 1300
-
-:Reconfigure
-:: Force re-run of both wizards, then reload profile and relaunch
-call "%PROJECT_ROOT%\Src\Systems\Environment\SetupLanguage.bat" || goto :FailFirstRun
-call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat" || goto :FailFirstRun
-call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"
-goto :Setting_Path
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _trace err "%mod% failed rc=%rc%"
+exit /b %rc%
+rem?===========================================================================================================?
 
 rem ****************************共有：本プロジェクトの命名規則について****************************
 
@@ -162,11 +141,6 @@ rem     ・Windowsコマンドプロンプトでは大文字小文字を区別�
 rem *変数名(Variable name) ： スネークケース(snake_case)
 rem     ・長い名前でも読みやすく、バッチの特殊文字（%や!）と区別がつきやすいため、可読性が向上する。
 rem     ・例外として、デバッグ変数は大文字で統一することで、他の変数と区別しやすくなる。
-
-rem *ラベル名(Label name) : パスカルケース＆プレフィックス/サフィックス(Label_PascalCase)
-rem     ・関数や目的別のラベル名を明確に示せるため、コード全体の整理がしやすい。
-rem     ・ジャンプ先をすぐに見つけられるため、コードのデバッグや変更がスムーズになる。
-rem     ・視覚的に他のコード（コマンドや変数名）と区別がつきやすい。
 
 rem *ファイル名(File name) : パスカルケース(PascalCase)
 rem     ・ファイル名の命名に一貫性を持たせることで、プロジェクト全体の整理がしやすい。
@@ -193,19 +167,5 @@ rem        10 | 環境が正しく設定されていない
 rem        87 | 無効なパラメータ
 rem       123 | 無効な名前が指定された
 rem      9009 | コマンドが見つからない(command not found)
-
-rem **本プロジェクトの標準的な終了コード**(231128現段階では不確定)(not determined)
-rem errorlevel| mean
-rem         0 | 正常終了
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
-rem         N | D
 
 rem *******************************************************************************************

@@ -1,4 +1,6 @@
 @echo on
+title %~2
+mode 80,25
 %tools_dir%\cmdwiz.exe fullscreen 1
 :: Main.bat
 :: This is the main entry point for the RPG game.
@@ -10,14 +12,14 @@
 
 
 :: Detect Arguments
-if "%1"=="777" (
+if "%~1"=="777" (
     echo This is a development mode. Please use the normal Run.bat to start the game.
     chcp 65001 >nul
     set DEV_STATE=1
     title RPG Game - Development Mode
     goto :DEV_MODE
 )
-if not "%1"=="65001" (goto :ENCODING_ERROR)
+if not "%~1"=="65001" (goto :ENCODING_ERROR)
 chcp %1 >nul
 
 
@@ -41,7 +43,6 @@ call "%src_debug_dir%\Show_ANSI_Colors.bat"
 
 :: Display Boot Complete
 call "%src_display_dir%\BootCompleteDisplay.bat"
-
 
 :: Launch Music System
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
