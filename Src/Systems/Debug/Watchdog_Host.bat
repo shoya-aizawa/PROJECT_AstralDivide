@@ -1,42 +1,38 @@
-@echo off & setlocal EnableDelayedExpansion
-set "ROOT=%PROJECT_ROOT%"
-set "IPC=%ROOT%\Runtime\ipc"
+@echo off & setlocal EnableExtensions EnableDelayedExpansion
+chcp 65001 >nul
+cls
+
+rem ===== 引数: 1=IPC_DIR(任意) 2=TITLE(任意) =====
+if "%~1"=="" (
+  if defined runtime_ipc_dir (set "IPC_DIR=%runtime_ipc_dir%") else set "IPC_DIR=%PROJECT_ROOT%\Runtime\IPC"
+) else (
+  set "IPC_DIR=%~1"
+)
+for %%A in ("%IPC_DIR%") do set "IPC_DIR=%%~fA"
+
+set "TITLE=%~2"
+if not defined TITLE set "TITLE=AstralDivide[v0.1.0]"
+
+rem 監視ディレクトリだけ確保
+if not exist "%IPC_DIR%" md "%IPC_DIR%" >nul 2>&1
+
+echo [WD] start  ipc=%IPC_DIR%
+echo [WD] target title="%TITLE%"
+echo [WD] press Ctrl+C to exit
 
 :loop
-for /f "usebackq delims=" %%L in ("%IPC%\.mode") do set "MODE=%%L" 2>nul
-
-rem ---- センチネル（常時）：Mainの生存/クラッシュ検出・簡易ログ ----
-rem TODO: .pid 心拍確認、異常終了の記録など
-%tools_dir%\cmdwiz.exe delay 10
-:: Check if Main.bat is running
-tasklist /fi "windowtitle eq AstralDivide[v0.1.0]" | find /i "cmd.exe" >nul
-if %errorlevel%==0 (
-   cls
-   echo [%launch_time%]
-   echo [WD] Main.bat is launched!
-   echo [%time%]
-   echo [WD] Main.bat is running...
-   goto :loop
-) else if %errorlevel%==1 (
-   echo [%time%]
-   echo [WD] Main.bat has exited!
+rem タイトル照合（リテラル検索 /L を明示）
+tasklist /v /fi "IMAGENAME eq cmd.exe" | findstr /I /L /C:"%TITLE%" >nul
+if errorlevel 1 (
+  echo [!time!] miss
+) else (
+  echo [!time!] alive
 )
 
-rem ---- ホスト（INTERCEPTのみ）：RVPディスパッチ ----
-if /i "%MODE%"=="INTERCEPT" (
-   for %%F in ("%IPC%\events\*.rvp") do call :handle "%%~fF"
-)
-timeout /t 0 /nobreak >nul & goto :loop
+if exist "%IPC_DIR%\.stop" goto :stop
+timeout /t 1 >nul
+goto :loop
 
-:handle
-set "F=%~1"
-for /f "usebackq tokens=1,* delims==" %%A in (`type "%F%"`) do set "%%A=%%B"
-for %%P in ("%~dp0Plugins\*.bat") do (
-   call "%%~fP"
-   if defined ACTION (
-      > "%IPC%\replies\%~nF.ack" (echo ACTION=!ACTION!&echo PAYLOAD=!PAYLOAD!&echo TTL_MS=!TTL_MS!)
-      set ACTION=&set PAYLOAD=&set TTL_MS=& goto :done
-   )
-)
-:done
-del "%F%" >nul 2>&1 & exit /b
+:stop
+echo [WD] stop
+exit /b 0

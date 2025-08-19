@@ -1,14 +1,21 @@
-Folder PATH listing
-Volume serial number is 9665-CE6B
+フォルダー パスの一覧
+ボリューム シリアル番号は 9665-CE6B です
 C:.
-|   .gitattributes
-|   .gitignore
-|   AstralDivide.code-workspace
+|   .txt
+|   AstralDivide.bat
+|   CONTACT_NOTICE.md
 |   LICENSE.md
-|   tree.txt
+|   TERMS_OF_SERVICE.md
 |   
 +---Assets
 |   +---Docs
+|   |       Astral_Divide_Developer_Deck_ja.pptx
+|   |       Astral_Divide_Interception_Rvp_Spec_v_1.md
+|   |       Astral_Divide_Overall (Layer & Module) Architecture_Diagram.md
+|   |       Astral_Divide_Promo_ja.pptx
+|   |       Astral_Divide_Return_Error_Code_Standard_v_1.md
+|   |       Astral_Divide_Run_To_Main_Protocol_R2M_v_2.md
+|   |       Astral_Divide_Signature_Protocol_v_1.md
 |   |       Astral_Divide_World.md
 |   |       error_code_main_menu.md
 |   |       Interception_Protocol.md
@@ -19,15 +26,22 @@ C:.
 |   +---Images
 |   |       AD_CHRONICLES_OF_ASTRAL_DIVIDE.png
 |   |       AD_Heroine.png
+|   |       AD_Jacket_Image[Beta].ico
 |   |       AD_Jacket_Image[Beta].png
+|   |       AD_Jacket_Image[Beta]2.ico
 |   |       AD_Player.png
 |   |       AD_Player_and_Heroine.png
 |   |       AD_Player_Mini.bmp
+|   |       AD_StarrySky.png
 |   |       AD_WorldView.png
 |   |       
 |   \---Sounds
 |       |   BattleMusic.wav
+|       |   _LICENSE_NONCOMMERCIAL.md
 |       |   
+|       +---EternalGround
+|       |       EternalGround.wav
+|       |       
 |       +---RevelationOfGod
 |       |       RevelationOfGod.wav
 |       |       [copyrights]Music by PeriTune ( httpswww.youtube.com@PeriTune )
@@ -46,19 +60,52 @@ C:.
 |               Enter3.wav
 |               Move.wav
 |               
++---Config
+|   |   profile.env
+|   |   
+|   +---Cache
+|   |   \---Screen
+|   |       \---DESKTOP-MAIN
+|   |               screen_config.env
+|   |               
+|   +---Logs
+|   |       boot_.log
+|   |       env_.log
+|   |       guard_.log
+|   |       lang_.log
+|   |       run_.log
+|   |       wizard_.log
+|   |       
+|   \---Runtime
+|       \---IPC
+|           |   .mode
+|           |   
+|           +---events
+|           \---replies
++---Saves
 +---Src
 |   +---Data
-|   +---Internet
+|   |   +---EnemyData
+|   |   +---ItemData
+|   |   \---PlayerData
 |   +---Main
 |   |       Main.bat
 |   |       Run.bat
 |   |       
+|   +---Network
+|   |       Marketplace_BuyItem.bat
+|   |       Marketplace_Demo.bat
+|   |       Marketplace_OfferItem.bat
+|   |       Marketplace_ShowItems.bat
+|   |       ReadChat.bat
+|   |       SendChat.bat
+|   |       SendVote.bat
+|   |       
 |   +---Stories
 |   |   +---Scenes
-|   |   |   |   Prologue_ver.0.bat
-|   |   |   |   
 |   |   |   +---00_NewGame
 |   |   |   |       EnterYourName.bat
+|   |   |   |       NewGame.bat
 |   |   |   |       
 |   |   |   +---01_Prologue
 |   |   |   +---02_Episode01
@@ -85,8 +132,18 @@ C:.
 |       |   InitializeModule.bat
 |       |   
 |       +---Audio
+|       |       Play_BGM.bat
+|       |       Play_BGM.ps1
+|       |       
+|       +---Bootstrap
+|       |       Bootstrap_Init.bat
+|       |       
 |       +---Debug
+|       |       InteractivePicker.bat
+|       |       ReturnCodeConst.bat
+|       |       ReturnCodeUtil.bat
 |       |       Show_ANSI_Colors.bat
+|       |       Watchdog_Host.bat
 |       |       
 |       +---Display
 |       |   |   BootCompleteDisplay.bat
@@ -99,17 +156,32 @@ C:.
 |       |   |       TypeWriter_v2.3.bat
 |       |   |       
 |       |   \---Templates
+|       |           DisplayFrame_01 copy.txt
 |       |           DisplayFrame_01.txt
 |       |           DisplayFrame_02.txt
 |       |           EYNDisplay.txt
 |       |           MainMenuDisplay.txt
 |       |           [DEV]SelectSaveDataDisplay.txt
 |       |           
+|       +---Environment
+|       |       LoadEnv.bat
+|       |       ScreenEnvironmentDetection.bat
+|       |       SettingPath.bat
+|       |       SetupLanguage.bat
+|       |       SetupStorageWizard.bat
+|       |       
+|       +---Launcher
+|       |       LaunchGuard.bat
+|       |       
 |       \---SaveSys
 |               SaveDataDetectSystem.bat
 |               SaveDataSelector.bat
 |               
 +---Test
+|       AstralDivide.bat
+|       ReturnCodeUtil_SmokeTest.bat
+|       tree.txt
+|       
 +---Tools
 |       cmdbkg.exe
 |       cmdgfx.exe

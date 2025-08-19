@@ -44,7 +44,6 @@ call :padnum %RC_CCC% 3 RC_CCC || (endlocal & exit /b 3)
 set "CODE=%RC_S%%RC_DD%%RC_RR%%RC_CCC%"
 echo %CODE%
 endlocal & set "CODE=%CODE%"
-echo %CODE%
 exit /b 0
 
 :decode
@@ -96,22 +95,26 @@ exit /b 0
 rem Args: [-trace] LEVEL TAG MSG...
 if /i "%~1"=="-trace" shift
 
-rem 1) LEVEL / TAG を確定
+setlocal EnableDelayedExpansion
 set "LEVEL=%~1"
 set "TAG=%~2"
-
-rem 2) 残りを安全に収集（%*は使わない）
 set "MSG="
+
+rem ★ Collect after discarding LEVEL and TAG (shift twice)
+shift /1 & shift /1
+
 :__trace_collect
-shift /1
 if "%~1"=="" goto :__trace_emit
-if defined MSG (set "MSG=%MSG% %~1") else set "MSG=%~1"
+if defined MSG (set "MSG=!MSG! %~1") else set "MSG=%~1"
+shift /1
 goto :__trace_collect
 
 :__trace_emit
 if not defined LOGFILE call :init_log
->>"%LOGFILE%" echo [%DATE% %TIME%] %LEVEL% %TAG% %MSG%
+>>"%LOGFILE%" echo [%DATE% %TIME%] %LEVEL% %TAG% "!MSG!"
+endlocal
 exit /b 0
+
 
 
 
@@ -184,38 +187,59 @@ endlocal & set "%ov%=%name%"
 exit /b 0
 
 :init_log
-set "LOGDIR=%~dp0..\..\..\Logs"
+rem --- すでに LOGFILE が決まっていれば再初期化しない（多重生成防止）
+if defined LOGFILE exit /b 0
+
+rem --- ログ出力先ディレクトリの決定（優先順：外部指定→SettingPathの変数→従来フォールバック）
+if not defined LOGDIR (
+  if defined CONFIG_LOGS_DIR (
+    set "LOGDIR=%CONFIG_LOGS_DIR%"
+  ) else if defined config_logs_dir (
+    set "LOGDIR=%config_logs_dir%"
+  ) else (
+    set "LOGDIR=%~dp0..\..\..\Logs"
+  )
+)
 md "%LOGDIR%" >nul 2>&1
 
-rem --- mode: daily | session | single (default: daily)
-if not defined LOG_MODE set "LOG_MODE=daily"
+rem --- 既定モード/プレフィックス
+if not defined LOG_MODE   set "LOG_MODE=daily"    rem daily|session|single
+if not defined LOG_PREFIX set "LOG_PREFIX=ad"
 
-rem --- tags (ロケール依存の記号を安全化)
+rem --- タグ生成（初回のみ）
 set "DATE_TAG=%DATE:/=-%"
 set "TIME_TAG=%TIME::=-%"
 set "TIME_TAG=%TIME_TAG:.=-%"
 set "TIME_TAG=%TIME_TAG: =0%"
 
-rem --- prefix も任意で変えられるように（未指定なら ad）
-if not defined LOG_PREFIX set "LOG_PREFIX=ad"
-
+rem --- session はセッション固定のタグを採用（毎回ファイルを増やさない）
 if /i "%LOG_MODE%"=="session" (
-  set "LOGFILE=%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%_%TIME_TAG%.log"
+  if not defined LOG_SESSION_TAG set "LOG_SESSION_TAG=%DATE_TAG%_%TIME_TAG%"
+  set "LOGFILE=%LOGDIR%\%LOG_PREFIX%_%LOG_SESSION_TAG%.log"
 ) else if /i "%LOG_MODE%"=="single" (
   set "LOGFILE=%LOGDIR%\%LOG_PREFIX%.log"
 ) else (
-  rem daily
   set "LOGFILE=%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%.log"
 )
 
-rem --- 単一ファイルモードの簡易ローテーション（5MB超えたら退避）
-if /i "%LOG_MODE%"=="single" if exist "%LOGFILE%" (
-  for %%A in ("%LOGFILE%") do set "SZ=%%~zA"
-  if defined SZ if %SZ% GEQ 5242880 (
-     move /y "%LOGFILE%" "%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%_%TIME_TAG%.log" >nul
-  )
-)
+rem --- single の簡易ローテ（遅延展開回避のため別ルーチン）
+if /i "%LOG_MODE%"=="single" if exist "%LOGFILE%" call :_rotate_single
 exit /b 0
+
+:_rotate_single
+setlocal EnableDelayedExpansion
+for %%A in ("%LOGFILE%") do set "SZ=%%~zA"
+if defined SZ if !SZ! GEQ 5242880 (
+  set "DATE_TAG=%DATE:/=-%"
+  set "TIME_TAG=%TIME::=-%"
+  set "TIME_TAG=%TIME_TAG:.=-%"
+  set "TIME_TAG=%TIME_TAG: =0%"
+  move /y "%LOGFILE%" "%LOGDIR%\%LOG_PREFIX%_%DATE_TAG%_%TIME_TAG%.log" >nul
+)
+endlocal & exit /b 0
+
+
+
 
 
 :usage

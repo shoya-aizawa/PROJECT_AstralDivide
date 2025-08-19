@@ -6,91 +6,96 @@
 ::    | checks the environment and set up the necessary configurations. |
 ::    +=================================================================+
 
-:: rem !) this file alredy restarted by [@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof] command. (!
-:: rem !) so, can't recording return value by use exit /b options. if want to use, a separate log file must be generated.   (!
+:: rem !) this file will restarting by [@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof] command. (!
+:: rem !) so, can't recording return value by use exit /b options to "AstralDivide.bat". if want to use, a separate log file must be generated.   (!
 
-::
 @if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof
 @echo off
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
 @prompt $G
 @chcp 65001 >nul
 @mode 90,35
-::
 
+rem============================================= RCC/RCU bootstrap =============================================
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeConst.bat" || (
+    rem 定数の読み込みに失敗 (レガシーコードで最小フォールバック) : Systems/Other/001
+    set "RC=90690001" & goto :FailRun
+)
+rem ★ ここで最初のトレースが Config\Logs に出るように強制（SettingPath 前でも集約先使用）
+if not defined CONFIG_LOGS_DIR set "CONFIG_LOGS_DIR=%PROJECT_ROOT%\Config\Logs"
 
+rem OKコードを定義 (FLOW/SYS/OTHER/000)
+for /f %%E in ('call "%RCU%" -build %rc_s_flow% %rc_d_sys% %rc_r_other% 000') do set "RC_OK=%%E"
 
-rem TODO: 理想処理フロー
-rem !!!! Flow -1  :  未実装
+rem ログ設定 (任意) : このラン実行だけセッションログ化
+set "LOG_MODE=session" & set "LOG_PREFIX=run"
+call "%RCU%" -trace INFO Run "start profile=? args=%*"
 
-rem **** Flow 0   :  実装済み
-
-rem ???? Flow 1   :  仮実装済み
-
-rem ???? Flow 2   :  仮実装済み
-
-rem ???? Flow 3   :  仮実装済み
-
-rem !!!! Flow 4   :  未実装
-
-rem ???? Flow 5   :  仮実装済み
-
-rem ???? Flow 6   :  仮実装済み
-
-rem !!!! Flow 7   :  未実装
-::==============================================================================================================
-rem -1) AD_RC initialization (load constants)
-rem TODO: if not defined RC_S_FLOW call "%PROJECT_ROOT%\Src\Systems\Debug\Rc.Const.bat" || (set "AD_RC=90690001" & goto :FailRun)
-
-::
+rem================================================= Main Flow =================================================
 
 rem 0) Mode Interpretation (Default=RUN) (*RUN*|DEBUG|INTERCEPT)
 set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
 if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
 if /i "%~1"=="-mode" if /i "%~2"=="intercept" set "BUILD_PROFILE=dev" & set "INTERCEPT_MODE=1"
-
-::
+call "%RCU%" -trace INFO Run "mode profile=%BUILD_PROFILE% intercept=%INTERCEPT_MODE%"
 
 rem 1) LaunchGuard
 call "%PROJECT_ROOT%\Src\Systems\Launcher\LaunchGuard.bat" "%PROJECT_ROOT%"
 call :_gate_ok "LaunchGuard" || goto :FailFirstRun
-::
+call "%RCU%" -trace INFO Run "vars: src_env_dir=%src_env_dir%"
 
-rem 2) Bootstrap
+rem 1.5) Bootstrap
 call "%PROJECT_ROOT%\Src\Systems\Bootstrap\Bootstrap_Init.bat" "%PROJECT_ROOT%"
-if not %errorlevel% equ 10690000 goto :FailFirstRun
+if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
+call "%RCU%" -trace INFO Run "bootstrap ok"
 
-::
+rem 2) Path 解決は “最上位スコープ” で実施
+call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
+if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
+call "%RCU%" -trace INFO Run "paths ready root=%root_dir%"
+
+
+rem  2.5) 旧 -} 新 生成物のマイグレーション（集約先へ寄せる）
+rem     -Up until now, config_logs_dir /runtime_ipc_dir has been defined by SettingPath
+if exist "%PROJECT_ROOT%\Logs" (
+  if not exist "%config_logs_dir%" md "%config_logs_dir%" >nul 2>&1
+  move /y "%PROJECT_ROOT%\Logs\*" "%config_logs_dir%" >nul 2>&1
+  dir /b "%PROJECT_ROOT%\Logs" | findstr /r /c:"^." >nul || rd "%PROJECT_ROOT%\Logs"
+  call "%RCU%" -trace INFO Run "migrated Logs -> %config_logs_dir%"
+)
+if exist "%PROJECT_ROOT%\Runtime\ipc" (
+  if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+  move /y "%PROJECT_ROOT%\Runtime\ipc\*" "%runtime_ipc_dir%" >nul 2>&1
+  call "%RCU%" -trace INFO Run "migrated Runtime\ipc -> %runtime_ipc_dir%"
+)
 
 rem 3) Environment_Check (PowerShell availability/screen/VT)
 call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%PROJECT_ROOT%"
-if not %errorlevel% equ 10690000 goto :FailFirstRun
-
-::
+if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
+call "%RCU%" -trace INFO Run "screen env ok"
 
 rem 4) Signature Verification (Fail-Fast)
 rem TODO call "%PROJECT_ROOT%\Src\Systems\Security\VerifySignatures.bat"
 
-::
-
 rem 5) Main 起動
 start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
 set launch_time=%time%
+call "%RCU%" -trace INFO Run "main launched time=%launch_time%"
 
-::
+rem 6) Watchdog always running (mode reflected)
+rem Output destination is the aggregated IPC directory determined by SettingPath.
+if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+( if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL) ) > "%runtime_ipc_dir%\.mode"
 
-rem 6) Watchdog 常時起動（モード反映）
-> "%PROJECT_ROOT%\Runtime\ipc\.mode" (if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL))
-call "%PROJECT_ROOT%\Src\Systems\Debug\Watchdog_Host.bat"
+rem Pass IPC_DIR to WD as an argument
+call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.0]"
 
-::
 
 rem 7) 後片付け
-rem TODO del /q "%PROJECT_ROOT%\Runtime\ipc\*.tmp" 2>nul
-rem TODO exit /b %AD_RC%
+rem TODO del /q "%runtime_ipc_dir%\*.tmp" 2>nul
+rem TODO exit /b %RC%
 
-::==============================================================================================================
-
+rem=============================================================================================================
 
 rem//============================ Developer console (optional; keep off in release) ==========================//
 set /p command="" & %command%
@@ -99,37 +104,36 @@ rem//===========================================================================
 
 rem!========================================== Error & Exit sections ==========================================!
 :FailFirstRun
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _pretty %errorlevel%
+rem 直前のRCを人間可読表示
+call "%RCU%" -pretty %errorlevel%
+call "%RCU%" -trace ERR Run "first-run failed rc=%errorlevel%"
 echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や権限をご確認ください。
-set "rc_code=%errorlevel%"
+pause >nul
 goto :ExitRun
 
 :FailRun
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _pretty %rc_code%
+call "%RCU%" -trace ERR Run "fatal boot rc=%RC%"
 goto :ExitRun
 
 :ExitRun
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _trace info "Run.bat exit rc=%rc_code%"
-endlocal & exit /b %rc_code%
+call "%RCU%" -trace INFO Run "exit"
+pause >nul
+exit /b
 rem!===========================================================================================================!
 
 rem?================================================= Helpers =================================================?
 :_gate_ok
-rem use after any module call
-set "mod=%~1"
-set "rc=%errorlevel%"
-
-if %rc% LSS 10000000 (
-    rem 外部/未規格は Systems/Other で包む（1行）
-    call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _return %rc_s_err% %rc_d_sys% %rc_r_other% 1 "Wrapped external rc=%rc%"
-    set "rc=%errorlevel%"
+rem Usage: call :_gate_ok StepName
+set "STEP=%~1"
+set "RC=%errorlevel%"
+if "%RC%"=="%RC_OK%" (
+    call "%RCU%" -trace INFO Run "%STEP% ok rc=%RC%"
+    exit /b 0
 )
-
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _decode %rc%
-if "%rc_s%"=="1" exit /b 0
-
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat" _trace err "%mod% failed rc=%rc%"
-exit /b %rc%
+rem NG: 整形表示して戻る（呼び出し側で goto :FailFirstRun）
+call "%RCU%" -trace WARN Run "%STEP% fail rc=%RC%"
+call "%RCU%" -pretty %RC%
+exit /b 1
 rem?===========================================================================================================?
 
 rem ****************************共有：本プロジェクトの命名規則について****************************

@@ -1,7 +1,7 @@
 @echo off
 cls
 
-%tools_dir%\cmdbkg.exe "%assets_images_dir%\AD_StarrySky.png" /b
+%tools_dir%\cmdbkg.exe "%assets_images_dir%\AD_Selenos_Ritual.png" /b
 
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_revelation_dir%\RevelationOfGod.wav" repeat 15
 

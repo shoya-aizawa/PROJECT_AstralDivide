@@ -25,3 +25,8 @@ set rc_r_net=20
 set rc_r_valid=30
 set rc_r_compat=50
 set rc_r_other=90
+
+rem PROJECT_ROOT規定済みを前提
+if not defined PROJECT_ROOT (exit /b 1)
+set "RCU=%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat"
+set "RCC=%~f0"

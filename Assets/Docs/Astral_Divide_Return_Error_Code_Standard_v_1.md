@@ -3,7 +3,7 @@
 **Project:** PROJECT\_AstralDivide / HedgeHogSoft\
 **File:** `Src/Systems/Debug/ReturnCodeUtil.bat`（例）\
 **Status:** Draft v1.0（実装準拠）\
-**Purpose:** 統一戻り値（AD\_RC: `S DD RR CCC` → 8桁）を **生成／整形／返却／記録** する小型CLI
+**Purpose:** 統一戻り値（RC: `S DD RR CCC` → 8桁）を **生成／整形／返却／記録** する小型CLI
 
 ---
 
@@ -13,7 +13,7 @@
   ※`/help` 受理、`/build` は内部で `-build` に正規化。
 - **区切り入力OK**：`-build 1 01 01 001` も `"1-01-01-001"` も可。
 - **“自己防衛シフト”**：ディスパッチャでは `shift` せず、各ハンドラ先頭で必要時のみ `shift`。
-- **戻り値規約**：`-return`/`-throw` は **終了コード＝AD\_RC**。それ以外は `0`（成功）/`3`（引数不正）。
+- **戻り値規約**：`-return`/`-throw` は **終了コード＝RC**。それ以外は `0`（成功）/`3`（引数不正）。
 - **ログ**：`-trace` は `Logs\` へ追記。`LOG_MODE`（`daily|session|single`）で回転/分割を選択。
 
 ---
@@ -41,7 +41,7 @@ help                                  -> 使い方
 
 ## 2. 引数仕様
 
-### 2.1 AD\_RC（8桁）構造
+### 2.1 RC（8桁）構造
 
 ```
 S DD RR CCC

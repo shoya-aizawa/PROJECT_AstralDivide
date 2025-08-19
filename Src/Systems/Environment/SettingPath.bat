@@ -1,11 +1,49 @@
-:: ─── If PROJECT_ROOT exists, use it. If not, complete it yourself. ──
+@echo off
+setlocal EnableExtensions
+rem -----------------------------------------------------------------------------
+rem SettingPath.bat  (RCU/RC 統合版)
+rem 役割:
+rem   ルートから全ディレクトリ変数を解決し、親スコープへエクスポート
+rem   Optionally add Tools to your PATH without duplicates
+rem RC:
+rem   FLOW/SYS/OTHER/000 → 1-06-90-000 : OK
+rem -----------------------------------------------------------------------------
+
+rem --- RCU/RECS bootstrap（直叩きでも自律） ---
+if not defined PROJECT_ROOT for %%I in ("%~dp0\..\..\..") do set "PROJECT_ROOT=%%~fI"
+if not defined RCU set "RCU=%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat"
+call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeConst.bat" 2>nul
+if not defined rc_s_flow  set rc_s_flow=1
+if not defined rc_d_sys   set rc_d_sys=06
+if not defined rc_r_other set rc_r_other=90
+
+for /f "delims=" %%R in ('call "%RCU%" -build %rc_s_flow% %rc_d_sys% %rc_r_other% 000') do set "RC_OK=%%R"
+
+rem --- ESC（未定義なら取得） ---
+if not defined esc for /f %%e in ('cmd /k prompt $e^<nul') do set "esc=%%e"
+
+rem ─── If PROJECT_ROOT exists, use it. If not, complete it yourself. ──
 if defined PROJECT_ROOT (
    set "root_dir=%PROJECT_ROOT%"
 ) else (
-   rem %~dp0 = location of this script (…\Src\Main\)
-   rem Expand two levels up to get the "Project Root"
    for %%I in ("%~dp0\..\..\..") do set "root_dir=%%~fI\"
 )
+
+rem --- 追加: SAVE_MODE 未定義なら profile.env を読み込んで自律化 ---
+if not defined SAVE_MODE (
+  set "_cfg_guess=%root_dir%\Config"
+  if not defined CFG_DIR set "CFG_DIR=%_cfg_guess%"
+  if exist "%CFG_DIR%\profile.env" (
+    call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_DIR%\profile.env" >nul
+    set "RC=%errorlevel%"
+    if not "%RC%"=="%RC_OK%" (
+      rem オプション読み込みなので失敗しても落とさない（ログだけ）
+      call "%RCU%" -trace WARN SettingPath "LoadEnv optional rc=%RC% file=%CFG_DIR%\profile.env"
+    )
+  )
+)
+
+
 
 ::===== Under Assets ====================================================
 set "assets_dir=%root_dir%\Assets"
@@ -86,20 +124,65 @@ set "test_dir=%root_dir%\Test"
 set "tools_dir=%root_dir%\Tools"
 set "dev_dir=%root_dir%\[DEV]"
 
-rem //===== Verification output (for debug) =============================
-rem //echo root_dir                = %root_dir%
-rem //echo config_active_dir       = %config_active_dir%
-rem //echo config_profile_file     = %config_profile_file%
-rem //echo screen_cfg_file         = %screen_cfg_file%
-rem //echo saves_active_dir        = %saves_active_dir%
-rem //echo src_main_dir            = %src_main_dir%
-rem //echo tools_dir               = %tools_dir%
-rem //timeout /t 1
+rem --- ここまでで定義した変数を親スコープへエクスポート -------------------
+endlocal & (
+  set "esc=%esc%"
+  set "root_dir=%root_dir%"
+  set "assets_dir=%assets_dir%"
+  set "assets_docs_dir=%assets_docs_dir%"
+  set "assets_images_dir=%assets_images_dir%"
+  set "assets_sounds_dir=%assets_sounds_dir%"
+  set "assets_sounds_revelation_dir=%assets_sounds_revelation_dir%"
+  set "assets_sounds_starfall_dir=%assets_sounds_starfall_dir%"
+  set "assets_sounds_fx_dir=%assets_sounds_fx_dir%"
+  set "src_dir=%src_dir%"
+  set "src_data_dir=%src_data_dir%"
+  set "src_enemydata_dir=%src_enemydata_dir%"
+  set "src_itemdata_dir=%src_itemdata_dir%"
+  set "src_playerdata_dir=%src_playerdata_dir%"
+  set "src_main_dir=%src_main_dir%"
+  set "src_network_dir=%src_network_dir%"
+  set "src_stories_dir=%src_stories_dir%"
+  set "src_scenes_dir=%src_scenes_dir%"
+  set "src_scene_newgame_dir=%src_scene_newgame_dir%"
+  set "src_scene_prologue_dir=%src_scene_prologue_dir%"
+  set "src_textassets_dir=%src_textassets_dir%"
+  set "src_text_newgame_dir=%src_text_newgame_dir%"
+  set "src_text_prologue_dir=%src_text_prologue_dir%"
+  set "src_systems_dir=%src_systems_dir%"
+  set "src_audio_dir=%src_audio_dir%"
+  set "src_bootstrap_dir=%src_bootstrap_dir%"
+  set "src_debug_dir=%src_debug_dir%"
+  set "src_display_dir=%src_display_dir%"
+  set "src_display_mod_dir=%src_display_mod_dir%"
+  set "src_display_tpl_dir=%src_display_tpl_dir%"
+  set "src_env_dir=%src_env_dir%"
+  set "src_launcher_dir=%src_launcher_dir%"
+  set "src_savesys_dir=%src_savesys_dir%"
+  set "config_root_dir=%config_root_dir%"
+  set "config_active_dir=%config_active_dir%"
+  set "config_profile_file=%config_profile_file%"
+  set "config_cache_dir=%config_cache_dir%"
+  set "config_logs_dir=%config_logs_dir%"
+  set "screen_cache_dir=%screen_cache_dir%"
+  set "screen_cfg_file=%screen_cfg_file%"
+  set "saves_active_dir=%saves_active_dir%"
+  set "test_dir=%test_dir%"
+  set "tools_dir=%tools_dir%"
+  set "dev_dir=%dev_dir%"
+  set "state_root_dir=%config_active_dir%"
+  set "runtime_root_dir=%config_active_dir%\Runtime"
+  set "runtime_ipc_dir=%config_active_dir%\Runtime\IPC"
+  if not exist "%config_logs_dir%"   md "%config_logs_dir%"   >nul 2>&1
+  if not exist "%config_cache_dir%"  md "%config_cache_dir%"  >nul 2>&1
+  if not exist "%runtime_ipc_dir%"   md "%runtime_ipc_dir%"   >nul 2>&1
+)
 
-::===== Notice ==========================================================
-:: This configuration is resilient to structural changes:
-::  - Change only the *root* vars (assets_dir / config_root_dir etc.) and children follow.
-::  - Config is redirected by SAVE_MODE/CFG_DIR for portable/localappdata/custom.
+rem --- （任意）Tools を PATH に重複なく追加 --------------------------------
+set "PATH_TAG=;%PATH%;"
+echo %PATH_TAG% | find /I ";%tools_dir%;" >nul || set "PATH=%PATH%;%tools_dir%"
 
-echo %esc%[92m[OK]%esc%[0m Path variable setting completed successfully.
-timeout /t 1 > nul
+rem --- 表示 & RCU return ------------------------------------------------
+for /f %%e in ('cmd /k prompt $e^<nul') do set "ESC=%%e"
+echo %ESC%[92m[OK]%ESC%[0m Path variable setting completed successfully.
+call "%RCU%" -return %rc_s_flow% %rc_d_sys% %rc_r_other% 000

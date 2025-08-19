@@ -2,6 +2,7 @@
 title %~2
 mode 80,25
 %tools_dir%\cmdwiz.exe fullscreen 1
+
 :: Main.bat
 :: This is the main entry point for the RPG game.
 :: aka : "HUB Terminal"
@@ -9,7 +10,6 @@ mode 80,25
 :: and error code (return value) handling controls the system flow.
 :: error code material is in the bottom of this file.
 :: For complete guides, see the ErrorCodeReference.md file
-
 
 :: Detect Arguments
 if "%~1"=="777" (
@@ -33,7 +33,6 @@ call "%src_systems_dir%\InitializeModule.bat"
 :: Detect Save Data
 call "%src_savesys_dir%\SaveDataDetectSystem.bat"
 
-
 :: カラーシステム
 :: ここに将来的にMarkup言語のようなカラーコードを実装する予定
 :: 現在で言うと、Render系モジュール
@@ -46,6 +45,11 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 
 :: Launch Music System
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
+
+:: Background Image
+call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Jacket_Image_2_NoText.png" /b
+
+
 
 :: Debug Mode Check
 if not defined DEBUG_STATE set DEBUG_STATE=0

@@ -1,7 +1,7 @@
 ::[Bat To Exe Converter]
 ::
 ::YAwzoRdxOk+EWAjk
-::fBw5plQjdCyDJGyX8VAjFAhcQx2DAE+/Fb4I5/jHzvmTsEwRcOspcYve5pWdM+UH+XnNeJcq02lmue8zJhpbdRe/USY5qGlHjUaAI8ah4UHoSUfp
+::fBw5plQjdCyDJGyX8VAjFAhcQx2DAE+/Fb4I5/jHzvmTsEwRcOspcYve5pWdM+UH+XnNeJcq02lmue8zJhpbdRe/USY5qGlHjUaAI8ah/QbiRSg=
 ::YAwzuBVtJxjWCl3EqQJgSA==
 ::ZR4luwNxJguZRRnk
 ::Yhs/ulQjdF+5
@@ -32,9 +32,19 @@
 ::
 ::978f952a14a936cc963da21a135fa983
 @echo off
-:: Store the folder (root) in project_root
-set "PROJECT_ROOT=%~dp0"
-cd /d "%PROJECT_ROOT%"
+pushd "%~dp0" >nul || (
+   echo [E1001] Failed to enter project directory.
+   pause >nul
+   exit /b 1001
+   rem TODO : The error code is tentative
+)& rem ? below code has Normalized to no trailing backslash
+for %%A in (.) do set "PROJECT_ROOT=%%~fA"
 
-:: Inherit project_root as an environment variable in Run.bat
-call "%PROJECT_ROOT%Src\Main\Run.bat" %*
+:: --- VT activation is just once go (continue even if it fails)---
+reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: --- "Launch token" for direct launch prevention (verified on Run.bat side) ---
+set "GAME_LAUNCHER=1"
+
+:: --- Call the game itself (maintains the route, passes arguments directly) ---
+call "%PROJECT_ROOT%\Src\Main\Run.bat" %~1 %~2
