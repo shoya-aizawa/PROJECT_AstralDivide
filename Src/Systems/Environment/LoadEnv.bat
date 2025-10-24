@@ -3,7 +3,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 rem -----------------------------------------------------------------------------
 rem LoadEnv.bat  (RCU/RC 統合版)
 rem Usage : call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "C:\path\to\profile.env"
-rem Format: lines like ->  set "KEY=VALUE"
+rem Format: lines like set "KEY=VALUE"
 rem Comment lines must start with '#'
 rem RC:
 rem   FLOW/SYS/OTHER/000 → 1-06-90-000 : OK

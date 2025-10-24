@@ -22,6 +22,7 @@ set /p player_name="> "
 :: Input check (detect if player_name is empty)
 setlocal EnableDelayedExpansion
 if "%player_name%"=="" (
+   start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
    %tools_dir%\cmdwiz.exe setcursorpos 90 30
    echo %ESC%[90m※defaultのままでよろしいですか？%ESC%[0m
    %tools_dir%\cmdwiz.exe delay 800
@@ -34,12 +35,14 @@ if "%player_name%"=="" (
       endlocal
       set "player_name=シオン"
    ) else (
+      start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Cancel.wav"
       endlocal
       goto :loop
    )
 )
 
 :: Display the entered name
+start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter4.wav"
 call :display
 
 call :scene Scene02

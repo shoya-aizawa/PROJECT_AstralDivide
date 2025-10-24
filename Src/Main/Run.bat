@@ -6,84 +6,88 @@
 ::    | checks the environment and set up the necessary configurations. |
 ::    +=================================================================+
 
-:: rem !) this file will restarting by [@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof] command. (!
-:: rem !) so, can't recording return value by use exit /b options to "AstralDivide.bat". if want to use, a separate log file must be generated.   (!
-
-@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof
+@chcp 65001 >nul
 @echo off
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
 @prompt $G
-@chcp 65001 >nul
 @mode 90,35
-
-rem============================================= RCC/RCU bootstrap =============================================
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeConst.bat" || (
-    rem 定数の読み込みに失敗 (レガシーコードで最小フォールバック) : Systems/Other/001
-    set "RC=90690001" & goto :FailRun
-)
-rem ★ ここで最初のトレースが Config\Logs に出るように強制（SettingPath 前でも集約先使用）
-if not defined CONFIG_LOGS_DIR set "CONFIG_LOGS_DIR=%PROJECT_ROOT%\Config\Logs"
-
-rem OKコードを定義 (FLOW/SYS/OTHER/000)
-for /f %%E in ('call "%RCU%" -build %rc_s_flow% %rc_d_sys% %rc_r_other% 000') do set "RC_OK=%%E"
-
-rem ログ設定 (任意) : このラン実行だけセッションログ化
-set "LOG_MODE=session" & set "LOG_PREFIX=run"
-call "%RCU%" -trace INFO Run "start profile=? args=%*"
 
 rem================================================= Main Flow =================================================
 
-rem 0) Mode Interpretation (Default=RUN) (*RUN*|DEBUG|INTERCEPT)
+:: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT)
 set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
 if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
 if /i "%~1"=="-mode" if /i "%~2"=="intercept" set "BUILD_PROFILE=dev" & set "INTERCEPT_MODE=1"
-call "%RCU%" -trace INFO Run "mode profile=%BUILD_PROFILE% intercept=%INTERCEPT_MODE%"
+if /i not "%BUILD_PROFILE%"=="dev" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
 
-rem 1) LaunchGuard
-call "%PROJECT_ROOT%\Src\Systems\Launcher\LaunchGuard.bat" "%PROJECT_ROOT%"
-call :_gate_ok "LaunchGuard" || goto :FailFirstRun
-call "%RCU%" -trace INFO Run "vars: src_env_dir=%src_env_dir%"
+:: [1] LaunchGuard
+call "%~dp0..\Systems\Launcher\LaunchGuard.bat"
+set "LG_RC=%errorlevel%"
+if %LG_RC% neq 0 (
+	rem --- LG already printed user-facing message ---
+    rem --- Run.bat only performs controlled exit for upper logic ---
+    pause >nul
+    exit 900000%LG_RC%
+)
 
-rem 1.5) Bootstrap
-call "%PROJECT_ROOT%\Src\Systems\Bootstrap\Bootstrap_Init.bat" "%PROJECT_ROOT%"
+:: [2] RCS Bootstrap
+set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
+if not exist "%RCSU%" (
+	rem RCS_Util.bat not found : ERR/Systems/IO/case001
+	set "RCS_MISSING_TAG=RCS_Util.bat"
+	set "RCS_FALLBACK=90610001"
+	goto :FailRun
+)
+call "%RCSU%" -trace INFO "Run" "RCS bootstrap start"
+
+call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
+	rem RCS_Const.bat not found or failed to load : ERR/Systems/IO/case002
+	set "RCS_MISSING_TAG=RCS_Const.bat"
+	set "RCS_FALLBACK=90610002"
+	goto :FailRun
+)
+call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
+call "%RCSU%" -trace INFO "Run" "RCS ready [rc=%errorlevel%]"
+
+echo smoke test passthrough until step [2]
+pause
+:: [3] First-Run Initialization Steps
+call "%PROJECT_ROOT%\Src\Systems\Environment\ProfileInitializer.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
 call "%RCU%" -trace INFO Run "bootstrap ok"
 
-rem 2) Path 解決は “最上位スコープ” で実施
+:: [4] Path Setup
 call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
 call "%RCU%" -trace INFO Run "paths ready root=%root_dir%"
 
-
-rem  2.5) 旧 -} 新 生成物のマイグレーション（集約先へ寄せる）
-rem     -Up until now, config_logs_dir /runtime_ipc_dir has been defined by SettingPath
+:: [5] Resource Migration (Logs/IPC)
 if exist "%PROJECT_ROOT%\Logs" (
-  if not exist "%config_logs_dir%" md "%config_logs_dir%" >nul 2>&1
-  move /y "%PROJECT_ROOT%\Logs\*" "%config_logs_dir%" >nul 2>&1
-  dir /b "%PROJECT_ROOT%\Logs" | findstr /r /c:"^." >nul || rd "%PROJECT_ROOT%\Logs"
-  call "%RCU%" -trace INFO Run "migrated Logs -> %config_logs_dir%"
+	if not exist "%config_logs_dir%" md "%config_logs_dir%" >nul 2>&1
+	move /y "%PROJECT_ROOT%\Logs\*" "%config_logs_dir%" >nul 2>&1
+	dir /b "%PROJECT_ROOT%\Logs" | findstr /r /c:"^." >nul || rd "%PROJECT_ROOT%\Logs"
+	call "%RCU%" -trace INFO Run "migrated Logs -> %config_logs_dir%"
 )
 if exist "%PROJECT_ROOT%\Runtime\ipc" (
-  if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
-  move /y "%PROJECT_ROOT%\Runtime\ipc\*" "%runtime_ipc_dir%" >nul 2>&1
-  call "%RCU%" -trace INFO Run "migrated Runtime\ipc -> %runtime_ipc_dir%"
+	if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+	move /y "%PROJECT_ROOT%\Runtime\ipc\*" "%runtime_ipc_dir%" >nul 2>&1
+	call "%RCU%" -trace INFO Run "migrated Runtime\ipc -> %runtime_ipc_dir%"
 )
 
-rem 3) Environment_Check (PowerShell availability/screen/VT)
+:: [6] Environment Detection
 call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
 call "%RCU%" -trace INFO Run "screen env ok"
 
-rem 4) Signature Verification (Fail-Fast)
+:: [7] Security Verification
 rem TODO call "%PROJECT_ROOT%\Src\Systems\Security\VerifySignatures.bat"
 
-rem 5) Main 起動
+:: [8] Initiate Main.bat
 start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
 set launch_time=%time%
 call "%RCU%" -trace INFO Run "main launched time=%launch_time%"
 
-rem 6) Watchdog always running (mode reflected)
-rem Output destination is the aggregated IPC directory determined by SettingPath.
+:: [9] Watchdog Host Launch
 if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
 ( if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL) ) > "%runtime_ipc_dir%\.mode"
 
@@ -91,11 +95,29 @@ rem Pass IPC_DIR to WD as an argument
 call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.0]"
 
 
-rem 7) 後片付け
+:: [A] Cleanup Temporary Files
 rem TODO del /q "%runtime_ipc_dir%\*.tmp" 2>nul
 rem TODO exit /b %RC%
 
-rem=============================================================================================================
+:: [B] Normal Exit
+goto :ExitRun
+
+:: [C] Not Determined Yet
+
+:: [D] Not Determined Yet
+
+:: [E] Not Determined Yet
+
+:: [F] Not Determined Yet
+
+:: [1A] Extra Sections
+
+:: [1B] Extra Sections
+
+:: ...
+
+
+rem=============================================== Main Flow end ===============================================
 
 rem//============================ Developer console (optional; keep off in release) ==========================//
 set /p command="" & %command%
@@ -103,6 +125,7 @@ if "%command%"=="" (goto :eof)
 rem//=========================================================================================================//
 
 rem!========================================== Error & Exit sections ==========================================!
+:: Initialization failure
 :FailFirstRun
 rem 直前のRCを人間可読表示
 call "%RCU%" -pretty %errorlevel%
@@ -111,10 +134,30 @@ echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や�
 pause >nul
 goto :ExitRun
 
+:: Fatal launcher damage
 :FailRun
-call "%RCU%" -trace ERR Run "fatal boot rc=%RC%"
-goto :ExitRun
+if /i "%~1"=="-mode" if /i "%~2"=="debug" (
+	rem Debug mode: Show detailed error info in console
+	echo %esc%[31m[FATAL E1301]%esc%[0m Launcher is not working properly. Please try reinstalling.
+	echo Error code: %RCS_FALLBACK%
+	echo Missing component: %RCS_MISSING_TAG%
+	if defined RCSU (
+		call "%RCSU%" -trace ERR [Run] "FATAL startup rc=%RCS_FALLBACK%"
+		call "%RCSU%" -trace ERR [Run] "missing component=%RCS_MISSING_TAG%"
+	) else (
+		echo [FATAL] missing component=%RCS_MISSING_TAG% (code=%RCS_FALLBACK%) >> "%PROJECT_ROOT%\boot_fatal.log"
+	)
+	pause >nul
+	goto :ExitRun
+) else (
+	rem Normal mode: Show minimal error info
+	echo %esc%[31m[FATAL E1301]%esc%[0m Launcher is not working properly. Please try reinstalling.
+	echo Error code: %RCS_FALLBACK%
+	pause >nul
+	goto :ExitRun
+)
 
+:: Common exit(Utility)
 :ExitRun
 call "%RCU%" -trace INFO Run "exit"
 pause >nul
@@ -122,54 +165,43 @@ exit /b
 rem!===========================================================================================================!
 
 rem?================================================= Helpers =================================================?
-:_gate_ok
-rem Usage: call :_gate_ok StepName
-set "STEP=%~1"
-set "RC=%errorlevel%"
-if "%RC%"=="%RC_OK%" (
-    call "%RCU%" -trace INFO Run "%STEP% ok rc=%RC%"
-    exit /b 0
-)
-rem NG: 整形表示して戻る（呼び出し側で goto :FailFirstRun）
-call "%RCU%" -trace WARN Run "%STEP% fail rc=%RC%"
-call "%RCU%" -pretty %RC%
-exit /b 1
+:: Legacy code has been removed.
+:: Reason for removal: Each module is now self-contained using RCS.
 rem?===========================================================================================================?
 
-rem ****************************共有：本プロジェクトの命名規則について****************************
+rem ****************************Share: Naming Conventions for This Project****************************
 
-rem *コマンド (Command) : 小文字で統一(command)
-rem     ・コマンドは頻繁に使用されるため、小文字で統一することで視覚的ノイズを減らし、読みやすくなる。
-rem     ・Windowsコマンドプロンプトでは大文字小文字を区別しないため、小文字統一で問題なく動作する。
+rem *Command: Use lowercase consistently (command)
+rem - Commands are used frequently, so using lowercase consistently reduces visual noise and improves readability.
+rem - The Windows Command Prompt is case-insensitive, so using lowercase consistently works without issues.
 
-rem *変数名(Variable name) ： スネークケース(snake_case)
-rem     ・長い名前でも読みやすく、バッチの特殊文字（%や!）と区別がつきやすいため、可読性が向上する。
-rem     ・例外として、デバッグ変数は大文字で統一することで、他の変数と区別しやすくなる。
+rem *Variable name: Snake case (snake_case)
+rem - Long names are easier to read and are easily distinguished from batch special characters (% and !), improving readability.
+rem - As an exception, using uppercase consistently for debug variables makes them easier to distinguish from other variables.
 
-rem *ファイル名(File name) : パスカルケース(PascalCase)
-rem     ・ファイル名の命名に一貫性を持たせることで、プロジェクト全体の整理がしやすい。
-rem     ・ファイル名がOS環境（例: Windows）で大文字小文字の区別がつかなくても、構造的に分かりやすい。
+rem *File name: Pascal case (PascalCase)
+rem - Consistent filename naming makes it easier to organize the entire project.
+rem - The file name is structurally easy to understand even if the operating system environment (e.g., Windows) does not distinguish between uppercase and lowercase letters.
 
-rem *フォルダ名(Folder name) : パスカルケース(PascalCase)
-rem     ・視覚的に統一感を持たせることで、管理が容易になる。
-rem     ・ファイル名と統一し、プロジェクト全体の一貫性を保つため。
-rem     ・フォルダ名が階層構造を整理する役割を果たし、複数のファイルや機能を含む場合に利便性が高まる。
+rem *Folder name: PascalCase
+rem - Visual consistency makes management easier.
+rem - It is consistent with the file name to maintain consistency throughout the project.
+rem - Folder names help organize the hierarchical structure, making them more convenient when containing multiple files or functions.
 
+rem *************************************Shared: Return Code List*************************************
 
-rem *************************************共有：戻り値一覧表*************************************
+rem **Standard Batch File Exit Codes**
+rem errlvl  /     mean
+rem 0       /     Successful completion
+rem 1       /     General error
+rem 2       /     The specified file was not found
+rem 3       /     Path not found
+rem 4       /     The system cannot perform the requested operation
+rem 5       /     Access denied
+rem 6       /     Invalid handle
+rem 10      /     The environment is not configured correctly
+rem 87      /     Invalid parameter
+rem 123     /     An invalid name was specified
+rem 9009    /     Command not found
 
-rem **バッチファイルの標準的な終了コード**
-rem errorlevel|mean
-rem         0 | 正常終了
-rem         1 | 一般的なエラー
-rem         2 | 指定されたファイルが見つからない
-rem         3 | パスが見つからない
-rem         4 | システムが要求された操作を実行できない
-rem         5 | アクセスが拒否された
-rem         6 | ハンドルが無効
-rem        10 | 環境が正しく設定されていない
-rem        87 | 無効なパラメータ
-rem       123 | 無効な名前が指定された
-rem      9009 | コマンドが見つからない(command not found)
-
-rem *******************************************************************************************
+rem **************************************************************************************************

@@ -1,88 +1,89 @@
 @echo off
-setlocal EnableExtensions
-rem -----------------------------------------------------------------------------
-rem SetupLanguage.bat (RCU/RC integrated version)
-rem Role:
-rem Language selection (ja-JP / en-US) - Persisted to profile.env (maintains other keys)
-rem Arguments: None (Autonomous even if PROJECT_ROOT/CFG_DIR is undefined)
-rem RC:
-rem FLOW/SYS/OTHER/000 - 1-06-90-000: OK
-rem CANCEL/SYS/SELECTION/002 - 8-06-01-002: User canceled
-rem ERR/SYS/PARSE/011 - 9-06-11-011: Failed to read or parse profile.env
-rem ERR/SYS/I/O/012 - 9-06-10-012: Write-back failure, etc. I/O
-rem -----------------------------------------------------------------------------
+setlocal EnableExtensions EnableDelayedExpansion
+rem ============================================================================
+rem SetupLanguage.bat  (RCS-integrated version)
+rem Role: Language selection / profile.env synchronization
+rem ============================================================================
+rem RC MAP:
+rem 1-06-90-000 : OK
+rem 8-06-01-002 : User canceled
+rem 9-06-11-011 : profile.env parse failure
+rem 9-06-10-012 : I/O write failure
+rem ============================================================================
 
-rem === PROJECT_ROOT / CFG_DIR 解決（直叩きでも自律） ========================
-if not defined PROJECT_ROOT for %%I in ("%~dp0\..\..\..") do set "PROJECT_ROOT=%%~fI"
-if defined CFG_DIR ( set "_cfg=%CFG_DIR%" ) else ( set "_cfg=%PROJECT_ROOT%\Config" )
-set "_profile=%_cfg%\profile.env"
-if not exist "%_cfg%" md "%_cfg%" 2>nul
+call "%RCSU%" -trace INFO "SetupLanguage" "setup start"
 
-rem === RCU/RECS bootstrap ======================================================
-if not defined RCU set "RCU=%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat"
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeConst.bat" 2>nul
-if not defined rc_s_flow    set rc_s_flow=1
-if not defined rc_s_cancel  set rc_s_cancel=8
-if not defined rc_s_err     set rc_s_err=9
-if not defined rc_d_sys     set rc_d_sys=06
-if not defined rc_r_select  set rc_r_select=01
-if not defined rc_r_parse   set rc_r_parse=11
-if not defined rc_r_io      set rc_r_io=10
-if not defined rc_r_other   set rc_r_other=90
 
-set "LOG_PREFIX=lang"
-call "%RCU%" -trace INFO SetupLanguage "start cfg=%_cfg%"
+rem --- Arguments --------------------------------------------------------------
+set "ARG_LANG="
+set "ARG_AUTO=0"
 
-rem === ANSI ESC / UTF-8（見栄え用、無くてもOK） ============================
-for /f %%a in ('cmd /k prompt $e^<nul') do set "esc=%%a"
-chcp 65001 >nul
-
-:Select_Language
-rem cls
-echo.
-echo === Language Setup ===
-echo Select language / 言語を選択してください:
-echo   [1] 日本語 (ja-JP)
-echo   [2] English (en-US)
-echo   [0] Cancel / キャンセル
-set /p "_pick=> "
-if "%_pick%"=="2" (
-   set "LANGUAGE=en-US"
-) else if "%_pick%"=="1" (
-   set "LANGUAGE=ja-JP"
-) else if "%_pick%"=="0" (
-   call "%RCU%" -return %rc_s_cancel% %rc_d_sys% %rc_r_select% 002
-) else (
-   echo Invalid selection. / 無効な選択です。
-   timeout /t 1 >nul
-   goto :Select_Language
+for %%a in (%*) do (
+	set "tok=%%a"
+    if /i "!tok!"=="/auto" set "ARG_AUTO=1"
+    if /i "!tok:~0,6!"=="/lang=" set "ARG_LANG=!~a:~6!"
 )
 
-echo %esc%[92m[OK]%esc%[0m LANGUAGE=%LANGUAGE%
-timeout /t 1 >nul
-
-rem --- 既存のprofile.envを読み込み（他キーを保持） --------------------------
-if exist "%_profile%" call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%_profile%" || (
-   call "%RCU%" -throw %rc_s_err% %rc_d_sys% %rc_r_parse% 011 "LoadEnv failed" "file=%_profile%"
-)
-if not defined PROFILE_SCHEMA set "PROFILE_SCHEMA=1"
-if not defined CODEPAGE set "CODEPAGE=65001"
-
-rem --- 原子的に書き戻し（tmp→move） ----------------------------------------
-> "%_profile%.tmp" (
-   echo # Astral Divide profile [auto written by SetupLanguage.bat]
-   echo set "PROFILE_SCHEMA=%PROFILE_SCHEMA%"
-   echo set "CODEPAGE=%CODEPAGE%"
-   echo set "LANGUAGE=%LANGUAGE%"
-   if defined SAVE_MODE echo set "SAVE_MODE=%SAVE_MODE%"
-   if defined SAVE_DIR  echo set "SAVE_DIR=%SAVE_DIR%"
-)
-move /y "%_profile%.tmp" "%_profile%" >nul || (
-   del /q "%_profile%.tmp" >nul 2>&1
-   call "%RCU%" -throw %rc_s_err% %rc_d_sys% %rc_r_io% 012 "profile write failed" "file=%_profile%"
+:: Verify the validity of the value if specified
+if defined ARG_LANG (
+	if /i not "%ARG_LANG%"=="ja-JP" (
+		if /i not "%ARG_LANG%"=="en-US" (
+			call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_VALID% 013 "invalid /lang" "value=%ARG_LANG%"
+			exit /b 90300013
+			rem why not use errorlevel? in deep nest cant be used %errorlevel% variable.
+		)
+	)
+	set "LANGUAGE=%ARG_LANG%"
 )
 
-rem --- 親にも返す（LANGUAGEを昇格） ----------------------------------------
-endlocal & (
-   set "LANGUAGE=%LANGUAGE%"
-) & call "%RCU%" -return %rc_s_flow% %rc_d_sys% %rc_r_other% 000
+:: Defaults to ja-JP if /auto and /lang are not specified.
+if "%ARG_AUTO%"=="1" if not defined LANGUAGE set "LANGUAGE=ja-JP"
+
+rem --- Interactive UI (not /auto and no /lang) --------------------------------
+if "%ARG_AUTO%"=="0" (
+	if not defined ARG_LANG (
+		for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
+		chcp 65001 >nul
+		mode con cols=40 lines=15
+
+		:UI
+		cls
+		echo.
+		echo. ======================================
+		echo. =        Language Setup v0.1a        =
+		echo. ======================================
+		echo. = [1] 日本語 (ja-JP)
+		echo. = [2] English (en-US)
+		echo. = [0] Cancel / キャンセル
+		echo. =-------------------------------------
+		echo. = %esc%[36mPlease select your language:%esc%[0m
+		echo. ======================================
+		set /p "pick=> "
+
+		if "%pick%"=="0" (
+			call "%RCSU%" -trace INFO "SetupLanguage" "user canceled"
+			call "%RCSU%" -return %RCS_S_CANCEL% %RCS_D_SYS% %RCS_R_SELECT% 002 "user canceled"
+			exit /b !errorlevel!
+			rem I'm using errorlevel experimentally, but it may not work in deep nests, so I tested it here.
+		) else if "%pick%"=="1" (
+			set "LANGUAGE=ja-JP"
+		) else if "%pick%"=="2" (
+			set "LANGUAGE=en-US"
+		) else (
+			powershell -Command "[console]::Beep(130.82,100)" 2>nul
+			powershell -Command "[console]::Beep(130.82,200)" 2>nul
+			echo Invalid selection. / 無効な選択です.
+			timeout /t -1 >nul
+			goto :UI
+		)
+	)
+)
+if "%ARG_AUTO%"=="1" (
+	call "%RCSU%" -trace INFO "SetupLanguage" "auto mode, skipping UI"
+)
+
+set "lang_temp=%LANGUAGE%"
+endlocal & set LANGUAGE=%lang_temp%
+call "%RCSU%" -trace INFO "SetupLanguage" "user selected language=[%LANGUAGE%]"
+call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000 "SetupLanguage OK"
+exit /b %errorlevel%

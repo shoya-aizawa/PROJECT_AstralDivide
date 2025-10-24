@@ -5,6 +5,7 @@ setlocal
 
 set URL=https://script.google.com/macros/s/AKfycbxdyqU2EGSjKzQUgcI5s17Fx5B7IS94xdystNTQ2phdOqASUiCQpEELiv9MhOXT_C2s/exec
 
+
 echo 本来はルームIDが自動割り当てされてますが...
 set /p ROOM=接続するルームIDを入力してください:
 

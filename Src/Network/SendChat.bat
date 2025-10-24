@@ -4,6 +4,7 @@ setlocal
 
 set URL=https://script.google.com/macros/s/AKfycbxdyqU2EGSjKzQUgcI5s17Fx5B7IS94xdystNTQ2phdOqASUiCQpEELiv9MhOXT_C2s/exec
 
+
 echo 日本語対応済み
 
 
