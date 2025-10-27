@@ -38,7 +38,7 @@ if not exist "%RCSU%" (
 	set "RCS_FALLBACK=90610001"
 	goto :FailRun
 )
-call "%RCSU%" -trace INFO "Run" "RCS bootstrap start"
+call "%RCSU%" -trace INFO "%~n0" "RCS bootstrap start"
 
 call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
 	rem RCS_Const.bat not found or failed to load : ERR/Systems/IO/case002
@@ -47,14 +47,15 @@ call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
 	goto :FailRun
 )
 call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
-call "%RCSU%" -trace INFO "Run" "RCS ready [rc=%errorlevel%]"
+call "%RCSU%" -trace INFO "%~n0" "RCS ready [rc=%errorlevel%]"
+
 
 echo smoke test passthrough until step [2]
 pause
 :: [3] First-Run Initialization Steps
 call "%PROJECT_ROOT%\Src\Systems\Environment\ProfileInitializer.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCU%" -trace INFO Run "bootstrap ok"
+call "%RCU%" -trace INFO "%~n0" "bootstrap ok"
 
 :: [4] Path Setup
 call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"

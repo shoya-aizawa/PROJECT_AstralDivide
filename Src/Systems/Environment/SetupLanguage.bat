@@ -11,7 +11,10 @@ rem 9-06-11-011 : profile.env parse failure
 rem 9-06-10-012 : I/O write failure
 rem ============================================================================
 
-call "%RCSU%" -trace INFO "SetupLanguage" "setup start"
+
+
+call "%RCSU%" -trace INFO "%~n0" "setup start"
+
 
 
 rem --- Arguments --------------------------------------------------------------
@@ -29,7 +32,7 @@ if defined ARG_LANG (
 	if /i not "%ARG_LANG%"=="ja-JP" (
 		if /i not "%ARG_LANG%"=="en-US" (
 			call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_VALID% 013 "invalid /lang" "value=%ARG_LANG%"
-			exit /b 90300013
+			exit /b !errorlevel!
 			rem why not use errorlevel? in deep nest cant be used %errorlevel% variable.
 		)
 	)
@@ -44,13 +47,18 @@ if "%ARG_AUTO%"=="0" (
 	if not defined ARG_LANG (
 		for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 		chcp 65001 >nul
-		mode con cols=40 lines=15
+		for /l %%i in (90,-1,40) do (
+			mode con cols=%%i lines=35
+		)
+		for /l %%j in (35,-1,15) do (
+			mode con cols=40 lines=%%j
+		)
 
 		:UI
 		cls
 		echo.
 		echo. ======================================
-		echo. =        Language Setup v0.1a        =
+		echo. =        Language Setup v0.1a
 		echo. ======================================
 		echo. = [1] 日本語 (ja-JP)
 		echo. = [2] English (en-US)
@@ -61,29 +69,59 @@ if "%ARG_AUTO%"=="0" (
 		set /p "pick=> "
 
 		if "%pick%"=="0" (
-			call "%RCSU%" -trace INFO "SetupLanguage" "user canceled"
-			call "%RCSU%" -return %RCS_S_CANCEL% %RCS_D_SYS% %RCS_R_SELECT% 002 "user canceled"
-			exit /b !errorlevel!
-			rem I'm using errorlevel experimentally, but it may not work in deep nests, so I tested it here.
+			rem TODO: [1]
+			rem call "%RCSU%" -trace INFO "%~n0" "user pressed [0](cancel)"
+			call :ConfirmCancel
+			if "!confirm_cancel!"=="YES" (
+				call "%RCSU%" -return %RCS_S_CANCEL% %RCS_D_SYS% %RCS_R_SELECT% 002 "user canceled setup"
+				exit /b !errorlevel!
+			) else (
+				rem TODO: [1]
+				rem call "%RCSU%" -trace INFO "%~n0" "cancel aborted, returning to selection"
+				goto :UI
+			)
+
+			:ConfirmCancel
+			rem TODO: [1]
+			rem call "%RCSU%" -trace INFO "%~n0" "asking for cancel confirmation"
+			cls
+			echo.
+			echo. =------------------------------------=
+			echo. = セットアップを中断しますか?
+			echo. = Do u really want cancel setup?
+			echo. =    [Y]es / はい 
+			echo. =    [N]o  / いいえ 
+			echo. =------------------------------------=
+			echo. = [^^!] Select Yes to %esc%[32mexit%esc%[0m.
+			echo. =------------------------------------=
+			choice /c YN /n /m "> "
+			if "%errorlevel%"=="1" (set "confirm_cancel=YES") else (set "confirm_cancel=NO")
+			exit /b
+
 		) else if "%pick%"=="1" (
 			set "LANGUAGE=ja-JP"
 		) else if "%pick%"=="2" (
 			set "LANGUAGE=en-US"
 		) else (
-			powershell -Command "[console]::Beep(130.82,100)" 2>nul
-			powershell -Command "[console]::Beep(130.82,200)" 2>nul
-			echo Invalid selection. / 無効な選択です.
-			timeout /t -1 >nul
+			@powershell -Command "[console]::Beep(130.82,200)" 2>nul
+			echo. Invalid selection. / 無効な選択です.
+			timeout /t 1 >nul
 			goto :UI
 		)
 	)
 )
 if "%ARG_AUTO%"=="1" (
-	call "%RCSU%" -trace INFO "SetupLanguage" "auto mode, skipping UI"
+	call "%RCSU%" -trace INFO "%~n0" "auto mode, skipping UI"
 )
 
 set "lang_temp=%LANGUAGE%"
 endlocal & set LANGUAGE=%lang_temp%
-call "%RCSU%" -trace INFO "SetupLanguage" "user selected language=[%LANGUAGE%]"
-call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000 "SetupLanguage OK"
+call "%RCSU%" -trace INFO "%~n0" "user selected language=[%LANGUAGE%]"
+call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_SELECT% 000 "Language setup complete"
 exit /b %errorlevel%
+
+
+
+rem TODO [1] DEBUG 変数で粒度制御を導入する
+
+
