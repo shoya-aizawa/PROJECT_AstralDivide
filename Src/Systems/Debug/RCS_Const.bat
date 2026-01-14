@@ -34,6 +34,8 @@ set RCS_R_VALID=30
 set RCS_R_COMPAT=50
 set RCS_R_OTHER=90
 
+:: Templete
+set RC_OK=10690000
 
 :: [MIGRATION INFO] Internal references only; not used during Const load.
 set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"

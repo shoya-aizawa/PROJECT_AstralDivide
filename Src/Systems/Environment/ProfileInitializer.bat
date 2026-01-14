@@ -56,7 +56,7 @@ if "%rc%"=="9%RCS_D_SYS%%RCS_R_VALID%013" (
 )
 
 :: Case4: Other / unknown error
-if not "%rc%"=="0" (
+if "%rc:~0,1%"=="9" (
     call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_VALID% 999 "Unexpected return code from SetupLanguage [%rc%]"
     exit %errorlevel%
 )
@@ -65,10 +65,4 @@ if not "%rc%"=="0" (
 
 :: Step [2] Setup Storage (Save Location)
 call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat"
-
-
-
-pause
-
-
-
+exit /b %errorlevel%

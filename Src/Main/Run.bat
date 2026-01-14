@@ -49,36 +49,33 @@ call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
 call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
 call "%RCSU%" -trace INFO "%~n0" "RCS ready [rc=%errorlevel%]"
 
-
-echo smoke test passthrough until step [2]
-pause
 :: [3] First-Run Initialization Steps
 call "%PROJECT_ROOT%\Src\Systems\Environment\ProfileInitializer.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCU%" -trace INFO "%~n0" "bootstrap ok"
+call "%RCSU%" -trace INFO "%~n0" "bootstrap ok"
 
 :: [4] Path Setup
 call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCU%" -trace INFO Run "paths ready root=%root_dir%"
+call "%RCSU%" -trace INFO Run "paths ready root=%root_dir%"
 
 :: [5] Resource Migration (Logs/IPC)
 if exist "%PROJECT_ROOT%\Logs" (
 	if not exist "%config_logs_dir%" md "%config_logs_dir%" >nul 2>&1
 	move /y "%PROJECT_ROOT%\Logs\*" "%config_logs_dir%" >nul 2>&1
 	dir /b "%PROJECT_ROOT%\Logs" | findstr /r /c:"^." >nul || rd "%PROJECT_ROOT%\Logs"
-	call "%RCU%" -trace INFO Run "migrated Logs -> %config_logs_dir%"
+	call "%RCSU%" -trace INFO Run "migrated Logs -> %config_logs_dir%"
 )
 if exist "%PROJECT_ROOT%\Runtime\ipc" (
 	if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
 	move /y "%PROJECT_ROOT%\Runtime\ipc\*" "%runtime_ipc_dir%" >nul 2>&1
-	call "%RCU%" -trace INFO Run "migrated Runtime\ipc -> %runtime_ipc_dir%"
+	call "%RCSU%" -trace INFO Run "migrated Runtime\ipc -> %runtime_ipc_dir%"
 )
 
 :: [6] Environment Detection
 call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCU%" -trace INFO Run "screen env ok"
+call "%RCSU%" -trace INFO Run "screen env ok"
 
 :: [7] Security Verification
 rem TODO call "%PROJECT_ROOT%\Src\Systems\Security\VerifySignatures.bat"
@@ -86,7 +83,7 @@ rem TODO call "%PROJECT_ROOT%\Src\Systems\Security\VerifySignatures.bat"
 :: [8] Initiate Main.bat
 start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
 set launch_time=%time%
-call "%RCU%" -trace INFO Run "main launched time=%launch_time%"
+call "%RCSU%" -trace INFO Run "main launched time=%launch_time%"
 
 :: [9] Watchdog Host Launch
 if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
@@ -129,8 +126,8 @@ rem!========================================== Error & Exit sections ===========
 :: Initialization failure
 :FailFirstRun
 rem 直前のRCを人間可読表示
-call "%RCU%" -pretty %errorlevel%
-call "%RCU%" -trace ERR Run "first-run failed rc=%errorlevel%"
+call "%RCSU%" -pretty %errorlevel%
+call "%RCSU%" -trace ERR Run "first-run failed rc=%errorlevel%"
 echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や権限をご確認ください。
 pause >nul
 goto :ExitRun
@@ -160,7 +157,7 @@ if /i "%~1"=="-mode" if /i "%~2"=="debug" (
 
 :: Common exit(Utility)
 :ExitRun
-call "%RCU%" -trace INFO Run "exit"
+call "%RCSU%" -trace INFO Run "exit"
 pause >nul
 exit /b
 rem!===========================================================================================================!

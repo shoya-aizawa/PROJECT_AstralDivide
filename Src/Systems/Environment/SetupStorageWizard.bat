@@ -12,7 +12,7 @@ rem   8-06-01-002 : User canceled
 rem   9-06-10-012 : Directory creation/write failure
 rem =============================================================================
 
-for /l %%i in (40,1,80) do (
+for /l %%i in (40,1,87) do (
     mode con cols=%%i lines=15
 )
 

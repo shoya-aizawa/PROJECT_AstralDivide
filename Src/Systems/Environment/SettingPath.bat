@@ -1,26 +1,15 @@
 @echo off
 setlocal EnableExtensions
 rem -----------------------------------------------------------------------------
-rem SettingPath.bat  (RCU/RC 統合版)
-rem 役割:
-rem   ルートから全ディレクトリ変数を解決し、親スコープへエクスポート
+rem SettingPath.bat  (RCSU/RC BE)
+rem Role:
+rem   Resolve all directory variables from root and export to parent scope
 rem   Optionally add Tools to your PATH without duplicates
 rem RC:
-rem   FLOW/SYS/OTHER/000 → 1-06-90-000 : OK
+rem   FLOW/SYS/OTHER/000 : 1-06-90-000 : OK
 rem -----------------------------------------------------------------------------
 
-rem --- RCU/RECS bootstrap（直叩きでも自律） ---
-if not defined PROJECT_ROOT for %%I in ("%~dp0\..\..\..") do set "PROJECT_ROOT=%%~fI"
-if not defined RCU set "RCU=%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat"
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeConst.bat" 2>nul
-if not defined rc_s_flow  set rc_s_flow=1
-if not defined rc_d_sys   set rc_d_sys=06
-if not defined rc_r_other set rc_r_other=90
 
-for /f "delims=" %%R in ('call "%RCU%" -build %rc_s_flow% %rc_d_sys% %rc_r_other% 000') do set "RC_OK=%%R"
-
-rem --- ESC（未定義なら取得） ---
-if not defined esc for /f %%e in ('cmd /k prompt $e^<nul') do set "esc=%%e"
 
 rem ─── If PROJECT_ROOT exists, use it. If not, complete it yourself. ──
 if defined PROJECT_ROOT (
@@ -29,7 +18,7 @@ if defined PROJECT_ROOT (
    for %%I in ("%~dp0\..\..\..") do set "root_dir=%%~fI\"
 )
 
-rem --- 追加: SAVE_MODE 未定義なら profile.env を読み込んで自律化 ---
+rem ---Added: If SAVE_MODE is undefined, load profile.env and automate ---
 if not defined SAVE_MODE (
   set "_cfg_guess=%root_dir%\Config"
   if not defined CFG_DIR set "CFG_DIR=%_cfg_guess%"
@@ -37,8 +26,8 @@ if not defined SAVE_MODE (
     call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_DIR%\profile.env" >nul
     set "RC=%errorlevel%"
     if not "%RC%"=="%RC_OK%" (
-      rem オプション読み込みなので失敗しても落とさない（ログだけ）
-      call "%RCU%" -trace WARN SettingPath "LoadEnv optional rc=%RC% file=%CFG_DIR%\profile.env"
+      rem Since it is an option read, it will not be dropped even if it fails (log only)
+      call "%RCSU%" -trace WARN SettingPath "LoadEnv optional rc=%RC% file=%CFG_DIR%\profile.env"
     )
   )
 )
@@ -87,7 +76,7 @@ set "src_systems_dir=%src_dir%\Systems"
 set "config_root_dir=%root_dir%\Config"
 
 if defined CFG_DIR (
-   rem Run.bat等から明示された場所を最優先
+   rem Top priority is given to the location specified by Run.bat etc.
    set "config_active_dir=%CFG_DIR%"
 ) else (
    if /i "%SAVE_MODE%"=="localappdata" (
@@ -124,7 +113,7 @@ set "test_dir=%root_dir%\Test"
 set "tools_dir=%root_dir%\Tools"
 set "dev_dir=%root_dir%\[DEV]"
 
-rem --- ここまでで定義した変数を親スコープへエクスポート -------------------
+rem --- Export the variables defined so far to the parent scope -------------------
 endlocal & (
   set "esc=%esc%"
   set "root_dir=%root_dir%"
@@ -178,11 +167,12 @@ endlocal & (
   if not exist "%runtime_ipc_dir%"   md "%runtime_ipc_dir%"   >nul 2>&1
 )
 
-rem --- （任意）Tools を PATH に重複なく追加 --------------------------------
+rem --- (Optional) Add unique Tools to PATH --------------------------------
 set "PATH_TAG=;%PATH%;"
 echo %PATH_TAG% | find /I ";%tools_dir%;" >nul || set "PATH=%PATH%;%tools_dir%"
 
-rem --- 表示 & RCU return ------------------------------------------------
+rem --- show & RCSU return ------------------------------------------------
 for /f %%e in ('cmd /k prompt $e^<nul') do set "ESC=%%e"
 echo %ESC%[92m[OK]%ESC%[0m Path variable setting completed successfully.
-call "%RCU%" -return %rc_s_flow% %rc_d_sys% %rc_r_other% 000
+call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
+exit /b %errorlevel%
