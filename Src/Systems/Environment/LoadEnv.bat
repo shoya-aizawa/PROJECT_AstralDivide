@@ -11,21 +11,6 @@ rem   ERR /SYS/I/O   /012 → 9-06-10-012 : arg missing / file not found / SAVE_
 rem   ERR /SYS/PARSE /011 → 9-06-11-011 : invalid line format
 rem -----------------------------------------------------------------------------
 
-rem === RECS/RCU bootstrap（直叩きでも自律） ===
-if not defined PROJECT_ROOT set "PROJECT_ROOT=%~dp0..\..\.."
-if not defined RCU set "RCU=%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeUtil.bat"
-call "%PROJECT_ROOT%\Src\Systems\Debug\ReturnCodeConst.bat" 2>nul
-
-rem 保険（定数未ロード時）
-if not defined rc_s_flow  set rc_s_flow=1
-if not defined rc_s_err   set rc_s_err=9
-if not defined rc_d_sys   set rc_d_sys=06
-if not defined rc_r_io    set rc_r_io=10
-if not defined rc_r_parse set rc_r_parse=11
-if not defined rc_r_other set rc_r_other=90
-
-for /f "delims=" %%R in ('call "%RCU%" -build %rc_s_flow% %rc_d_sys% %rc_r_other% 000') do set "RC_OK=%%R"
-
 rem === Args & file existence ===
 set "ENV_FILE=%~1"
 if "%ENV_FILE%"==""              call "%RCU%" -throw %rc_s_err% %rc_d_sys% %rc_r_io%    012 "arg missing"

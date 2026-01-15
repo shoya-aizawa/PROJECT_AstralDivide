@@ -14,6 +14,23 @@
 
 rem================================================= Main Flow =================================================
 
+set "REMOTE_GAS_URL=https://script.google.com/macros/s/AKfycbwIOTx9BM2IwcIoHPyKJN529AkBUk7Kbadwxb4HzxYrHMUrV_2PX2BpbaPVhLuWphhK/exec"
+
+if /i "%~1"=="-mode" if /i "%~2"=="remotewatch" (
+    if not defined REMOTE_GAS_URL (
+        echo [E2001] REMOTE_GAS_URL not set. Set it with: set REMOTE_GAS_URL=https://...
+        pause >nul
+        exit /b 2001
+    )
+    echo Starting remote log watcher...
+    powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogWatcher.ps1" -GasUrl "%REMOTE_GAS_URL%"
+    goto :eof
+)
+
+
+
+
+
 :: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT)
 set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
 if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
@@ -48,6 +65,23 @@ call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
 )
 call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
 call "%RCSU%" -trace INFO "%~n0" "RCS ready [rc=%errorlevel%]"
+
+
+
+
+:: [DEV] Remote Debug Tail (optional; if REMOTE_DEBUG=1)
+for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd')"') do set "date_tag=%%d"
+
+rem if文内で変数を展開するための応急処置
+set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%date_tag%.log"
+
+
+if /i "%~1"=="-mode" if /i "%~2"=="remote" (
+    set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%date_tag%.log"
+    start "" powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%"
+    call "%RCSU%" -trace INFO Run "remote tail started logfile=%logfile%"
+)
+
 
 :: [3] First-Run Initialization Steps
 call "%PROJECT_ROOT%\Src\Systems\Environment\ProfileInitializer.bat" "%PROJECT_ROOT%"

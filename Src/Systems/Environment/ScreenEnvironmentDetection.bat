@@ -42,6 +42,8 @@ rem PowerShell 確認（簡易）
 powershell -NoProfile -Command "$PSVersionTable.PSVersion" >nul 2>&1
 if errorlevel 1 (
   call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_COMPAT% 021 "PowerShell unavailable"
+) else (
+  call "%RCSU%" -trace INFO ScreenEnv "PowerShell available"
 )
 
 rem === 画面描画: ヘッダ ========================================================
