@@ -15,17 +15,25 @@
 rem================================================= Main Flow =================================================
 
 set "REMOTE_GAS_URL=https://script.google.com/macros/s/AKfycbwIOTx9BM2IwcIoHPyKJN529AkBUk7Kbadwxb4HzxYrHMUrV_2PX2BpbaPVhLuWphhK/exec"
+set "REMOTE_ADMIN_KEY=admin"
+
 
 if /i "%~1"=="-mode" if /i "%~2"=="remotewatch" (
     if not defined REMOTE_GAS_URL (
-        echo [E2001] REMOTE_GAS_URL not set. Set it with: set REMOTE_GAS_URL=https://...
+        echo [E2001] REMOTE_GAS_URL not set.
         pause >nul
         exit /b 2001
     )
-    echo Starting remote log watcher...
-    powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogWatcher.ps1" -GasUrl "%REMOTE_GAS_URL%"
+    if not defined REMOTE_ADMIN_KEY (
+        echo [E2002] REMOTE_ADMIN_KEY not set.
+        pause >nul
+        exit /b 2002
+    )
+    echo Starting remote log watcher [ADMIN]...
+    powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogWatcher.ps1" -GasUrl "%REMOTE_GAS_URL%" -AdminKey "%REMOTE_ADMIN_KEY%"
     goto :eof
 )
+
 
 
 
@@ -80,6 +88,8 @@ if /i "%~1"=="-mode" if /i "%~2"=="remote" (
     set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%date_tag%.log"
     start "" powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%"
     call "%RCSU%" -trace INFO Run "remote tail started logfile=%logfile%"
+	echo 同期処理のため停止中... Enterキーで復帰
+	pause >nul
 )
 
 
