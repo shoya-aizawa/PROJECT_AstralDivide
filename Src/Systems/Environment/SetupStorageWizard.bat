@@ -62,8 +62,9 @@ set "_t=%_sv_dir%\.__permtest__"
 del /q "%_t%" >nul 2>&1
 
 rem --- Load existing profile.env ----------------------------------------------
-if exist "%_profile%" (
-    for /f "usebackq tokens=1,* delims==" %%A in ("%_profile%") do (
+set "_config_file=%PROJECT_ROOT%\Config\user_config.env"
+if exist "%_config_file%" (
+    for /f "usebackq tokens=1,* delims==" %%A in ("%_config_file%") do (
         if defined %%A set "%%A=%%B"
     )
 )
@@ -72,7 +73,7 @@ if not defined CODEPAGE set "CODEPAGE=65001"
 if not defined LANGUAGE set "LANGUAGE=ja-JP"
 
 rem --- Atomic writeback (preserve others) -------------------------------------
-> "%_profile%.tmp" (
+> "%_config_file%.tmp" (
     echo # Astral Divide profile [auto-written by SetupStorageWizard.bat]
     echo PROFILE_SCHEMA=%PROFILE_SCHEMA%
     echo CODEPAGE=%CODEPAGE%
@@ -80,7 +81,7 @@ rem --- Atomic writeback (preserve others) -------------------------------------
     echo SAVE_MODE=%_sv_mode%
     echo SAVE_DIR=%_sv_dir%
 )
-move /y "%_profile%.tmp" "%_profile%" >nul
+move /y "%_config_file%.tmp" "%_config_file%" >nul
 
 rem --- Return / Elevate vars --------------------------------------------------
 endlocal & (

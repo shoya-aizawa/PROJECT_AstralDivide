@@ -21,6 +21,7 @@ if not defined PROJECT_ROOT (
 )
 if not exist "%PROJECT_ROOT%" (
     echo [ERROR] PROJECT_ROOT invalid or unrecoverable.
+    pause >nul
     exit /b 1
 )
 
@@ -28,19 +29,23 @@ if not exist "%PROJECT_ROOT%" (
 if not defined GAME_LAUNCHER (
     echo !ESC![31m[ERROR]!ESC![0m Direct launch detected.
     echo Please use !ESC![92m"AstralDivide.bat"!ESC![0m to start the game.
+    pause >nul
     exit /b 2
 )
 
 :: [3] Confirm existence of Main.bat
 if not exist "%PROJECT_ROOT%\Src\Main\Main.bat" (
     echo [WARN] Main.bat not found. Validating path...
+    timeout /t 1 >nul 2>&1
     set "SRC_MAIN_DIR=%PROJECT_ROOT%\Src\Main"
     tree "%SRC_MAIN_DIR%" >nul 2>&1
     if errorlevel 1 (
         echo [CRITICAL] Path corrupted or inaccessible.
+        pause >nul
         exit /b 3
     )
     echo [ERROR] Main.bat missing. Please reinstall Astral Divide.
+    pause >nul
     exit /b 4
 )
 

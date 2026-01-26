@@ -54,7 +54,7 @@ flowchart TB
     end
 
     subgraph Assets[Assets/]
-      Docs[Docs/*.md\n(仕様・世界観・プロトコル)]
+      Docs[(仕様・世界観・プロトコル)]
       Images[Images/*.png *.ico *.bmp]
       Sounds[Sounds/*.wav]
     end

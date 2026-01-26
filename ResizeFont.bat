@@ -10,17 +10,19 @@ if /i "%mode%"=="up" (
     set "wheel=-120"
 ) else (
     echo [ERROR] Usage: call ResizeFont.bat up^|down
+    pause >nul
     exit /b 1
 )
 
 :: 自分自身を文字列で読み込んでPowerShellへ渡す
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$code = Get-Content -Raw -Path '%~f0'; iex ($code -split '#<\#\s*: begin PowerShell block')[1]"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$code = Get-Content -Raw -Path '%~f0'; $ps = ($code -split '#<:\s*begin PowerShell block')[1]; $sb = [ScriptBlock]::Create($ps); & $sb -wheel %wheel%"
 
 exit /b
 
 #<: begin PowerShell block
 param (
-    [int]$wheel = %wheel%
+    [Parameter(Mandatory)]
+    [int]$wheel
 )
 
 Add-Type -TypeDefinition @"

@@ -8,54 +8,59 @@
 
 @chcp 65001 >nul
 @echo off
-@for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
-@prompt $G
 @mode 90,35
+@for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
+@if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
 
 rem================================================= Main Flow =================================================
 
 set "REMOTE_GAS_URL=https://script.google.com/macros/s/AKfycbwIOTx9BM2IwcIoHPyKJN529AkBUk7Kbadwxb4HzxYrHMUrV_2PX2BpbaPVhLuWphhK/exec"
-set "REMOTE_ADMIN_KEY=admin"
+set "REMOTE_ADMIN_KEY=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
 
 
-if /i "%~1"=="-mode" if /i "%~2"=="remotewatch" (
+
+
+
+
+
+
+
+:: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT/REMOTE/REMOTEADMIN)
+set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
+if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
+if /i "%~1"=="-mode" if /i "%~2"=="intercept" set "BUILD_PROFILE=dev" & set "INTERCEPT_MODE=1"
+if /i "%~1"=="-mode" if /i "%~2"=="remote" (
+	for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd')"') do set "date_tag=%%d"
+	call set "logfile=%%PROJECT_ROOT%%\Config\Logs\AstralDivide_Session_%%date_tag%%.log"
+	)
+if /i "%~1"=="-mode" if /i "%~2"=="remoteadmin" (
     if not defined REMOTE_GAS_URL (
         echo [E2001] REMOTE_GAS_URL not set.
         pause >nul
-        exit /b 2001
+        goto :eof
     )
     if not defined REMOTE_ADMIN_KEY (
         echo [E2002] REMOTE_ADMIN_KEY not set.
         pause >nul
-        exit /b 2002
+        goto :eof
     )
-    echo Starting remote log watcher [ADMIN]...
     powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogWatcher.ps1" -GasUrl "%REMOTE_GAS_URL%" -AdminKey "%REMOTE_ADMIN_KEY%"
     goto :eof
 )
 
 
 
-
-
-
-:: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT)
-set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
-if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
-if /i "%~1"=="-mode" if /i "%~2"=="intercept" set "BUILD_PROFILE=dev" & set "INTERCEPT_MODE=1"
-if /i not "%BUILD_PROFILE%"=="dev" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
-
 :: [1] LaunchGuard
 call "%~dp0..\Systems\Launcher\LaunchGuard.bat"
 set "LG_RC=%errorlevel%"
-if %LG_RC% neq 0 (
-	rem --- LG already printed user-facing message ---
-    rem --- Run.bat only performs controlled exit for upper logic ---
-    pause >nul
-    exit 900000%LG_RC%
+if not "%LG_RC%"=="0" (
+    if "%LG_RC%"=="2" (exit)
+    set /a "RCS_FALLBACK=90630100 + %LG_RC%"
+    set "RCS_MISSING_TAG=LaunchGuard.bat"
+    goto :FailRun
 )
 
-:: [2] RCS Bootstrap
+:: [2] Return Code System(RCS) Initialization
 set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 if not exist "%RCSU%" (
 	rem RCS_Util.bat not found : ERR/Systems/IO/case001
@@ -63,7 +68,7 @@ if not exist "%RCSU%" (
 	set "RCS_FALLBACK=90610001"
 	goto :FailRun
 )
-call "%RCSU%" -trace INFO "%~n0" "RCS bootstrap start"
+call "%RCSU%" -trace INFO "%~n0" "RCS initialization start"
 
 call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
 	rem RCS_Const.bat not found or failed to load : ERR/Systems/IO/case002
@@ -75,59 +80,45 @@ call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
 call "%RCSU%" -trace INFO "%~n0" "RCS ready [rc=%errorlevel%]"
 
 
-
-
-:: [DEV] Remote Debug Tail (optional; if REMOTE_DEBUG=1)
-for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd')"') do set "date_tag=%%d"
-
-rem if文内で変数を展開するための応急処置
-set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%date_tag%.log"
-
-
+:: [3] Remote debug tailing launch point
+rem 引数指定で起動できない人向けに隠しコマンドを用意
+choice /c AX /n /cs /t 1 /d A >nul
+if errorlevel 2 (
+	goto :X
+)
 if /i "%~1"=="-mode" if /i "%~2"=="remote" (
-    set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%date_tag%.log"
+	:X
     start "" powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%"
-    call "%RCSU%" -trace INFO Run "remote tail started logfile=%logfile%"
+    call "%RCSU%" -trace INFO "%~n0" "remote tail started logfile=%logfile%"
 	echo 同期処理のため停止中... Enterキーで復帰
 	pause >nul
 )
 
-
-:: [3] First-Run Initialization Steps
+:: [4] Profile Initialization
 call "%PROJECT_ROOT%\Src\Systems\Environment\ProfileInitializer.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
 call "%RCSU%" -trace INFO "%~n0" "bootstrap ok"
 
-:: [4] Path Setup
+:: [5] Path Setup
 call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCSU%" -trace INFO Run "paths ready root=%root_dir%"
-
-:: [5] Resource Migration (Logs/IPC)
-if exist "%PROJECT_ROOT%\Logs" (
-	if not exist "%config_logs_dir%" md "%config_logs_dir%" >nul 2>&1
-	move /y "%PROJECT_ROOT%\Logs\*" "%config_logs_dir%" >nul 2>&1
-	dir /b "%PROJECT_ROOT%\Logs" | findstr /r /c:"^." >nul || rd "%PROJECT_ROOT%\Logs"
-	call "%RCSU%" -trace INFO Run "migrated Logs -> %config_logs_dir%"
-)
-if exist "%PROJECT_ROOT%\Runtime\ipc" (
-	if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
-	move /y "%PROJECT_ROOT%\Runtime\ipc\*" "%runtime_ipc_dir%" >nul 2>&1
-	call "%RCSU%" -trace INFO Run "migrated Runtime\ipc -> %runtime_ipc_dir%"
-)
+call "%RCSU%" -trace INFO "%~n0" "paths ready root=%root_dir%"
 
 :: [6] Environment Detection
-call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%PROJECT_ROOT%"
+if %FIRST_LAUNCH%==0 (goto :GoMain)
+call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%root_dir%"
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCSU%" -trace INFO Run "screen env ok"
+call "%RCSU%" -trace INFO "%~n0" "screen env ok"
 
 :: [7] Security Verification
-rem TODO call "%PROJECT_ROOT%\Src\Systems\Security\VerifySignatures.bat"
+rem TODO call "%root_dir%\Src\Systems\Security\VerifySignatures.bat"
 
 :: [8] Initiate Main.bat
-start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
+:GoMain
+start "AstralDivide[v0.1.0]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.0]"
+rem start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
 set launch_time=%time%
-call "%RCSU%" -trace INFO Run "main launched time=%launch_time%"
+call "%RCSU%" -trace INFO "%~n0" "main launched time=%launch_time%"
 
 :: [9] Watchdog Host Launch
 if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
@@ -203,7 +194,7 @@ if /i "%~1"=="-mode" if /i "%~2"=="debug" (
 :ExitRun
 call "%RCSU%" -trace INFO Run "exit"
 pause >nul
-exit /b
+exit
 rem!===========================================================================================================!
 
 rem?================================================= Helpers =================================================?

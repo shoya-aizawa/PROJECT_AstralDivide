@@ -2,7 +2,6 @@
 title %~2
 mode 80,25
 %tools_dir%\cmdwiz.exe fullscreen 1
-
 :: Main.bat
 :: This is the main entry point for the RPG game.
 :: aka : "HUB Terminal"

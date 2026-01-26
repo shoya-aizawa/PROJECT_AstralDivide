@@ -1,4 +1,4 @@
-# LogTailToGAS.ps1 (fixed)
+# LogTailToGAS.ps1 (Client)
 param(
   [Parameter(Mandatory=$true)][string]$LogPath,
   [Parameter(Mandatory=$true)][string]$GasUrl,
@@ -18,7 +18,6 @@ function To-Sha256Hex([string]$s) {
   $hash = $sha.ComputeHash($bytes)
   ($hash | ForEach-Object { $_.ToString("x2") }) -join ""
 }
-
 function Post-Form([hashtable]$body) {
   Invoke-RestMethod -Uri $GasUrl -Method POST -Body $body -ContentType "application/x-www-form-urlencoded; charset=utf-8"
 }
@@ -85,21 +84,27 @@ $lastFlush = [DateTime]::UtcNow
 function Flush-Buffer {
   if ($buffer.Count -le 0) { return }
 
-  # 送信対象をスナップショット化してからクリア（送信中に追加されても破綻しない）
+  # snapshot -> clear（送信中に追記されても壊れない）
   $toSend = $buffer.ToArray()
   $buffer.Clear()
 
   try {
     foreach ($line in $toSend) {
-      Post-Form @{
+      $r = Post-Form @{
         action        = "post_log"
         session_token = $token
         log           = $line
-      } | Out-Null
+      }
+
+      if ($r -and $r.ok -eq $false -and $r.reason -eq "BAD_SESSION") {
+        Write-Host "[DENY] session revoked/expired (kicked). exiting..." -ForegroundColor Red
+        exit 2
+      }
     }
+
     $script:lastFlush = [DateTime]::UtcNow
   } catch {
-    # 失敗時は戻して再送可能に（ただし肥大を防ぐ）
+    # 失敗時は戻す（ただし肥大防止）
     foreach ($line in $toSend) { $buffer.Add($line) }
     if ($buffer.Count -gt 2000) { $buffer.RemoveRange(0, $buffer.Count - 2000) }
     Write-Host ("[ERR] send failed: {0}" -f $_.Exception.Message) -ForegroundColor Red
@@ -108,29 +113,28 @@ function Flush-Buffer {
 
 Write-Host "[*] streaming..." -ForegroundColor DarkCyan
 
-# ここが肝：-Wait を ReadLine でブロックさせず、短いタイムアウトで回す
+# Get-Content -Wait だと「新規行が来ないとFlush判定が走らない」問題が出るので、
+# StreamReaderで自前ループ（一定間隔でFlush判定できる）
 $fs = [System.IO.File]::Open($LogPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::ReadWrite)
 $sr = New-Object System.IO.StreamReader($fs)
 
 try {
-  # ファイル末尾までシーク（-Tail 0 相当）
+  # 末尾に移動（Tail 0 相当）
   $fs.Seek(0, [System.IO.SeekOrigin]::End) | Out-Null
 
   while ($true) {
-    # 1行読めるなら読む（読めないなら $null）
     $line = $sr.ReadLine()
 
     if ($null -ne $line) {
       $buffer.Add($line)
 
-      # 行数でFlush
       if ($buffer.Count -ge $BatchLines) {
         Flush-Buffer
       }
       continue
     }
 
-    # 行が無い（= 新規追記待ち）ので、時間でFlush判定してから少し待つ
+    # 追記が無い時間でもFlush判定
     $now = [DateTime]::UtcNow
     if ($buffer.Count -gt 0 -and ($now - $lastFlush).TotalMilliseconds -ge $FlushMs) {
       Flush-Buffer

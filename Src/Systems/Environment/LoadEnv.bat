@@ -1,7 +1,7 @@
 @echo off
-setlocal EnableExtensions EnableDelayedExpansion
+rem setlocal EnableExtensions EnableDelayedExpansion
 rem -----------------------------------------------------------------------------
-rem LoadEnv.bat  (RCU/RC 統合版)
+rem LoadEnv.bat  (RCSU/RC 統合版)
 rem Usage : call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "C:\path\to\profile.env"
 rem Format: lines like set "KEY=VALUE"
 rem Comment lines must start with '#'
@@ -13,26 +13,26 @@ rem ----------------------------------------------------------------------------
 
 rem === Args & file existence ===
 set "ENV_FILE=%~1"
-if "%ENV_FILE%"==""              call "%RCU%" -throw %rc_s_err% %rc_d_sys% %rc_r_io%    012 "arg missing"
-if not exist "%ENV_FILE%"        call "%RCU%" -throw %rc_s_err% %rc_d_sys% %rc_r_io%    012 "not found: %ENV_FILE%"
+if "%ENV_FILE%"==""              call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO%    012 "arg missing"
+if not exist "%ENV_FILE%"        call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO%    012 "not found: %ENV_FILE%"
 
-rem === 読み込み: # から始まる行はコメントとして無視 ===
-rem ※ 値中の ! 展開を避けるため、読み込み中は delayed expansion を OFF
-setlocal DisableDelayedExpansion
-for /f "usebackq eol=# tokens=1,* delims= " %%A in ("%ENV_FILE%") do (
-    if /i "%%A"=="set" (
-        rem 例: 行が  set "KEY=VALUE" なら B= "KEY=VALUE"
-        call set %%B
-    ) else (
-        endlocal & call "%RCU%" -throw %rc_s_err% %rc_d_sys% %rc_r_parse% 011 "bad line: %%A %%B"
+
+if exist "%ENV_FILE%" (
+    for /f "usebackq eol=# tokens=1,* delims==" %%A in ("%ENV_FILE%") do (
+        set "%%A=%%B"
+        call "%RCSU%" -trace INFO "%~n0" "loaded {%%A}={%%B}"
     )
 )
-endlocal
 
 rem === 完了 ===
 if defined esc (
-  echo %esc%[92m[OK]%esc%[0m profile.env file has been loaded
+  echo %esc%[92m[OK]%esc%[0m user_config.env file has been loaded
+  echo PROFILE_SCHEMA=%PROFILE_SCHEMA%
+  echo CODEPAGE=%CODEPAGE%
+  echo LANGUAGE=%LANGUAGE%
+  echo SAVE_MODE=%SAVE_MODE%
+  echo SAVE_DIR=%SAVE_DIR%
 ) else (
-  echo [OK] profile.env file has been loaded
+  echo [OK] user_config.env file has been loaded
 )
-call "%RCU%" -return %rc_s_flow% %rc_d_sys% %rc_r_other% 000
+call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000

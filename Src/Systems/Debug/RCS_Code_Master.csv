@@ -1,0 +1,7 @@
+Section,Domain,Reason,CCC,Code,Level,ShortLabel,InternalMeaning,UXIntent,UserVisible,DefaultMessage_JP,DefaultMessage_EN,LogPolicy,IntroducedIn,Notes
+1,06,90,000,10690000,FLOW,RC_OK,正常終了,フローが問題なく完了したことを示す,NO,,,SILENT,v0.1a,共通成功コード
+2,01,01,001,,INFO,MENU_SELECT,メニュー項目が選択された,入力が正しく受理されたことを内部的に示す,NO,,,SILENT,v0.1a,
+2,02,10,002,,INFO,SAVE_CREATED,新規セーブデータ作成完了,プレイヤーに安心感を与える通知,YES,セーブデータを作成しました,Save data created,TRACE,v0.1a,
+2,04,50,001,,INFO,ENV_COMPAT_OK,環境互換性チェック成功,起動条件を満たしていることの確認,NO,,,TRACE,v0.1a,
+8,01,01,001,,CANCEL,MENU_CANCEL,メニュー操作がキャンセルされた,ユーザーの意図的な中断を示す,NO,,,SILENT,v0.1a,
+9,06,10,001,,ERR,SYS_IO_FAIL,システムI/O失敗,致命的エラーとして即時停止させる,YES,システムエラーが発生しました,System error occurred,TRACE,v0.1a,

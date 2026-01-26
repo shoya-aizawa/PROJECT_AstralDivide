@@ -1,5 +1,4 @@
 @echo off
-setlocal EnableDelayedExpansion
 :: ==========================================================
 ::  ProfileInitializer.bat (RCS Integrated)
 ::  by HedgeHogSoft / PROJECT_AstralDivide
@@ -13,7 +12,7 @@ setlocal EnableDelayedExpansion
 call "%RCSU%" -trace INFO "%~n0" "init start"
 
 set "CFG_DIR=%PROJECT_ROOT%\Config"
-set "CFG_FILE=%CFG_DIR%\profile.env"
+set "CFG_FILE=%CFG_DIR%\user_config.env"
 if not exist "%CFG_DIR%" (
     md "%CFG_DIR%" 2>nul
     call "%RCSU%" -trace INFO "%~n0" "created config dir at {%CFG_DIR%}"
@@ -27,16 +26,20 @@ if not exist "%CFG_DIR%" (
 if exist "%CFG_FILE%" (
     call "%RCSU%" -trace INFO "%~n0" "profile found in {%CFG_FILE%}"
     call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"
-    if %errorlevel%==1 (
-        call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_PARSE% 011 "faild to parse profile"
+    if not errorlevel %RC_OK% (
+        call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_PARSE% 011 "failed to parse profile"
         exit /b %errorlevel%
     )
-    goto :ProfileReady
+    call "%RCSU%" -trace INFO "%~n0" "profile loaded successfully"
+    set "FIRST_LAUNCH=0"
+    exit /b %RC_OK%
 )
+
 
 :: First Launch Detected
 :: Step [1] Setup Language
 call "%RCSU%" -trace INFO "%~n0" "first launch detected"
+set "FIRST_LAUNCH=1"
 call "%PROJECT_ROOT%\Src\Systems\Environment\SetupLanguage.bat"
 set "rc=%errorlevel%"
 

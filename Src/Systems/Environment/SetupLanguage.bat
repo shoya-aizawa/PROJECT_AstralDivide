@@ -58,11 +58,11 @@ if "%ARG_AUTO%"=="0" (
 		cls
 		echo.
 		echo. ======================================
-		echo. =        Language Setup v0.1a
+		echo.          Language Setup v0.1a
 		echo. ======================================
-		echo. = [1] 日本語 (ja-JP)
-		echo. = [2] English (en-US)
-		echo. = [0] Cancel / キャンセル
+		echo.   [1] 日本語 (ja-JP)
+		echo.   [2] English (en-US)
+		echo.   [0] Cancel / キャンセル
 		echo. =-------------------------------------
 		echo. = %esc%[36mPlease select your language:%esc%[0m
 		echo. ======================================
@@ -87,12 +87,12 @@ if "%ARG_AUTO%"=="0" (
 			cls
 			echo.
 			echo. =------------------------------------=
-			echo. = セットアップを中断しますか?
-			echo. = Do u really want cancel setup?
-			echo. =    [Y]es / はい 
-			echo. =    [N]o  / いいえ 
+			echo.   セットアップを中断しますか?
+			echo.   Do u really want cancel setup?
+			echo.      [Y]es / はい 
+			echo.      [N]o  / いいえ 
 			echo. =------------------------------------=
-			echo. = [^^!] Select Yes to %esc%[32mexit%esc%[0m.
+			echo.   [^^!] Select Yes to %esc%[32mexit%esc%[0m.
 			echo. =------------------------------------=
 			choice /c YN /n /m "> "
 			if "%errorlevel%"=="1" (set "confirm_cancel=YES") else (set "confirm_cancel=NO")
@@ -103,7 +103,7 @@ if "%ARG_AUTO%"=="0" (
 		) else if "%pick%"=="2" (
 			set "LANGUAGE=en-US"
 		) else (
-			@powershell -Command "[console]::Beep(130.82,200)" 2>nul
+			@powershell -Command "[console]::Beep(130.82,500)" 2>nul
 			echo. Invalid selection. / 無効な選択です.
 			timeout /t 1 >nul
 			goto :UI

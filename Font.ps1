@@ -35,7 +35,7 @@ public class ConsoleFont {
 # フォント設定を変更する関数
 function Set-ConsoleFont {
     param(
-        [string]$FontName = "Consolas",
+        [string]$FontName = "MS Gothic",
         [int]$FontSize = 16
     )
 
@@ -51,4 +51,11 @@ function Set-ConsoleFont {
 }
 
 # フォントを変更（例：Consolas, サイズ16）
-Set-ConsoleFont -FontName "Consolas" -FontSize 16
+Set-ConsoleFont -FontName "MS Gothic" -FontSize 16
+
+Add-Type -AssemblyName System.Drawing
+[System.Drawing.FontFamily]::Families |
+Where-Object { $_.IsStyleAvailable([System.Drawing.FontStyle]::Regular) } |
+Select-Object Name
+
+
