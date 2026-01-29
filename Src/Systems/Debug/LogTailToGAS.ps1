@@ -12,13 +12,13 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = 'SilentlyContinue'
 
-function To-Sha256Hex([string]$s) {
+function ConvertTo-Sha256Hex([string]$s) {
   $sha = [System.Security.Cryptography.SHA256]::Create()
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($s)
   $hash = $sha.ComputeHash($bytes)
   ($hash | ForEach-Object { $_.ToString("x2") }) -join ""
 }
-function Post-Form([hashtable]$body) {
+function Invoke-FormRequest([hashtable]$body) {
   Invoke-RestMethod -Uri $GasUrl -Method POST -Body $body -ContentType "application/x-www-form-urlencoded; charset=utf-8"
 }
 function Get-Json([string]$url) {
@@ -39,11 +39,11 @@ Write-Host ""
 $userId = Read-Host "User ID"
 $pass   = Read-Host "Password" -AsSecureString
 $passPlain = [Runtime.InteropServices.Marshal]::PtrToStringUni([Runtime.InteropServices.Marshal]::SecureStringToBSTR($pass))
-$passHash  = To-Sha256Hex $passPlain
+$passHash  = ConvertTo-Sha256Hex $passPlain
 
 Write-Host "[*] requesting join..."
 
-$req = Post-Form @{
+$req = Invoke-FormRequest @{
   action    = "request_join"
   user_id   = $userId
   pass_hash = $passHash
@@ -81,7 +81,7 @@ while ($true) {
 $buffer = New-Object System.Collections.Generic.List[string]
 $lastFlush = [DateTime]::UtcNow
 
-function Flush-Buffer {
+function Clear-LogBuffer {
   if ($buffer.Count -le 0) { return }
 
   # snapshot -> clear（送信中に追記されても壊れない）
@@ -90,7 +90,7 @@ function Flush-Buffer {
 
   try {
     foreach ($line in $toSend) {
-      $r = Post-Form @{
+      $r = Invoke-FormRequest @{
         action        = "post_log"
         session_token = $token
         log           = $line
@@ -129,7 +129,7 @@ try {
       $buffer.Add($line)
 
       if ($buffer.Count -ge $BatchLines) {
-        Flush-Buffer
+        Clear-LogBuffer
       }
       continue
     }
@@ -137,14 +137,14 @@ try {
     # 追記が無い時間でもFlush判定
     $now = [DateTime]::UtcNow
     if ($buffer.Count -gt 0 -and ($now - $lastFlush).TotalMilliseconds -ge $FlushMs) {
-      Flush-Buffer
+      Clear-LogBuffer
     }
 
     Start-Sleep -Milliseconds 200
   }
 }
 finally {
-  try { Flush-Buffer } catch {}
+  try { Clear-LogBuffer } catch {}
   $sr.Close()
   $fs.Close()
 }

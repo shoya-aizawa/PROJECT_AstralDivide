@@ -11,7 +11,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = 'SilentlyContinue'
 
-function Post-Form([hashtable]$body) {
+function Invoke-FormRequest([hashtable]$body) {
   Invoke-RestMethod -Uri $GasUrl -Method POST -Body $body -ContentType "application/x-www-form-urlencoded; charset=utf-8"
 }
 function Get-Json([string]$url) {
@@ -32,7 +32,7 @@ Write-Host ""
 
 # --- start session (Plan B) ---
 try {
-  $ss = Post-Form @{ action="start_session"; admin_key=$AdminKey }
+  $ss = Invoke-FormRequest @{ action="start_session"; admin_key=$AdminKey }
   if (-not $ss.ok) { throw "start_session failed: $($ss.reason)" }
   $sessionId = [string]$ss.session_id
   if (-not $sessionId) { throw "start_session returned empty session_id" }
@@ -45,7 +45,7 @@ try {
 }
 
 # --- helper to build URLs with session_id ---
-function Build-LogsUrl([int]$sinceValue) {
+function New-LogsUrl([int]$sinceValue) {
   return ($GasUrl + "?since=$sinceValue&session_id=" + [uri]::EscapeDataString($sessionId))
 }
 
@@ -62,7 +62,7 @@ if ($modeAll) {
   Write-Host "[MODE] ALL logs"
 } else {
   # NEW only: jump to lastRow (we still pass session_id for consistent behavior)
-  $bootstrap = Get-Json (Build-LogsUrl 999999999)
+  $bootstrap = Get-Json (New-LogsUrl 999999999)
   $since = [int]$bootstrap.lastRow
   Write-Host "[MODE] NEW only (start since=$since)"
 }
@@ -74,7 +74,7 @@ Write-Host ""
 $lastHb = Get-Date 0
 $hbSec = 8
 
-function Cmd-Help {
+function Show-Help {
   Write-Host ""
   Write-Host "help"
   Write-Host "mode new | mode all"
@@ -87,14 +87,14 @@ function Cmd-Help {
   Write-Host ""
 }
 
-function Cmd-Mode([string]$m) {
+function Set-ViewMode([string]$m) {
   if ($m -eq "all") {
     $script:since = 0
     Write-Host "[MODE] ALL logs"
     return
   }
   if ($m -eq "new") {
-    $bootstrap = Get-Json (Build-LogsUrl 999999999)
+    $bootstrap = Get-Json (New-LogsUrl 999999999)
     $script:since = [int]$bootstrap.lastRow
     Write-Host "[MODE] NEW only (start since=$since)"
     return
@@ -102,7 +102,7 @@ function Cmd-Mode([string]$m) {
   Write-Host "[ERR] mode must be 'new' or 'all'" -ForegroundColor Red
 }
 
-function Cmd-Pending {
+function Get-PendingRequest {
   $p = Get-Json ($GasUrl + "?action=get_pending")
   if (-not $p.ok -or $p.pending.Count -eq 0) { Write-Host "(no pending)"; return }
 
@@ -114,19 +114,19 @@ function Cmd-Pending {
   }
 }
 
-function Cmd-Approve([string]$rid) {
+function Approve-Request([string]$rid) {
   if (-not $rid) { Write-Host "[ERR] approve needs req_id" -ForegroundColor Red; return }
-  $r = Post-Form @{ action="approve"; admin_key=$AdminKey; req_id=$rid }
+  $r = Invoke-FormRequest @{ action="approve"; admin_key=$AdminKey; req_id=$rid }
   if ($r.ok) { Write-Host "[OK] approved" -ForegroundColor Cyan } else { Write-Host ("[ERR] {0}" -f $r.reason) -ForegroundColor Red }
 }
 
-function Cmd-Deny([string]$rid) {
+function Deny-Request([string]$rid) {
   if (-not $rid) { Write-Host "[ERR] deny needs req_id" -ForegroundColor Red; return }
-  $r = Post-Form @{ action="deny"; admin_key=$AdminKey; req_id=$rid }
+  $r = Invoke-FormRequest @{ action="deny"; admin_key=$AdminKey; req_id=$rid }
   if ($r.ok) { Write-Host "[OK] denied" -ForegroundColor DarkYellow } else { Write-Host ("[ERR] {0}" -f $r.reason) -ForegroundColor Red }
 }
 
-function Cmd-Clients {
+function Get-ClientSession {
   $c = Get-Json ($GasUrl + "?action=list_clients")
   if (-not $c.ok -or $c.clients.Count -eq 0) { Write-Host "(no clients)"; return }
 
@@ -137,9 +137,9 @@ function Cmd-Clients {
   }
 }
 
-function Cmd-Kick([string]$uid) {
+function Remove-ClientSession([string]$uid) {
   if (-not $uid) { Write-Host "[ERR] kick needs user_id" -ForegroundColor Red; return }
-  $r = Post-Form @{ action="revoke"; admin_key=$AdminKey; user_id=$uid }
+  $r = Invoke-FormRequest @{ action="revoke"; admin_key=$AdminKey; user_id=$uid }
   if ($r.ok) { Write-Host "[OK] kicked" -ForegroundColor Cyan } else { Write-Host ("[ERR] {0}" -f $r.reason) -ForegroundColor Red }
 }
 
@@ -150,7 +150,7 @@ while (-not $quit) {
     # heartbeat
     $now = Get-Date
     if (($now - $lastHb).TotalSeconds -ge $hbSec) {
-      Post-Form @{ action="admin_heartbeat"; admin_key=$AdminKey } | Out-Null
+      Invoke-FormRequest @{ action="admin_heartbeat"; admin_key=$AdminKey } | Out-Null
       $lastHb = $now
     }
 
@@ -168,8 +168,8 @@ while (-not $quit) {
         Write-Host ("ID:{0} is requesting permission to connect host={1} session={2}" -f $uid, $hst, $sid) -ForegroundColor Yellow
         $ans = Read-Host "Approve? (Y/N)"
 
-        if ($ans -match '^[Yy]') { Cmd-Approve $rid }
-        else { Cmd-Deny $rid }
+        if ($ans -match '^[Yy]') { Approve-Request $rid }
+        else { Deny-Request $rid }
       }
     }
 
@@ -184,16 +184,16 @@ while (-not $quit) {
         $arg = if ($parts.Count -ge 2) { $parts[1].Trim() } else { "" }
 
         switch ($op) {
-          "help"    { Cmd-Help }
-          "mode"    { Cmd-Mode $arg }
-          "pending" { Cmd-Pending }
-          "approve" { Cmd-Approve $arg }
-          "deny"    { Cmd-Deny $arg }
-          "clients" { Cmd-Clients }
-          "kick"    { Cmd-Kick $arg }
+          "help"    { Show-Help }
+          "mode"    { Set-ViewMode $arg }
+          "pending" { Get-PendingRequest }
+          "approve" { Approve-Request $arg }
+          "deny"    { Deny-Request $arg }
+          "clients" { Get-ClientSession }
+          "kick"    { Remove-ClientSession $arg }
           "quit"    {
             try {
-                Post-Form @{
+                Invoke-FormRequest @{
                     action    = "end_session"
                     admin_key = $AdminKey
                     admin     = $adminId 
@@ -207,7 +207,7 @@ while (-not $quit) {
     }
 
     # logs (session filtered)
-    $obj = Get-Json (Build-LogsUrl $since)
+    $obj = Get-Json (New-LogsUrl $since)
     foreach ($log in $obj.logs) {
       $msg = Sanitize ([string]$log.message)
       Write-Host -ForegroundColor Green $msg

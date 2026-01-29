@@ -1,0 +1,68 @@
+{clear}
+{player}{pos:10:10}{type:normal}{green}ようこそ、{var:player_name}。{/green}{/type}
+
+{heroine}{delay:800}{pos:20:20}{type:slow}機械の未来を、信じる？{/type}
+
+{delay:1000}{pos:11:11}{type:fast}ここまで 描写 されるか{yellow}テスト{/yellow}{/type}
+
+{both}{delay:1000}{pos:12:12}{type:300}ただの{/type}
+{type:100}{mix:red:blue}文字{/mix}{/type}
+{type}でも行ける？{/type}
+
+
+{delay:100}
+
+
+
+{pos:30:30}{shake:10}{red}くらえぇぇぇぇぇぇぇ！！！{/red}{/shake}
+
+
+
+
+
+
+
+
+# scene.txt
+## HTML風のタグを記述したスクリプトを格納するテキストファイル
+## このファイルは RenderScene.bat によって解析・描画される
+##
+## =========================
+## 🏷️ タグ一覧（使用可能タグ）
+## =========================
+##
+## 🎙 話者タグ
+## {player}      ... 話者：主人公（[PLAYER]）
+## {heroine}     ... 話者：ヒロイン（[HEROIN]）
+## {both}        ... 話者：両者同時（[BOTH]）
+##
+## 🎬 表示制御タグ
+## {pos:Y:X}     ... 表示位置を座標 (Y,X) に移動
+## {delay:ms}    ... 指定ミリ秒だけ待機（例：{delay:1000}）
+## {type:XXX}        ... タイプライター表示開始（以後のテキストが1文字ずつ表示）
+## {/type}       ... タイプライター表示終了
+## {clear}       ... 画面クリア（cls）
+##
+## 🖍 色・装飾タグ
+## {bold}        ... 太字（強調）
+## {/bold}
+## {underline}   ... 下線
+## {/underline}
+## {reverse}     ... 前景と背景の反転
+## {/reverse}
+## {green}       ... 緑文字
+## {/green}
+## {yellow}      ... 黄文字
+## {/yellow}
+## {highlight_blue} ... 青背景＋白文字の強調表示
+## {/highlight_blue}
+##
+## 🔁 変数展開タグ
+## {var:変数名}  ... バッチ変数を表示（例：{var:player_name}）
+##
+## 📌 補足
+## - タグは `{}` で囲んで記述してください
+## - ネスト（入れ子構造）は非対応（{bold}{green}〜{/green}{/bold} は未サポート）
+## - 一行ごとに表示命令を完結させてください
+##
+## =========================

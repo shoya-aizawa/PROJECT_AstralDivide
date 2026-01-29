@@ -46,7 +46,10 @@ call "%src_display_dir%\BootCompleteDisplay.bat"
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
 
 :: Background Image
-call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Jacket_Image_2_NoText.png" /b
+call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Title_Image.png" /b
+
+:: TEST Applying fonts
+call "%tools_dir%\cmdwiz.exe" setfont "%tools_dir%\Consolas.fnt"
 
 
 
@@ -192,7 +195,7 @@ goto :Scenario_Return
     if "%~1"=="Episode_1"      call "%cd_stories%\Episode_01\EntryPoint.bat"
     if "%~1"=="Episode_2"      call "%cd_stories%\Episode_02\EntryPoint.bat"
 
-    if %retcode%==55 goto :JumpToEpisode
+    rem if %retcode%==55 goto :JumpToEpisode
 
 
     :: ...今後も増やせる
@@ -357,7 +360,7 @@ if %errorlevel%==5 (goto :Start_MainMenu)
 :Exit
     call "%src_audio_dir%\Play_BGM.bat" "" stop
     echo. %ESC%[92mGame has exited successfully. [E-0:EXIT]%ESC%[0m
-    echo. %ESC%[92mThank you for playing!%ESC%[0m
+    echo. %esc%[6m%esc%[92mThank you for playing.%esc%[0m
     timeout /t 2 >nul
     exit /b 39
 

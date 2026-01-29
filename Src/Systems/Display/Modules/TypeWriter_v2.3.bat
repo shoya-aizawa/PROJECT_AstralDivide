@@ -39,7 +39,7 @@ if "!prefix!"=="!ESC![" (
 
 set "char=!line:~%i%,1!"
 if not defined char goto :done
-<nul set /p="!char!"
+%tools_dir%\cmdwiz.exe print "!char!"
 set /a i+=1
 %tools_dir%\cmdwiz.exe delay !speed!
 goto :main_loop

@@ -115,7 +115,7 @@ rem TODO call "%root_dir%\Src\Systems\Security\VerifySignatures.bat"
 
 :: [8] Initiate Main.bat
 :GoMain
-start "AstralDivide[v0.1.0]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.0]"
+start "AstralDivide[v0.1.1]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.1]"
 rem start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
 set launch_time=%time%
 call "%RCSU%" -trace INFO "%~n0" "main launched time=%launch_time%"
@@ -125,7 +125,7 @@ if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
 ( if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL) ) > "%runtime_ipc_dir%\.mode"
 
 rem Pass IPC_DIR to WD as an argument
-call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.0]"
+call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.1]"
 
 
 :: [A] Cleanup Temporary Files
