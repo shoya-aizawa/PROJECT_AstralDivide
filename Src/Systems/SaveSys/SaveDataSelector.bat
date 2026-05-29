@@ -1,4 +1,9 @@
 @echo off
+:: Load static UI profile configurations
+if exist "%src_display_tpl_dir%\StaticUIProfileSelector.bat" (
+    call "%src_display_tpl_dir%\StaticUIProfileSelector.bat"
+)
+
 
 :: 通常の初期化・分岐
 set "selector_mode=%1"
@@ -31,16 +36,35 @@ set debug_current_key=
 
 set current_selected_slot=1
 
-:: 表示設定
-set max_available_slots=3
-set max_total_slots=12
-set slots_per_row=4
+:: 返り値・アクションの初期化
+set UI_ACTION=
+set UI_PARAM=
 
-:: カラーコード定義
-set color_selected=7
-set color_available=32
-set color_coming_soon=90
-set color_normal=0
+:: 表示設定
+set max_available_slots=12
+set max_total_slots=12
+set slots_per_row=3
+
+:: 描画品質のデフォルト設定
+if not defined RENDER_QUALITY set "RENDER_QUALITY=HIGH"
+
+:: 描画品質に応じたカラーコード定義
+if /i "%RENDER_QUALITY%"=="LOW" (
+    set color_selected=7
+    set color_available=7
+    set color_coming_soon=90
+    set color_normal=0
+) else if /i "%RENDER_QUALITY%"=="MIDDLE" (
+    set color_selected=30;47
+    set color_available=36
+    set color_coming_soon=90
+    set color_normal=0
+) else (
+    set color_selected=30;46
+    set color_available=96
+    set color_coming_soon=90
+    set color_normal=0
+)
 
 
 :: ========== モード別前処理 ==========
@@ -66,17 +90,15 @@ exit /b 2099
 :Process_Continue_Result
     set prereq_result=%errorlevel%
     
-    if %prereq_result%==0 exit /b 2031
-    if %prereq_result%==1 goto :MainLoop
-    if %prereq_result%==2000 (
-        :: セーブデータが見つからない場合はメインメニューに戻る
-        exit /b 2000
+    if %prereq_result%==0 (
+        :: セーブデータが見つからなかった場合（既にメッセージ表示とUI_ACTION=CANCEL設定済み）
+        exit /b %RC_OK%
     )
+    if %prereq_result%==1 goto :MainLoop
     
-    echo [Debug] Unexpected prereq_result=%prereq_result%
-    timeout /t 5 >nul
-    exit /b 2999
     :: 想定外
+    set "UI_ACTION=CANCEL"
+    exit /b %RC_OK%
 
 
 :: ========== CONTINUE前提条件チェック ==========
@@ -104,18 +126,19 @@ exit /b 2099
 :Display_NoSaveData_Message
     cls
     echo.
-    echo. %esc%[91m+---------------------------------------------+%esc%[0m
+    echo. %esc%[91m┌─────────────────────────────────────────────┐%esc%[0m
     echo. %esc%[91m│%esc%[0m                                             %esc%[91m│%esc%[0m
     echo. %esc%[91m│%esc%[93m         セーブデータが見つかりません        %esc%[91m│%esc%[0m
     echo. %esc%[91m│%esc%[0m                                             %esc%[91m│%esc%[0m
     echo. %esc%[91m│%esc%[97m    まずは「はじめから」でゲームを開始して   %esc%[91m│%esc%[0m
     echo. %esc%[91m│%esc%[97m        セーブデータを作成してください       %esc%[91m│%esc%[0m
     echo. %esc%[91m│%esc%[0m                                             %esc%[91m│%esc%[0m
-    echo. %esc%[91m+---------------------------------------------+%esc%[0m
+    echo. %esc%[91m└─────────────────────────────────────────────┘%esc%[0m
     echo.
     echo. %esc%[96mpress any key to continue%esc%[0m
     pause >nul
-    exit /b 2000
+    set "UI_ACTION=CANCEL"
+    exit /b %RC_OK%
 
 
 :: ========== NEWGAME前提条件チェック ==========
@@ -134,16 +157,17 @@ exit /b 2099
 :: ================================
 
 :MainLoop
+    call :Load_All_Slots_Cache
     call :Initialize_Slot_Colors
     :: 初回のみ全体表示
     call :Display_SaveDataSelector
-
+ 
 :SaveDataSelectLoop
     call :Update_Slot_Colors
     call :Quick_Update_Display
     call :GetChoice
     call :HandleKey %choice%
-    if %errorlevel% geq 2000 exit /b %errorlevel%
+    if defined UI_ACTION exit /b %RC_OK%
     goto :SaveDataSelectLoop
 
 
@@ -207,128 +231,47 @@ exit /b 2099
 :Display_SaveDataSelector
     :: 初回表示時のみ全体描画
     cls
-    for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\[DEV]SelectSaveDataDisplay.txt") do (echo %%a)
+    if /i "%RENDER_QUALITY%"=="LOW" (
+        :: LOW: Load single-border static fallback template
+        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\SelectSaveDataDisplay_LOW.txt") do (echo %%a)
+    ) else (
+        :: HIGH / MIDDLE: Load high-quality static templates (pre-rendered borders and title)
+        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\SelectSaveDataDisplay_%RENDER_QUALITY%.txt") do (echo %%a)
+    )
     if %DEBUG_STATE%==1 (
         call :Display_Debug_Info
     )
     exit /b 0
 
 :Quick_Update_Display
-    :: 第1行のスロット（22-29行目）の外枠とスロット番号を更新
-
-    echo %esc%[22;55H%esc%[%slot_1_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[23;55H%esc%[%slot_1_color%m│%esc%[0m[1]                 %esc%[%slot_1_color%m│%esc%[0m
-    echo %esc%[24;55H%esc%[%slot_1_color%m│%esc%[0m                    %esc%[%slot_1_color%m│%esc%[0m
-    echo %esc%[25;55H%esc%[%slot_1_color%m│%esc%[0m                    %esc%[%slot_1_color%m│%esc%[0m
-    echo %esc%[26;55H%esc%[%slot_1_color%m│%esc%[0m                    %esc%[%slot_1_color%m│%esc%[0m
-    echo %esc%[27;55H%esc%[%slot_1_color%m│%esc%[0m                    %esc%[%slot_1_color%m│%esc%[0m
-    echo %esc%[28;55H%esc%[%slot_1_color%m│%esc%[0m                    %esc%[%slot_1_color%m│%esc%[0m
-    echo %esc%[29;55H%esc%[%slot_1_color%m└────────────────────┘%esc%[0m
-    
-    echo %esc%[22;82H%esc%[%slot_2_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[23;82H%esc%[%slot_2_color%m│%esc%[0m[2]                 %esc%[%slot_2_color%m│%esc%[0m
-    echo %esc%[24;82H%esc%[%slot_2_color%m│%esc%[0m                    %esc%[%slot_2_color%m│%esc%[0m
-    echo %esc%[25;82H%esc%[%slot_2_color%m│%esc%[0m                    %esc%[%slot_2_color%m│%esc%[0m
-    echo %esc%[26;82H%esc%[%slot_2_color%m│%esc%[0m                    %esc%[%slot_2_color%m│%esc%[0m
-    echo %esc%[27;82H%esc%[%slot_2_color%m│%esc%[0m                    %esc%[%slot_2_color%m│%esc%[0m
-    echo %esc%[28;82H%esc%[%slot_2_color%m│%esc%[0m                    %esc%[%slot_2_color%m│%esc%[0m
-    echo %esc%[29;82H%esc%[%slot_2_color%m└────────────────────┘%esc%[0m
-    
-    echo %esc%[22;109H%esc%[%slot_3_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[23;109H%esc%[%slot_3_color%m│%esc%[0m[3]                 %esc%[%slot_3_color%m│%esc%[0m
-    echo %esc%[24;109H%esc%[%slot_3_color%m│%esc%[0m                    %esc%[%slot_3_color%m│%esc%[0m
-    echo %esc%[25;109H%esc%[%slot_3_color%m│%esc%[0m                    %esc%[%slot_3_color%m│%esc%[0m
-    echo %esc%[26;109H%esc%[%slot_3_color%m│%esc%[0m                    %esc%[%slot_3_color%m│%esc%[0m
-    echo %esc%[27;109H%esc%[%slot_3_color%m│%esc%[0m                    %esc%[%slot_3_color%m│%esc%[0m
-    echo %esc%[28;109H%esc%[%slot_3_color%m│%esc%[0m                    %esc%[%slot_3_color%m│%esc%[0m
-    echo %esc%[29;109H%esc%[%slot_3_color%m└────────────────────┘%esc%[0m
-    
-    echo %esc%[22;136H%esc%[%slot_4_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[23;136H%esc%[%slot_4_color%m│%esc%[0m[4]                 %esc%[%slot_4_color%m│%esc%[0m
-    echo %esc%[24;136H%esc%[%slot_4_color%m│%esc%[0m                    %esc%[%slot_4_color%m│%esc%[0m
-    echo %esc%[25;136H%esc%[%slot_4_color%m│%esc%[0m                    %esc%[%slot_4_color%m│%esc%[0m
-    echo %esc%[26;136H%esc%[%slot_4_color%m│%esc%[0m                    %esc%[%slot_4_color%m│%esc%[0m
-    echo %esc%[27;136H%esc%[%slot_4_color%m│%esc%[0m                    %esc%[%slot_4_color%m│%esc%[0m
-    echo %esc%[28;136H%esc%[%slot_4_color%m│%esc%[0m                    %esc%[%slot_4_color%m│%esc%[0m
-    echo %esc%[29;136H%esc%[%slot_4_color%m└────────────────────┘%esc%[0m
-    
-    :: 第2行のスロット（31-38行目）
-
-    echo %esc%[31;55H%esc%[%slot_5_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[32;55H%esc%[%slot_5_color%m│%esc%[0m[5]                 %esc%[%slot_5_color%m│%esc%[0m
-    echo %esc%[33;55H%esc%[%slot_5_color%m│%esc%[0m                    %esc%[%slot_5_color%m│%esc%[0m
-    echo %esc%[34;55H%esc%[%slot_5_color%m│%esc%[0m                    %esc%[%slot_5_color%m│%esc%[0m
-    echo %esc%[35;55H%esc%[%slot_5_color%m│%esc%[0m                    %esc%[%slot_5_color%m│%esc%[0m
-    echo %esc%[36;55H%esc%[%slot_5_color%m│%esc%[0m                    %esc%[%slot_5_color%m│%esc%[0m
-    echo %esc%[37;55H%esc%[%slot_5_color%m│%esc%[0m                    %esc%[%slot_5_color%m│%esc%[0m
-    echo %esc%[38;55H%esc%[%slot_5_color%m└────────────────────┘%esc%[0m
-
-    echo %esc%[31;82H%esc%[%slot_6_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[32;82H%esc%[%slot_6_color%m│%esc%[0m[6]                 %esc%[%slot_6_color%m│%esc%[0m
-    echo %esc%[33;82H%esc%[%slot_6_color%m│%esc%[0m                    %esc%[%slot_6_color%m│%esc%[0m
-    echo %esc%[34;82H%esc%[%slot_6_color%m│%esc%[0m                    %esc%[%slot_6_color%m│%esc%[0m
-    echo %esc%[35;82H%esc%[%slot_6_color%m│%esc%[0m                    %esc%[%slot_6_color%m│%esc%[0m
-    echo %esc%[36;82H%esc%[%slot_6_color%m│%esc%[0m                    %esc%[%slot_6_color%m│%esc%[0m
-    echo %esc%[37;82H%esc%[%slot_6_color%m│%esc%[0m                    %esc%[%slot_6_color%m│%esc%[0m
-    echo %esc%[38;82H%esc%[%slot_6_color%m└────────────────────┘%esc%[0m
-
-    echo %esc%[31;109H%esc%[%slot_7_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[32;109H%esc%[%slot_7_color%m│%esc%[0m[7]                 %esc%[%slot_7_color%m│%esc%[0m
-    echo %esc%[33;109H%esc%[%slot_7_color%m│%esc%[0m                    %esc%[%slot_7_color%m│%esc%[0m
-    echo %esc%[34;109H%esc%[%slot_7_color%m│%esc%[0m                    %esc%[%slot_7_color%m│%esc%[0m
-    echo %esc%[35;109H%esc%[%slot_7_color%m│%esc%[0m                    %esc%[%slot_7_color%m│%esc%[0m
-    echo %esc%[36;109H%esc%[%slot_7_color%m│%esc%[0m                    %esc%[%slot_7_color%m│%esc%[0m
-    echo %esc%[37;109H%esc%[%slot_7_color%m│%esc%[0m                    %esc%[%slot_7_color%m│%esc%[0m
-    echo %esc%[38;109H%esc%[%slot_7_color%m└────────────────────┘%esc%[0m
-
-    echo %esc%[31;136H%esc%[%slot_8_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[32;136H%esc%[%slot_8_color%m│%esc%[0m[8]                 %esc%[%slot_8_color%m│%esc%[0m
-    echo %esc%[33;136H%esc%[%slot_8_color%m│%esc%[0m                    %esc%[%slot_8_color%m│%esc%[0m
-    echo %esc%[34;136H%esc%[%slot_8_color%m│%esc%[0m                    %esc%[%slot_8_color%m│%esc%[0m
-    echo %esc%[35;136H%esc%[%slot_8_color%m│%esc%[0m                    %esc%[%slot_8_color%m│%esc%[0m
-    echo %esc%[36;136H%esc%[%slot_8_color%m│%esc%[0m                    %esc%[%slot_8_color%m│%esc%[0m
-    echo %esc%[37;136H%esc%[%slot_8_color%m│%esc%[0m                    %esc%[%slot_8_color%m│%esc%[0m
-    echo %esc%[38;136H%esc%[%slot_8_color%m└────────────────────┘%esc%[0m
-    
-    :: 第3行のスロット（40-47行目）
-
-    echo %esc%[40;55H%esc%[%slot_9_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[41;55H%esc%[%slot_9_color%m│%esc%[0m[9]                 %esc%[%slot_9_color%m│%esc%[0m
-    echo %esc%[42;55H%esc%[%slot_9_color%m│%esc%[0m                    %esc%[%slot_9_color%m│%esc%[0m
-    echo %esc%[43;55H%esc%[%slot_9_color%m│%esc%[0m                    %esc%[%slot_9_color%m│%esc%[0m
-    echo %esc%[44;55H%esc%[%slot_9_color%m│%esc%[0m                    %esc%[%slot_9_color%m│%esc%[0m
-    echo %esc%[45;55H%esc%[%slot_9_color%m│%esc%[0m                    %esc%[%slot_9_color%m│%esc%[0m
-    echo %esc%[46;55H%esc%[%slot_9_color%m│%esc%[0m                    %esc%[%slot_9_color%m│%esc%[0m
-    echo %esc%[47;55H%esc%[%slot_9_color%m└────────────────────┘%esc%[0m
-
-    echo %esc%[40;82H%esc%[%slot_10_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[41;82H%esc%[%slot_10_color%m│%esc%[0m[10]                %esc%[%slot_10_color%m│%esc%[0m
-    echo %esc%[42;82H%esc%[%slot_10_color%m│%esc%[0m                    %esc%[%slot_10_color%m│%esc%[0m
-    echo %esc%[43;82H%esc%[%slot_10_color%m│%esc%[0m                    %esc%[%slot_10_color%m│%esc%[0m
-    echo %esc%[44;82H%esc%[%slot_10_color%m│%esc%[0m                    %esc%[%slot_10_color%m│%esc%[0m
-    echo %esc%[45;82H%esc%[%slot_10_color%m│%esc%[0m                    %esc%[%slot_10_color%m│%esc%[0m
-    echo %esc%[46;82H%esc%[%slot_10_color%m│%esc%[0m                    %esc%[%slot_10_color%m│%esc%[0m
-    echo %esc%[47;82H%esc%[%slot_10_color%m└────────────────────┘%esc%[0m
-
-    echo %esc%[40;109H%esc%[%slot_11_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[41;109H%esc%[%slot_11_color%m│%esc%[0m[11]                %esc%[%slot_11_color%m│%esc%[0m
-    echo %esc%[42;109H%esc%[%slot_11_color%m│%esc%[0m                    %esc%[%slot_11_color%m│%esc%[0m
-    echo %esc%[43;109H%esc%[%slot_11_color%m│%esc%[0m                    %esc%[%slot_11_color%m│%esc%[0m
-    echo %esc%[44;109H%esc%[%slot_11_color%m│%esc%[0m                    %esc%[%slot_11_color%m│%esc%[0m
-    echo %esc%[45;109H%esc%[%slot_11_color%m│%esc%[0m                    %esc%[%slot_11_color%m│%esc%[0m
-    echo %esc%[46;109H%esc%[%slot_11_color%m│%esc%[0m                    %esc%[%slot_11_color%m│%esc%[0m
-    echo %esc%[47;109H%esc%[%slot_11_color%m└────────────────────┘%esc%[0m
-
-    echo %esc%[40;136H%esc%[%slot_12_color%m┌────────────────────┐%esc%[0m
-    echo %esc%[41;136H%esc%[%slot_12_color%m│%esc%[0m[12]                %esc%[%slot_12_color%m│%esc%[0m
-    echo %esc%[42;136H%esc%[%slot_12_color%m│%esc%[0m                    %esc%[%slot_12_color%m│%esc%[0m
-    echo %esc%[43;136H%esc%[%slot_12_color%m│%esc%[0m                    %esc%[%slot_12_color%m│%esc%[0m
-    echo %esc%[44;136H%esc%[%slot_12_color%m│%esc%[0m                    %esc%[%slot_12_color%m│%esc%[0m
-    echo %esc%[45;136H%esc%[%slot_12_color%m│%esc%[0m                    %esc%[%slot_12_color%m│%esc%[0m
-    echo %esc%[46;136H%esc%[%slot_12_color%m│%esc%[0m                    %esc%[%slot_12_color%m│%esc%[0m
-    echo %esc%[47;136H%esc%[%slot_12_color%m└────────────────────┘%esc%[0m
-    
-    :: デバッグモード時のみ統合更新
+    setlocal EnableDelayedExpansion
+    for /l %%i in (1,1,12) do (
+        set /a "col_idx=(%%i - 1) %% 3"
+        set /a "row_idx=(%%i - 1) / 3"
+        set /a "s_row=SLOT_POS_ROW + (row_idx * 9)"
+        if "!col_idx!"=="0" set "s_col=%SLOT_POS_COL_1%"
+        if "!col_idx!"=="1" set "s_col=%SLOT_POS_COL_2%"
+        if "!col_idx!"=="2" set "s_col=%SLOT_POS_COL_3%"
+        set /a "s_col_right=s_col + 21"
+        set /a "r0=s_row"
+        set /a "r1=s_row+1"
+        set /a "r2=s_row+2"
+        set /a "r3=s_row+3"
+        set /a "r4=s_row+4"
+        set /a "r5=s_row+5"
+        set /a "r6=s_row+6"
+        set /a "r7=s_row+7"
+        set "s_color=!slot_%%i_color!"
+        echo !esc![!r0!;!s_col!H!esc![!s_color!m┌────────────────────┐!esc![0m
+        echo !esc![!r1!;!s_col!H!esc![!s_color!m│!esc![0m[%%i] !slot_%%i_line_name!!esc![!s_color!m!esc![!r1!;!s_col_right!H│!esc![0m
+        echo !esc![!r2!;!s_col!H!esc![!s_color!m│!esc![0m    !slot_%%i_line_level!!esc![!s_color!m!esc![!r2!;!s_col_right!H│!esc![0m
+        echo !esc![!r3!;!s_col!H!esc![!s_color!m│!esc![0m    !slot_%%i_line_route!!esc![!s_color!m!esc![!r3!;!s_col_right!H│!esc![0m
+        echo !esc![!r4!;!s_col!H!esc![!s_color!m│                    !esc![!s_color!m!esc![!r4!;!s_col_right!H│!esc![0m
+        echo !esc![!r5!;!s_col!H!esc![!s_color!m│                    !esc![!s_color!m!esc![!r5!;!s_col_right!H│!esc![0m
+        echo !esc![!r6!;!s_col!H!esc![!s_color!m│                    !esc![!s_color!m!esc![!r6!;!s_col_right!H│!esc![0m
+        echo !esc![!r7!;!s_col!H!esc![!s_color!m└────────────────────┘!esc![0m
+    )
+    endlocal
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
     )
@@ -404,7 +347,7 @@ exit /b 2099
     
     :: キー別処理の実行
     call :Execute_Key_Action %key%
-    if %errorlevel% geq 2000 exit /b %errorlevel%
+    if defined UI_ACTION exit /b 0
     
     :: 後処理（隠しシーケンス、制限チェック）
     call :Process_Hidden_Sequences
@@ -433,10 +376,10 @@ exit /b 2099
     
     :: 主要機能キー（即座に返る）
     if %key%==6 call :Handle_Select
-    if %errorlevel% geq 2000 (exit /b %errorlevel%)
+    if defined UI_ACTION (exit /b 0)
 
     if %key%==17 call :Handle_Back
-    if %errorlevel% geq 2000 (exit /b %errorlevel%)
+    if defined UI_ACTION (exit /b 0)
 
     :: 移動キー（統一処理）
     if %key%==1 call :Handle_Move_Left
@@ -453,43 +396,43 @@ exit /b 2099
     exit /b 0
 
 :Handle_Select
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav"
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
     )
     call :HandleSelection
-    exit /b %retcode%
+    exit /b 0
 
 :Handle_Back
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Cancel.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav"
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
     )
     
-    :: Qキーでのキャンセルは2099を返す
-    set retcode=2099
-    exit /b %retcode%
+    set "UI_ACTION=CANCEL"
+    set "UI_PARAM="
+    exit /b 0
 
 :Handle_Move_Left
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Left_1
     exit /b 0
 
 :Handle_Move_Right
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
     call :Move_Right_1
     exit /b 0
 
 :Handle_Move_Down
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
-    call :Move_Down_4
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
+    call :Move_Down_3
     exit /b 0
 
 :Handle_Move_Up
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
-    call :Move_Up_4
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
+    call :Move_Up_3
     exit /b 0
 
 :Handle_Hidden_Sequence_Key
@@ -703,8 +646,8 @@ exit /b 2099
 
 :: ========== 移動処理関数 ==========
 
-:Move_Up_4
-    set /a new_slot=%current_selected_slot% - 4
+:Move_Up_3
+    set /a new_slot=%current_selected_slot% - 3
     if %new_slot% lss 1 set new_slot=%current_selected_slot%
     set current_selected_slot=%new_slot%
     exit /b 0
@@ -715,8 +658,8 @@ exit /b 2099
     set current_selected_slot=%new_slot%
     exit /b 0
 
-:Move_Down_4
-    set /a new_slot=%current_selected_slot% + 4
+:Move_Down_3
+    set /a new_slot=%current_selected_slot% + 3
     if %new_slot% gtr %max_total_slots% set new_slot=%current_selected_slot%
     set current_selected_slot=%new_slot%
     exit /b 0
@@ -732,16 +675,16 @@ exit /b 2099
 :HandleSelection
     if "%selector_mode%"=="CONTINUE" (
         call :Handle_Continue_Selection
-        exit /b %retcode%
+        exit /b 0
     ) else if "%selector_mode%"=="NEWGAME" (
         call :Handle_NewGame_Selection
         if %DEBUG_STATE%==1 (
             echo %esc%[29;2H%esc%[K[%current_time%]%esc%[0m
-            call echo %%esc%%[30;2H%%esc%%[K%%esc%%[91m[DEBUG] ReturnCode from Handle_NewGame_Selection = %%retcode%% %%esc%%[0m
+            call echo %%esc%%[30;2H%%esc%%[K%%esc%%[91m[DEBUG] UI_ACTION from Handle_NewGame_Selection = %%UI_ACTION%% %%esc%%[0m
         )
-        exit /b %retcode%
+        exit /b 0
     )
-    exit /b 2000
+    exit /b 0
 
 :Handle_Continue_Selection
     :: デバッグ情報表示
@@ -751,7 +694,7 @@ exit /b 2099
         timeout /t 1 >nul
     )
     if %current_selected_slot% leq %max_available_slots% (
-        if exist "%cd_savedata%\SaveData_%current_selected_slot%.txt" (
+        if exist "%saves_active_dir%\SaveData_%current_selected_slot%.txt" (
             call :Preview_SaveData %current_selected_slot%
             call :Confirm_LoadGame %current_selected_slot%
             if !errorlevel! == 1 (
@@ -760,13 +703,13 @@ exit /b 2099
                 set temp_confirmed=0
             )
             if %temp_confirmed%==1 (
-                :: 設計書準拠：2030 + スロット番号
-                set /a retcode=2030 + %current_selected_slot%
+                set "UI_ACTION=CONTINUE"
+                set "UI_PARAM=%current_selected_slot%"
                 if %DEBUG_STATE%==1 (
-                    echo %esc%[15;1H%esc%[K%esc%[91m [DEBUG] Continue confirmed: retcode=%retcode% %esc%[0m
+                    echo %esc%[15;1H%esc%[K%esc%[91m [DEBUG] Continue confirmed: slot=%current_selected_slot% %esc%[0m
                     timeout /t 2 >nul
                 )
-                exit /b %retcode%
+                exit /b 0
             ) else (
                 exit /b 0
             )
@@ -785,32 +728,32 @@ exit /b 2099
         exit /b 0
     )
     
-    :: 設計書準拠：キャンセルは2099
-    exit /b 2099
+    set "UI_ACTION=CANCEL"
+    exit /b 0
 
 :Handle_NewGame_Selection
     :: デバッグ情報表示
     if %DEBUG_STATE%==1 (
         echo %esc%[27;2H%esc%[K[%current_time%]%esc%[0m
-        echo %esc%[28;2H%esc%[K%esc%[91m[DEBUG] Handle_Continue_Selection: Slot=%current_selected_slot% %esc%[0m
+        echo %esc%[28;2H%esc%[K%esc%[91m[DEBUG] Handle_NewGame_Selection: Slot=%current_selected_slot% %esc%[0m
         timeout /t 1 >nul
     )
     if %current_selected_slot% leq %max_available_slots% (
-        if exist "%cd_savedata%\SaveData_%current_selected_slot%.txt" (
+        if exist "%saves_active_dir%\SaveData_%current_selected_slot%.txt" (
             call :Confirm_Overwrite %current_selected_slot%
             if %errorlevel%==1 (
-                set /a retcode=2070 + %current_selected_slot%
-                exit /b %retcode%
+                set "UI_ACTION=NEWGAME_OVERWRITE"
+                set "UI_PARAM=%current_selected_slot%"
+                exit /b 0
             ) else (
                 exit /b 0
             )
         ) else (
             call :Confirm_CreateNew %current_selected_slot%
-            setlocal EnableDelayedExpansion
-            if !retcode!==1 (
-                endlocal
-                set /a retcode=2050 + %current_selected_slot%
-                exit /b 1
+            if %errorlevel%==1 (
+                set "UI_ACTION=NEWGAME_CREATE"
+                set "UI_PARAM=%current_selected_slot%"
+                exit /b 0
             ) else (
                 exit /b 0
             )
@@ -824,7 +767,8 @@ exit /b 2099
         exit /b 0
     )
 
-    exit /b 2099
+    set "UI_ACTION=CANCEL"
+    exit /b 0
 
 
 
@@ -858,18 +802,18 @@ exit /b 2099
     echo %esc%[20;92H%esc%[K
 
     if %errorlevel%==1 (
-        start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter3.wav"
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter3.wav"
         set retcode=1
         exit /b 1
     ) else (
-        start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Cancel.wav"
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav"
         set retcode=0
         exit /b 0
     )
 
 :Preview_SaveData
     set slot_num=%1
-    if exist "%cd_savedata%\SaveData_%slot_num%.txt" (
+    if exist "%saves_active_dir%\SaveData_%slot_num%.txt" (
         echo %esc%[20;92H%esc%[96m [Preview] Slot %slot_num% データ確認中... %esc%[0m
         timeout /t 1 >nul
         echo %esc%[20;92H%esc%[K
@@ -1155,3 +1099,72 @@ exit /b 2099
 :: ========== Errorlevel チェック専用ヘルパー関数 ==========
 
 :: （不要になったため削除済み）
+
+
+:: ========== セーブデータプレビューキャッシュロード ==========
+
+:Load_All_Slots_Cache
+    :: スロット 1〜3 のロード
+    for /l %%i in (1,1,3) do (
+        set "slot_%%i_is_empty=true"
+        set "slot_%%i_name=Empty Slot"
+        set "slot_%%i_level=Lv.0"
+        set "slot_%%i_route=None"
+        if exist "%saves_active_dir%\SaveData_%%i.txt" (
+            set "slot_%%i_is_empty=false"
+            for /f "usebackq tokens=1,2 delims==" %%a in ("%saves_active_dir%\SaveData_%%i.txt") do (
+                if "%%a"=="player_name" set "slot_%%i_name=%%b"
+                if "%%a"=="player_level" set "slot_%%i_level=Lv.%%b"
+                if "%%a"=="player_storyroute" set "slot_%%i_route=%%b"
+            )
+        )
+    )
+    
+    :: 個別にパディング（16文字パディング）
+    call :PadString slot_1_line_name "%slot_1_name%"
+    call :PadString slot_1_line_level "%slot_1_level%"
+    call :PadString slot_1_line_route "%slot_1_route%"
+    
+    call :PadString slot_2_line_name "%slot_2_name%"
+    call :PadString slot_2_line_level "%slot_2_level%"
+    call :PadString slot_2_line_route "%slot_2_route%"
+    
+    call :PadString slot_3_line_name "%slot_3_name%"
+    call :PadString slot_3_line_level "%slot_3_level%"
+    call :PadString slot_3_line_route "%slot_3_route%"
+    
+    :: スロット4〜9用（未実装）
+    for /l %%i in (4,1,9) do (
+        call :PadString slot_%%i_line_name "Coming Soon"
+        call :PadString slot_%%i_line_level " "
+        call :PadString slot_%%i_line_route " "
+    )
+    
+    :: スロット 10〜12 用の15文字パディングを個別に作成
+    call :PadString15 slot_10_line_name_15 "Coming Soon"
+    call :PadString15 slot_10_line_level " "
+    call :PadString15 slot_10_line_route " "
+    
+    call :PadString15 slot_11_line_name_15 "Coming Soon"
+    call :PadString15 slot_11_line_level " "
+    call :PadString15 slot_11_line_route " "
+    
+    call :PadString15 slot_12_line_name_15 "Coming Soon"
+    call :PadString15 slot_12_line_level " "
+    call :PadString15 slot_12_line_route " "
+    exit /b 0
+
+:PadString
+    set "orig_str=%~2"
+    if "%orig_str%"=="" set "orig_str= "
+    set "padded=%orig_str%                "
+    set "%1=%padded:~0,16%"
+    exit /b 0
+
+:PadString15
+    set "orig_str=%~2"
+    if "%orig_str%"=="" set "orig_str= "
+    set "padded=%orig_str%               "
+    set "%1=%padded:~0,15%"
+    exit /b 0
+

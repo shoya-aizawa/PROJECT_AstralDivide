@@ -9,7 +9,10 @@ rem RC:
 rem   FLOW/SYS/OTHER/000 : 1-06-90-000 : OK
 rem -----------------------------------------------------------------------------
 
-call "%RCSU%" -trace INFO SettingPath "Start setting directory path variable"
+set "SILENT_MODE="
+if /i "%~1"=="SILENT" set "SILENT_MODE=1"
+
+if not defined SILENT_MODE call "%RCSU%" -trace INFO SettingPath "Start setting directory path variable"
 
 rem ─── If PROJECT_ROOT exists, use it. If not, complete it yourself. ──
 if defined PROJECT_ROOT (
@@ -173,7 +176,11 @@ echo %PATH_TAG% | find /I ";%tools_dir%;" >nul || set "PATH=%PATH%;%tools_dir%"
 
 rem --- show & RCSU return ------------------------------------------------
 for /f %%e in ('cmd /k prompt $e^<nul') do set "ESC=%%e"
-echo %ESC%[92m[OK]%ESC%[0m Path variable setting completed successfully.
-call "%RCSU%" -trace INFO SettingPath "Path variable setting completed successfully."
-call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
+if not defined SILENT_MODE (
+  echo %ESC%[92m[OK]%ESC%[0m Path variable setting completed successfully.
+  call "%RCSU%" -trace INFO SettingPath "Path variable setting completed successfully."
+  call "%RCSU%" -return %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
+) else (
+  exit /b %RC_OK%
+)
 exit /b %errorlevel%

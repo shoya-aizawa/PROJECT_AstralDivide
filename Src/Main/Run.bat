@@ -11,6 +11,7 @@
 @mode 90,35
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
 @if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
+@title Astral Divide - Booting.
 
 rem================================================= Main Flow =================================================
 
@@ -24,6 +25,45 @@ set "REMOTE_ADMIN_KEY=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab4
 
 
 
+
+:: --- Developer Option: Force First Launch Setup ---
+set "FORCE_FIRST_LAUNCH=0"
+for %%A in (%*) do (
+    if /i "%%~A"=="-first" set "FORCE_FIRST_LAUNCH=1"
+    if /i "%%~A"=="--first" set "FORCE_FIRST_LAUNCH=1"
+)
+if "%FORCE_FIRST_LAUNCH%"=="1" goto :Dev_ForceFirstLaunch
+goto :Dev_ForceFirstLaunch_End
+
+:Dev_ForceFirstLaunch
+    echo %esc%[93m[DEV] Force First Launch option detected.%esc%[0m
+    if not defined PROJECT_ROOT (
+        for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
+    )
+    for %%I in ("%PROJECT_ROOT%") do set "PROJECT_ROOT=%%~fI"
+    if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
+
+    set "_dev_cfg=%PROJECT_ROOT%\Config\user_config.env"
+    if exist "%_dev_cfg%" (
+        echo %esc%[90mCleaning user_config.env...%esc%[0m
+        del /q "%_dev_cfg%" >nul 2>&1
+    )
+    set "_dev_cache=%PROJECT_ROOT%\Config\Cache\Screen"
+    if exist "%_dev_cache%" (
+        echo %esc%[90mCleaning screen cache...%esc%[0m
+        rd /s /q "%_dev_cache%" >nul 2>&1
+    )
+    set "_dev_logs=%PROJECT_ROOT%\Config\Logs"
+    if exist "%_dev_logs%" (
+        echo %esc%[90mClearing all log files content...%esc%[0m
+        for %%F in ("%_dev_logs%\*.log") do (
+            type nul > "%%F" 2>nul
+        )
+    )
+    timeout /t 1 >nul
+    goto :Dev_ForceFirstLaunch_End
+
+:Dev_ForceFirstLaunch_End
 
 :: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT/REMOTE/REMOTEADMIN)
 set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
@@ -50,73 +90,57 @@ if /i "%~1"=="-mode" if /i "%~2"=="remoteadmin" (
 
 
 
-:: [1] LaunchGuard
-call "%~dp0..\Systems\Launcher\LaunchGuard.bat"
-set "LG_RC=%errorlevel%"
-if not "%LG_RC%"=="0" (
-    if "%LG_RC%"=="2" (exit)
-    set /a "RCS_FALLBACK=90630100 + %LG_RC%"
-    set "RCS_MISSING_TAG=LaunchGuard.bat"
+:: [1] Splash Animation & Background Initialization (Synchronous execution)
+@title Astral Divide - Loading...
+call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.bat" "%PROJECT_ROOT%"
+if not "%errorlevel%"=="0" (
+    set /a "RCS_FALLBACK=90640100 + %errorlevel%"
+    set "RCS_MISSING_TAG=Splash/Initializer"
     goto :FailRun
 )
 
-:: [2] Return Code System(RCS) Initialization
+:: Splash frontend has completed. All profile and setups are written to disk.
+:: Now we natively load RCS and Environment Variables inside the parent scope to protect game systems!
 set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 if not exist "%RCSU%" (
-	rem RCS_Util.bat not found : ERR/Systems/IO/case001
 	set "RCS_MISSING_TAG=RCS_Util.bat"
 	set "RCS_FALLBACK=90610001"
 	goto :FailRun
 )
-call "%RCSU%" -trace INFO "%~n0" "RCS initialization start"
-
-call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" || (
-	rem RCS_Const.bat not found or failed to load : ERR/Systems/IO/case002
+call "%PROJECT_ROOT%\Src\Systems\Debug\RCS_Const.bat" >nul 2>&1 || (
 	set "RCS_MISSING_TAG=RCS_Const.bat"
 	set "RCS_FALLBACK=90610002"
 	goto :FailRun
 )
-call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000
-call "%RCSU%" -trace INFO "%~n0" "RCS ready [rc=%errorlevel%]"
+call "%RCSU%" -build %RCS_S_FLOW% %RCS_D_SYS% %RCS_R_OTHER% 000 >nul 2>&1
 
-
-:: [3] Remote debug tailing launch point
-rem 引数指定で起動できない人向けに隠しコマンドを用意
-choice /c AX /n /cs /t 1 /d A >nul
-if errorlevel 2 (
-	goto :X
-)
-if /i "%~1"=="-mode" if /i "%~2"=="remote" (
-	:X
-    start "" powershell -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%"
-    call "%RCSU%" -trace INFO "%~n0" "remote tail started logfile=%logfile%"
-	echo 同期処理のため停止中... Enterキーで復帰
-	pause >nul
+:: =============================================================================
+:: [RCS & Configuration Parent Scope Load]
+:: All profile setups & directory calculations have been 100% completed 
+:: and sync'd with the loading bar during the Splash.
+:: Here we purely & silently load the generated configuration to the parent shell.
+:: =============================================================================
+set "USER_CONFIG=%PROJECT_ROOT%\Config\user_config.env"
+if exist "%USER_CONFIG%" (
+    call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%USER_CONFIG%" SILENT >nul 2>&1
 )
 
-:: [4] Profile Initialization
-call "%PROJECT_ROOT%\Src\Systems\Environment\ProfileInitializer.bat" "%PROJECT_ROOT%"
+:: Export finalized directory path variables to the parent shell (using SILENT to avoid duplicated logs)
+call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat" SILENT >nul 2>&1
 if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCSU%" -trace INFO "%~n0" "bootstrap ok"
 
-:: [5] Path Setup
-call "%PROJECT_ROOT%\Src\Systems\Environment\SettingPath.bat"
-if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCSU%" -trace INFO "%~n0" "paths ready root=%root_dir%"
+:: Transition directly to the Main Game Core (RCS variables are fully active!)
+goto :GoMain
 
-:: [6] Environment Detection
-if %FIRST_LAUNCH%==0 (goto :GoMain)
-call "%src_env_dir%\ScreenEnvironmentDetection.bat" "%root_dir%"
-if not "%errorlevel%"=="%RC_OK%" goto :FailFirstRun
-call "%RCSU%" -trace INFO "%~n0" "screen env ok"
-
-:: [7] Security Verification
+:: [2] Terminal Environment Check (Bypassed - already checked in Splash)
+:: [3] Environment Detection (Bypassed - already checked in Splash)
+:: [4] Security Verification
 rem TODO call "%root_dir%\Src\Systems\Security\VerifySignatures.bat"
 
 :: [8] Initiate Main.bat
 :GoMain
-start "AstralDivide[v0.1.1]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.1]"
-rem start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.0]"
+rem start "AstralDivide[v0.1.1]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.1]"
+start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.1]"
 set launch_time=%time%
 call "%RCSU%" -trace INFO "%~n0" "main launched time=%launch_time%"
 

@@ -1,5 +1,10 @@
 @echo off
-
+chcp 65001 >nul
+:: Load static UI profile configurations
+if exist "%src_display_tpl_dir%\StaticUIProfileSelector.bat" (
+    call "%src_display_tpl_dir%\StaticUIProfileSelector.bat"
+)
+rem call "%tools_dir%\cmdwiz.exe" setfont "%tools_dir%\Consolas.fnt"
 :: デバッグ状態継承（環境変数から）
 if not defined DEBUG_STATE set DEBUG_STATE=0
 
@@ -32,8 +37,9 @@ set debug_current_key=
 
 :: ========== 変数初期化 ==========
 
-:: 返り値の初期化
-set retcode=0
+:: 返り値・アクションの初期化
+set UI_ACTION=
+set UI_PARAM=
 
 :: 現在選択中のメニュー項目（1-4対応）
 set current_selected_menu=1
@@ -41,11 +47,26 @@ set current_selected_menu=1
 :: 表示設定
 set max_menu_items=4
 
-:: カラーコード定義
-set color_selected=7
-set color_available=32
-set color_unavailable=90
-set color_normal=0
+:: 描画品質のデフォルト設定
+if not defined RENDER_QUALITY set "RENDER_QUALITY=HIGH"
+
+:: 描画品質に応じたカラーコード定義
+if /i "%RENDER_QUALITY%"=="LOW" (
+    set color_selected=7
+    set color_available=7
+    set color_unavailable=90
+    set color_normal=0
+) else if /i "%RENDER_QUALITY%"=="MIDDLE" (
+    set color_selected=30;47
+    set color_available=36
+    set color_unavailable=90
+    set color_normal=0
+) else (
+    set color_selected=30;46
+    set color_available=96
+    set color_unavailable=90
+    set color_normal=0
+)
 
 
 
@@ -66,12 +87,12 @@ set color_normal=0
     call :Quick_Update_Display
     call :GetChoice
     call :HandleKey %choice%
-    if %errorlevel% geq 1000 (
+    if defined UI_ACTION (
         if %DEBUG_STATE%==1 (
-            echo %esc%[10;2H%esc%[K%esc%[91m[DEBUG-MMM] ReturnCode: %retcode% %esc%[0m
+            echo %esc%[10;2H%esc%[K%esc%[91m[DEBUG-MMM] UI_ACTION: %UI_ACTION% %esc%[0m
             timeout /t 1 >nul
         )
-        exit /b %retcode%
+        exit /b %RC_OK%
     )
     goto :MenuInputLoop
 
@@ -138,8 +159,14 @@ set color_normal=0
     :: 画面を常にクリア
     cls
 
-    :: MainMenuDisplay.txtを表示
-    for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\MainMenuDisplay.txt") do (echo %%a)
+    :: RENDER_QUALITY に応じたテンプレート表示
+    if /i "%RENDER_QUALITY%"=="LOW" (
+        :: LOW: Load single-border static fallback template
+        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\MainMenuDisplay_LOW.txt") do (echo %%a)
+    ) else (
+        :: HIGH / MIDDLE: Load high-quality static templates (pre-rendered AA and borders)
+        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\MainMenuDisplay_%RENDER_QUALITY%.txt") do (echo %%a)
+    )
 
     :: デバッグモード時の追加処理
     if %DEBUG_STATE%==1 (
@@ -172,7 +199,7 @@ set color_normal=0
     set debug_breakpoint_hit=0
     call :Process_Common_Key_Tasks %key%
     call :Execute_Key_Action %key%
-    if %retcode% geq 1000 exit /b %retcode%
+    if defined UI_ACTION exit /b 0
     call :Process_Hidden_Sequences
     call :Check_Sequence_Length
     exit /b 0
@@ -197,7 +224,7 @@ set color_normal=0
     
     :: 主要機能キー（即座に返る）
     if %key%==6 call :Handle_Select
-    if %retcode% geq 1000 (exit /b %retcode%)
+    if defined UI_ACTION (exit /b 0)
 
     :: 無効キーは何もしない（ログは既に記録済み）
     if %key%==1 call :Handle_Invalid_Key %key%
@@ -222,17 +249,17 @@ set color_normal=0
         call :Update_All_Debug_Info
         timeout /t 1 >nul
     )
-    :: retcode設定とデバッグ表示
-    if "%current_selected_menu%"=="1" set "retcode=1001"
-    if "%current_selected_menu%"=="2" set "retcode=1002"
-    if "%current_selected_menu%"=="3" set "retcode=1003"
-    if "%current_selected_menu%"=="4" set "retcode=1099"
+    :: UI_ACTION設定とデバッグ表示
+    if "%current_selected_menu%"=="1" set "UI_ACTION=MAINMENU_NEWGAME"
+    if "%current_selected_menu%"=="2" set "UI_ACTION=MAINMENU_CONTINUE"
+    if "%current_selected_menu%"=="3" set "UI_ACTION=MAINMENU_SETTINGS"
+    if "%current_selected_menu%"=="4" set "UI_ACTION=EXIT"
     if %DEBUG_STATE%==1 (
-        echo %esc%[8;1H%esc%[K%esc%[91m [DEBUG-MMM] Handle_Select: Menu=%current_selected_menu% RetCode=%retcode% %esc%[0m
-        echo %esc%[9;1H%esc%[K%esc%[93m [DEBUG-MMM] About to exit with code: %retcode% %esc%[0m
+        echo %esc%[8;1H%esc%[K%esc%[91m [DEBUG-MMM] Handle_Select: Menu=%current_selected_menu% UI_ACTION=%UI_ACTION% %esc%[0m
+        echo %esc%[9;1H%esc%[K%esc%[93m [DEBUG-MMM] About to exit with code: 0 %esc%[0m
         timeout /t 2 >nul
     )
-    exit /b %retcode%
+    exit /b 0
 
 :Handle_Move_Down
     start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
@@ -456,11 +483,13 @@ set color_normal=0
 :: ========== 表示更新システム ==========
 
 :Quick_Update_Display
-    :: メニュー項目は常に部分更新（チカチカ防止）
-    echo %esc%[36;99H%esc%[%menu_1_color%m   New Game   %esc%[0m
-    echo %esc%[38;99H%esc%[%menu_2_color%m   Continue   %esc%[0m
-    echo %esc%[42;99H%esc%[%menu_3_color%m   Settings   %esc%[0m
-    echo %esc%[44;99H%esc%[%menu_4_color%m     Quit     %esc%[0m
+    :: Update menu items selectively (anti-flicker) with 100% exact character alignment
+    setlocal EnableDelayedExpansion
+    echo !esc![%MENU_POS_ROW_1%;%MENU_POS_COL%H!esc![%menu_1_color%m      New Game      !esc![0m
+    echo !esc![%MENU_POS_ROW_2%;%MENU_POS_COL%H!esc![%menu_2_color%m      Continue      !esc![0m
+    echo !esc![%MENU_POS_ROW_3%;%MENU_POS_COL%H!esc![%menu_3_color%m      Settings      !esc![0m
+    echo !esc![%MENU_POS_ROW_4%;%MENU_POS_COL%H!esc![%menu_4_color%m        Quit        !esc![0m
+    endlocal
     :: デバッグモード時の統合更新
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info

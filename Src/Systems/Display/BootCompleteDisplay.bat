@@ -1,4 +1,5 @@
 @echo off
+chcp 65001 >nul
 cls & echo.
 echo. %esc%[92mRPG Game Booting...%esc%[0m
 echo.

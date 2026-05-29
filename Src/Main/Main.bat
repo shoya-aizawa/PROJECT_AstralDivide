@@ -1,160 +1,172 @@
-@echo on
+@echo off
 title %~2
-mode 80,25
-%tools_dir%\cmdwiz.exe fullscreen 1
-:: Main.bat
-:: This is the main entry point for the RPG game.
-:: aka : "HUB Terminal"
-:: All system modules are called from here,
-:: and error code (return value) handling controls the system flow.
-:: error code material is in the bottom of this file.
-:: For complete guides, see the ErrorCodeReference.md file
 
-:: Detect Arguments
-if "%~1"=="777" (
-    echo This is a development mode. Please use the normal Run.bat to start the game.
-    chcp 65001 >nul
-    set DEV_STATE=1
-    title RPG Game - Development Mode
-    goto :DEV_MODE
+:: Load dynamic console size from user config or default to 90x35
+if not defined CONSOLE_COLS set "CONSOLE_COLS=90"
+if not defined CONSOLE_ROWS set "CONSOLE_ROWS=35"
+mode %CONSOLE_COLS%,%CONSOLE_ROWS%
+
+powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')"
+:: ==================================================
+:: Astral Divide - Main.bat (v0.1.2 planned)
+:: Role: Game Core / State Orchestrator
+:: ==================================================
+
+:: --------------------------------------------------
+:: [0] Encoding & Launch Guard
+:: --------------------------------------------------
+if not "%~1"=="65001" goto :ENCODING_ERROR
+chcp %~1 >nul
+
+:: DEV MODE (optional)
+if "%~2"=="DEV" (
+    set DEBUG_STATE=1
+) else (
+    if not defined DEBUG_STATE set DEBUG_STATE=0
 )
-if not "%~1"=="65001" (goto :ENCODING_ERROR)
-chcp %1 >nul
 
-
-
-:: Setting Environment
-
-:: System Initialization
+:: --------------------------------------------------
+:: [1] Environment Initialization
+:: --------------------------------------------------
 call "%src_systems_dir%\InitializeModule.bat"
+if not "%errorlevel%"=="%RC_OK%" goto :FATAL_ERROR
 
-
-:: Detect Save Data
 call "%src_savesys_dir%\SaveDataDetectSystem.bat"
+if not "%errorlevel%"=="%RC_OK%" goto :FATAL_ERROR
 
-:: カラーシステム
-:: ここに将来的にMarkup言語のようなカラーコードを実装する予定
-:: 現在で言うと、Render系モジュール
-
-call "%src_debug_dir%\Show_ANSI_Colors.bat"
-
-
-:: Display Boot Complete
 call "%src_display_dir%\BootCompleteDisplay.bat"
 
-:: Launch Music System
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
 
-:: Background Image
 call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Title_Image.png" /b
 
-:: TEST Applying fonts
-call "%tools_dir%\cmdwiz.exe" setfont "%tools_dir%\Consolas.fnt"
+chcp 65001
 
-
-
-:: Debug Mode Check
-if not defined DEBUG_STATE set DEBUG_STATE=0
-
-::setlocal enabledelayedexpansion
-
-:: Main Menu Loop
-:Start_MainMenu
-    :: Debug Info
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
-        echo [DEBUG-Main] Starting MainMenu call...
-        timeout /t 1 >nul
+:: Apply user-configured font automatically
+if defined CONSOLE_FONT (
+    if not "%EXTERNAL_TOOLS_BLOCKED%"=="1" (
+        if exist "%tools_dir%\cmdwiz.exe" (
+            call "%tools_dir%\cmdwiz.exe" setfont "%tools_dir%\%CONSOLE_FONT%.fnt" >nul 2>&1
+        )
     )
+)
 
-    :: Call Main Menu Module (MMM)
-    call "%src_display_dir%\MainMenuModule.bat" MainMenu
-    
-    :: Check return code from MMM
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
-        echo [DEBUG-Main] MMM returned errorlevel: %errorlevel%
-        echo [DEBUG-Main] DEBUG_STATE is now: %DEBUG_STATE%
-        echo [DEBUG-Main] Checking conditions...
-        timeout /t 3 >nul
-    )
-    
-    if %retcode%==1001 goto :Start_NewGame
-    if %retcode%==1002 goto :Start_Continue
-    if %retcode%==1003 goto :Start_Settings
-    if %retcode%==1099 goto :Exit
-    
-    :: デバッグ情報：予期しない返り値
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
-        echo [DEBUG-Main] Unexpected errorlevel: %errorlevel% - returning to MainMenu
-        timeout /t 3 >nul
-    )
-    goto :Start_MainMenu
-::
+:: --------------------------------------------------
+:: [2] Main State Loop
+:: --------------------------------------------------
+:STATE_MAINMENU
+    call :Reset_UI_Context
+
+    call "%src_display_dir%\MainMenuModule.bat"
+    if not "%errorlevel%"=="%RC_OK%" goto :UI_ERROR
+
+    call :Route_MainMenu_Action
+    goto :STATE_MAINMENU
 
 
-:: セーブデータ選択画面に遷移
-:: コンティニュー処理
 
-:Start_Continue
-    call "%src_savesys_dir%\SaveDataSelector.bat" CONTINUE
-    if %errorlevel%==2000 (goto :Start_MainMenu)& rem セーブデータが見つからない場合はメインメニューに戻る
-    if %errorlevel%==2031 (call :Start_ContinueGame 1)
-    if %errorlevel%==2032 (call :Start_ContinueGame 2)
-    if %errorlevel%==2033 (call :Start_ContinueGame 3)
-    if %errorlevel%==2099 (goto :Start_MainMenu)
-:: 拡張予定
-::  if %errorlevel%==2034 (call :Start_ContinueGame 4)
-::  if %errorlevel%==2035 (call :Start_ContinueGame 5)
-::  ...
+:: ==================================================
+:: ========== ROUTERS =================================
+:: ==================================================
+
+:Route_MainMenu_Action
+    if "%UI_ACTION%"=="MAINMENU_NEWGAME"   goto :STATE_NEWGAME
+    if "%UI_ACTION%"=="MAINMENU_CONTINUE"  goto :STATE_CONTINUE
+    if "%UI_ACTION%"=="MAINMENU_SETTINGS"  goto :STATE_SETTINGS
+    if "%UI_ACTION%"=="EXIT"               goto :STATE_EXIT
+
+    rem 想定外
+    goto :STATE_MAINMENU
 
 
-:: ニューゲーム処理
-:Start_NewGame
-    :: デバッグ情報
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
-        echo [DEBUG-Main] Starting NewGame process - calling SaveDataSelector...
-        timeout /t 2 >nul
-    )
-    
+
+:: ==================================================
+:: ========== STATES ==================================
+:: ==================================================
+
+:STATE_NEWGAME
+    call :Reset_UI_Context
     call "%src_savesys_dir%\SaveDataSelector.bat" NEWGAME
-    
-    :: デバッグ情報：SDS返り値確認
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
-        echo %esc%[8;1H[DEBUG-Main] SDS returned errorlevel: %errorlevel%%esc%[0m
-        timeout /t 2 >nul
+    if not "%errorlevel%"=="%RC_OK%" goto :STATE_MAINMENU
+
+    if "%UI_ACTION%"=="CANCEL" goto :STATE_MAINMENU
+    if "%UI_ACTION%"=="NEWGAME_CREATE" (
+        call :Start_NewGameSession %UI_PARAM% CreateNew
+        goto :STATE_SCENARIO
     )
-    
-    if %retcode%==2051 (call :Start_NewGameSession 1 CreateNew)
-    if %retcode%==2052 (call :Start_NewGameSession 2 CreateNew)
-    if %retcode%==2053 (call :Start_NewGameSession 3 CreateNew)
-    if %retcode%==2071 (call :Start_NewGameSession 1 Overwrite)
-    if %retcode%==2072 (call :Start_NewGameSession 2 Overwrite)
-    if %retcode%==2073 (call :Start_NewGameSession 3 Overwrite)
-    if %retcode%==2099 (goto :Start_MainMenu)
-    
-    :: デバッグ情報：予期しない返り値
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
-        echo [DEBUG-Main] Unexpected SDS errorlevel: %errorlevel% - returning to MainMenu...
-        timeout /t 3 >nul
+    if "%UI_ACTION%"=="NEWGAME_OVERWRITE" (
+        call :Start_NewGameSession %UI_PARAM% Overwrite
+        goto :STATE_SCENARIO
     )
-    goto :Start_MainMenu
-::
+    goto :STATE_MAINMENU
 
 
-:: オプション処理
+:STATE_CONTINUE
+    call :Reset_UI_Context
+    call "%src_savesys_dir%\SaveDataSelector.bat" CONTINUE
+    if not "%errorlevel%"=="%RC_OK%" goto :STATE_MAINMENU
 
-:Start_Settings
-echo オプションメニューを開きます。
-pause
-goto :Label_Settings
-::
+    if "%UI_ACTION%"=="CANCEL" goto :STATE_MAINMENU
+    if "%UI_ACTION%"=="CONTINUE" (
+        call :Start_ContinueGameSession %UI_PARAM%
+        goto :STATE_SCENARIO
+    )
+    goto :STATE_MAINMENU
 
 
-:: ゲームセッション開始処理
-:Start_ContinueGameSession
-    call :Label_IsSelectedSaveData %1
-    call :Label_LoadSaveData %1
+:STATE_SETTINGS
+    call "%src_display_dir%\SettingsMenu.bat"
+    goto :STATE_MAINMENU
+
+
+:STATE_SCENARIO
     call :JumpToEpisode %player_storyroute%
-::
+    if "%errorlevel%"=="602" (
+        echo セーブ完了、ゲームを終了します。
+        goto :STATE_EXIT
+    )
+    if "%errorlevel%"=="603" (
+        echo セーブ失敗。緊急停止します。
+        pause
+        goto :STATE_EXIT
+    )
+    if "%errorlevel%"=="604" (
+        echo プレイヤーによって中断されました。
+        goto :STATE_MAINMENU
+    )
+    goto :STATE_SCENARIO
+
+
+:STATE_EXIT
+    call "%src_audio_dir%\Play_BGM.bat" "" stop
+    echo %esc%[6m%esc%[92mThank you for playing.%esc%[0m
+    exit /b 0
+
+
+
+:: ==================================================
+:: ========== UTILITIES ===============================
+:: ==================================================
+
+:Reset_UI_Context
+    set UI_ACTION=
+    set UI_PARAM=
+    exit /b 0
+
+
+:JumpToEpisode
+    if "%~1"=="NewGame"  call "%src_scene_newgame_dir%\NewGame.bat"
+    if "%~1"=="Prologue" call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
+    if "%~1"=="Episode_1" call "%src_stories_dir%\Episode_01\EntryPoint.bat"
+    exit /b %errorlevel%
+
+
+:Load_SaveData
+    for /f "usebackq tokens=1,2 delims==" %%a in ("%saves_active_dir%\SaveData_%1.txt") do (
+        set "%%a=%%b"
+    )
+    exit /b 0
+
 
 :Start_NewGameSession
     :: デバッグ情報
@@ -163,7 +175,6 @@ goto :Label_Settings
         timeout /t 2 >nul
     )
 
-
     cls
     call "%src_audio_dir%\Play_BGM.bat" "" stop
     echo おめでとうございます！ニューゲームを開始します。
@@ -171,77 +182,40 @@ goto :Label_Settings
     call :Label_IsSelectedSaveData %1
     call :Label_PlayerStatus_Initialize
 
-
     if "%2"=="CreateNew" (
         call :JumpToEpisode NewGame
     ) else (
         call :Label_OverwriteSaveAndStartNewGame %1
         call :JumpToEpisode NewGame
     )
-
-
-::
-:Start_Scenario
-call :JumpToEpisode %player_storyroute%
-goto :Scenario_Return
-::
-
-
-
-:: ストーリー進行処理
-:JumpToEpisode
-    if "%~1"=="NewGame"        call "%src_scene_newgame_dir%\NewGame.bat"
-    if "%~1"=="Prologue"       call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
-    if "%~1"=="Episode_1"      call "%cd_stories%\Episode_01\EntryPoint.bat"
-    if "%~1"=="Episode_2"      call "%cd_stories%\Episode_02\EntryPoint.bat"
-
-    rem if %retcode%==55 goto :JumpToEpisode
-
-
-    :: ...今後も増やせる
-
-
-    exit /b
-::
-
-
-:Scenario_Return
-if %errorlevel%==602 (
-    echo セーブ完了、ゲームを終了します。
     exit /b 0
-)
-if %errorlevel%==603 (
-    echo セーブ失敗。緊急停止します。
-    exit /b 1
-)
-if %errorlevel%==604 (
-    echo プレイヤーによって中断されました。
-    exit /b 2
-)
-goto :Start_Scenario
+
+
+:Start_ContinueGameSession
+    call :Label_IsSelectedSaveData %1
+    call :Load_SaveData %1
+    exit /b 0
 
 
 :Label_PlayerStatus_Initialize
-    for /f "eol=# tokens=1,2 delims='='" %%a in (
-        %src_playerdata_dir%\Player_Status_Initialize.txt
+    for /f "usebackq eol=# tokens=1,2 delims==" %%a in (
+        "%src_playerdata_dir%\Player_Status_Initialize.txt"
     ) do (
         set "%%a=%%b"
     ) & rem ここではplayer_変数が初期化
     exit /b 0
 
+
 :Label_OverwriteSaveAndStartNewGame
-    rem 既存のセーブデータを上書きしNewGameをスタート
+    :: 既存のセーブデータを上書きしNewGameをスタート
     set "selected_save=%1"
-    del "%cd_savedata%\ESD_%selected_save%.txt" >nul
-    del "%cd_savedata%\SaveData_%selected_save%.txt" >nul
+    del "%saves_active_dir%\ESD_%selected_save%.txt" >nul 2>&1
+    del "%saves_active_dir%\SaveData_%selected_save%.txt" >nul 2>&1
     exit /b 0
 
 
-::Utility
 :Label_IsSelectedSaveData
-    rem 今後セーブデータ容量を増やす場合forループ範囲の変更をする 現在:3
     for /l %%i in (1,1,3) do (
-        rem selected_savedata_: どのセーブデータを選択しているかを示すフラグ (true/false)
         if %%i==%1 (
             set "selected_savedata_%%i=true"
         ) else (
@@ -251,146 +225,24 @@ goto :Start_Scenario
     exit /b 0
 
 
-::Continue
-:Label_LoadSaveData
-    rem セーブデータのロード
-    for /f "tokens=1,2 delims='='" %%a in (
-        %cd_savedata%\SaveData_%1.txt
-    ) do (
-        set "%%a=%%b"
-    )
-    exit /b 0
+
+:: ==================================================
+:: ========== ERROR HANDLING ==========================
+:: ==================================================
+
+:UI_ERROR
+    echo [FATAL] UI Module returned invalid state.
+    pause
+    goto :STATE_EXIT
 
 
-::Settings
-:Label_Settings
-goto :OPTION
+:FATAL_ERROR
+    echo [FATAL] System initialization failed.
+    pause
+    goto :STATE_EXIT
 
 
-
-
-::
-::
-::****************************************************************************************************************
-:Main1
-rem Continue
-goto %player_lastplace%
-:Main2
-
-
-
-:EnterPlayerName
-call "%cd_newgame%\EntreYourName.bat"
-:ReadyForPrologue
-call "%cd_newgame%\ReadyForPrologue.bat"
-if %errorlevel%==18 (goto :Prologue)
-IF %ERRORLEVEL%==666 (GOTO :CRITICAL_ERROR)
-
-
-:Prologue
-call "%cd_stories%\Prologue.bat"
-if %errorlevel%==100 (cls& goto :Prologue)& rem エラーコード100予期せぬエラー
-if %errorlevel%==602 (exit)& rem 602はセーブして終了のコード
-
-
-
-:UnexpectedError
-rem 予期しないエラーが発生しました
-cls
-echo. %ESC%[91mAn unexpected error occurred. [E-100:EOF]
-echo. Terminate Systems.%ESC%[0m
-call "%cd_sounds%\ErrorBeepSounds.bat"
-pause >nul
-exit 9009
-::****************************************************************************************************************
-::
-::
-::
-
-
-
-
-
-
-
-
-:OPTION
-cls
-echo.+-------------------------------------------------++-------------------------------------------------+
-echo.%P%                                                 %P%%P%                                                 %P%
-echo.%P%      (A)        DELETE SAVE DATA                %P%%P%       (C)          @ECHO ON                     %P%
-echo.%P%                                                 %P%%P%                                                 %P%
-echo.+-------------------------------------------------++-------------------------------------------------+
-echo.+-------------------------------------------------++-------------------------------------------------+
-echo.%P%                                                 %P%%P%                                                 %P%
-echo.%P%      (B)           EXIT GAME                    %P%%P%      (D)           SET /P                       %P%
-echo.%P%                                                 %P%%P%                                                 %P%
-echo.+-------------------------------------------------++-------------------------------------------------+
-choice /c ABCDQ
-if %errorlevel%==1 (goto :Label_DeleteAllSaveData)
-if %errorlevel%==2 (exit /b 9000)
-if %errorlevel%==3 (@echo on & goto Label_Main)
-if %errorlevel%==4 (goto :Label_DevCommand)
-if %errorlevel%==5 (goto :Start_MainMenu)
-
-
-:Label_DeleteAllSaveData
-    echo. 開発段階用緊急停止pause
-    echo. 続行しますか？
-    pause > nul
-    rem これセーブデータ初期化バッチにつき注意（キャンセルできるようにしてます）
-    call "%cd_systems%\SaveDataDeleteSystem.bat"
-    if %errorlevel%==606 (exit /b 606)
-    if %errorlevel%==660 (goto Label_Main)
-
-:Label_DevCommand
-    set /p command="command=>"
-    %command%
-    call :DevCommand
-
-
-
-
-
-
-
-
-
-
-:Exit
-    call "%src_audio_dir%\Play_BGM.bat" "" stop
-    echo. %ESC%[92mGame has exited successfully. [E-0:EXIT]%ESC%[0m
-    echo. %esc%[6m%esc%[92mThank you for playing.%esc%[0m
-    timeout /t 2 >nul
-    exit /b 39
-
-::
-::
-::*******************************************************************************************************
 :ENCODING_ERROR
-    @ECHO OFF
-    CHCP 65001
-    COLOR 1F
-    CLS
-    ECHO.
-    ECHO.
-    ECHO. Error code: 65001 - A serious encoding error has been detected in the boot sector.
-    ECHO.
-    ECHO. The system source that is the core of this project is a batch file,
-    ECHO.  so if an encoding error occurs, it will cause irreparable problems in the code.
-    ECHO.
-    ECHO. If this error message appears, the following may be the cause:
-    ECHO.
-    ECHO. - The game was started by an illegal means other than "Run.bat"
-    ECHO. - The source code was rewritten and did not run using the normal startup procedure
-    ECHO. - There is a problem with the Windows encoding settings
-    ECHO.
-    TIMEOUT /T 600
-    ECHO.
-    ECHO. PRESS ANY KEY TO EXIT.
-    PAUSE > NUL
-
-EXIT
-::*******************************************************************************************************
-::
-
+    echo Encoding Error. Please launch via Run.bat
+    pause
+    exit /b 1
