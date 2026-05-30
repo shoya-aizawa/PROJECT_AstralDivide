@@ -12,12 +12,23 @@
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
 @if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
 @title Astral Divide - Booting.
+set "self_name=%~n0"
 
 rem================================================= Main Flow =================================================
 
 set "REMOTE_GAS_URL=https://script.google.com/macros/s/AKfycbwIOTx9BM2IwcIoHPyKJN529AkBUk7Kbadwxb4HzxYrHMUrV_2PX2BpbaPVhLuWphhK/exec"
 set "REMOTE_ADMIN_KEY=8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
 
+:: Load secret override configs if they exist in user_config.env
+if not defined PROJECT_ROOT (
+    for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
+)
+if exist "%PROJECT_ROOT%\Config\user_config.env" (
+    for /f "usebackq eol=# tokens=1,2 delims==" %%A in ("%PROJECT_ROOT%\Config\user_config.env") do (
+        if "%%A"=="REMOTE_GAS_URL" set "REMOTE_GAS_URL=%%B"
+        if "%%A"=="REMOTE_ADMIN_KEY" set "REMOTE_ADMIN_KEY=%%B"
+    )
+)
 
 
 
@@ -66,14 +77,32 @@ goto :Dev_ForceFirstLaunch_End
 :Dev_ForceFirstLaunch_End
 
 :: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT/REMOTE/REMOTEADMIN)
-set "BUILD_PROFILE=release" & set "INTERCEPT_MODE=0"
-if /i "%~1"=="-mode" if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
-if /i "%~1"=="-mode" if /i "%~2"=="intercept" set "BUILD_PROFILE=dev" & set "INTERCEPT_MODE=1"
-if /i "%~1"=="-mode" if /i "%~2"=="remote" (
-	for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd')"') do set "date_tag=%%d"
-	call set "logfile=%%PROJECT_ROOT%%\Config\Logs\AstralDivide_Session_%%date_tag%%.log"
-	)
-if /i "%~1"=="-mode" if /i "%~2"=="remoteadmin" (
+:: Parse startup options robustly regardless of argument order
+set "BUILD_PROFILE=release"
+set "INTERCEPT_MODE=0"
+set "REMOTE_MODE=0"
+set "REMOTE_ADMIN_MODE=0"
+
+:ParseArgsLoop
+if "%~1"=="" goto :ParseArgsEnd
+if /i "%~1"=="-mode" (
+    if /i "%~2"=="debug"     set "BUILD_PROFILE=dev"
+    if /i "%~2"=="intercept" set "BUILD_PROFILE=dev"& set "INTERCEPT_MODE=1"
+    if /i "%~2"=="remote" (
+        for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd')"') do (
+            set "date_tag=%%d"
+            set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%%d.log"
+        )
+        set "REMOTE_MODE=1"
+    )
+    if /i "%~2"=="remoteadmin" set "REMOTE_ADMIN_MODE=1"
+    shift
+)
+shift
+goto :ParseArgsLoop
+:ParseArgsEnd
+
+if "%REMOTE_ADMIN_MODE%"=="1" (
     if not defined REMOTE_GAS_URL (
         echo [E2001] REMOTE_GAS_URL not set.
         pause >nul
@@ -97,6 +126,14 @@ if not "%errorlevel%"=="0" (
     set /a "RCS_FALLBACK=90640100 + %errorlevel%"
     set "RCS_MISSING_TAG=Splash/Initializer"
     goto :FailRun
+)
+
+:: Load remote debugging session token if exists to parent shell scope
+if exist "%TEMP%\remote_session.env" (
+    for /f "usebackq eol=# tokens=1,2 delims==" %%A in ("%TEMP%\remote_session.env") do (
+        set "%%A=%%B"
+    )
+    del "%TEMP%\remote_session.env" >nul 2>&1
 )
 
 :: Splash frontend has completed. All profile and setups are written to disk.
@@ -142,7 +179,29 @@ rem TODO call "%root_dir%\Src\Systems\Security\VerifySignatures.bat"
 rem start "AstralDivide[v0.1.1]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.1]"
 start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.1]"
 set launch_time=%time%
-call "%RCSU%" -trace INFO "%~n0" "main launched time=%launch_time%"
+call "%RCSU%" -trace INFO "%self_name%" "main launched time=%launch_time%"
+
+:: Launch remote debugging log streamer if active
+if "%REMOTE_MODE%"=="1" (
+    if defined REMOTE_TOKEN (
+        if not "%REMOTE_STREAMER_STARTED%"=="1" (
+            :: Ensure the log directory and log file exist before tail starts to avoid file-not-found exceptions
+            for %%D in ("%logfile%") do (
+                if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
+            )
+            if not exist "%logfile%" type nul > "%logfile%" 2>nul
+            
+            start "AstralDivide - Log Streamer" /b powershell -NoProfile -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%" -ClientName "%USERNAME%@%COMPUTERNAME%" -SessionToken "%REMOTE_TOKEN%" > "%PROJECT_ROOT%\Config\Logs\ad_streamer.log" 2>&1
+            call "%RCSU%" -trace INFO "%self_name%" "started background remote log streamer with token"
+        ) else (
+            if defined RCSU call "%RCSU%" -trace INFO "%self_name%" "Remote log streamer was already started during splash screen."
+        )
+    ) else (
+        if defined RCSU call "%RCSU%" -trace WARN "%self_name%" "REMOTE_TOKEN is not defined. Skipping streamer launch."
+    )
+) else (
+    if defined RCSU call "%RCSU%" -trace INFO "%self_name%" "Remote debugging mode is not active."
+)
 
 :: [9] Watchdog Host Launch
 if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1

@@ -21,12 +21,65 @@ if defined RCSU (
     call "%RCSU%" -trace INFO DetectTerminal "Starting terminal environment check."
 )
 
+:: Load user config to detect current font selection
+set "DT_PROJECT_ROOT=%PROJECT_ROOT%"
+if "%DT_PROJECT_ROOT%"=="" (
+    for %%A in ("%~dp0..\..\..") do set "DT_PROJECT_ROOT=%%~fA"
+)
+for %%A in ("%DT_PROJECT_ROOT%") do set "DT_PROJECT_ROOT=%%~fA"
+set "IS_CONSOLAS="
+if defined SELECTED_FONT (
+    if /i "%SELECTED_FONT%"=="Consolas" set "IS_CONSOLAS=1"
+)
+if not defined IS_CONSOLAS (
+    if exist "%DT_PROJECT_ROOT%\Config\user_config.env" (
+        findstr /i /c:"CONSOLE_FONT=Consolas" "%DT_PROJECT_ROOT%\Config\user_config.env" >nul
+        if not errorlevel 1 set "IS_CONSOLAS=1"
+    )
+)
+
 :: Win32 API call via PowerShell inside a robust try-catch block.
 :: Returns exit 1 on PseudoConsoleWindow (Windows Terminal).
 :: Returns exit 0 on ConsoleWindowClass (conhost) or any exceptions/headless environments.
 set "IS_WT=0"
-powershell -NoProfile -Command "try { $c = '[DllImport(\"kernel32.dll\")]public static extern IntPtr GetConsoleWindow();[DllImport(\"user32.dll\")]public static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int m);'; $t = Add-Type -MemberDefinition $c -Name W -Namespace N -PassThru; $h = $t::GetConsoleWindow(); if ($h -eq [IntPtr]::Zero) { exit 0 }; $sb = New-Object System.Text.StringBuilder(256); $null = $t::GetClassName($h, $sb, 256); $n = $sb.ToString(); if ($n -eq 'PseudoConsoleWindow') { exit 1 } else { exit 0 } } catch { exit 0 }"
-if errorlevel 1 set "IS_WT=1"
+if "%IS_CONSOLAS%"=="1" goto IsConsolasCheck
+goto IsNormalCheck
+
+:IsConsolasCheck
+set "PS_SCRIPT=%TEMP%\ad_ps_wt.ps1"
+
+echo try {> "%PS_SCRIPT%"
+echo     $c = '[DllImport("kernel32.dll")]public static extern IntPtr GetConsoleWindow^(^);[DllImport("user32.dll")]public static extern int GetClassName^(IntPtr h, System.Text.StringBuilder sb, int m^);'>> "%PS_SCRIPT%"
+echo     $t = Add-Type -MemberDefinition $c -Name W -Namespace N -PassThru>> "%PS_SCRIPT%"
+echo     $h = $t::GetConsoleWindow^(^)>> "%PS_SCRIPT%"
+echo     if ^($h -eq [IntPtr]::Zero^) { exit 0 }>> "%PS_SCRIPT%"
+echo     $sb = New-Object System.Text.StringBuilder^(256^)>> "%PS_SCRIPT%"
+echo     $null = $t::GetClassName^($h, $sb, 256^)>> "%PS_SCRIPT%"
+echo     $n = $sb.ToString^(^)>> "%PS_SCRIPT%"
+echo     if ^($n -eq 'PseudoConsoleWindow'^) { exit 1 } else { exit 0 }>> "%PS_SCRIPT%"
+echo } catch { exit 0 }>> "%PS_SCRIPT%"
+
+start /min /wait powershell.exe -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "%PS_SCRIPT%" > "%TEMP%\ad_ps_wt.tmp" 2>nul
+set "ps_rc=%errorlevel%"
+
+if "%ps_rc%"=="1" (
+    set "IS_WT=1"
+) else (
+    set "IS_WT=0"
+)
+
+if exist "%TEMP%\ad_ps_wt.tmp" del "%TEMP%\ad_ps_wt.tmp" >nul 2>&1
+if exist "%PS_SCRIPT%" del "%PS_SCRIPT%" >nul 2>&1
+goto WTCheckDone
+
+:IsNormalCheck
+powershell -NoProfile -NonInteractive -InputFormat None -Command "try { $c = '[DllImport(\"kernel32.dll\")]public static extern IntPtr GetConsoleWindow();[DllImport(\"user32.dll\")]public static extern int GetClassName(IntPtr h, System.Text.StringBuilder sb, int m);'; $t = Add-Type -MemberDefinition $c -Name W -Namespace N -PassThru; $h = $t::GetConsoleWindow(); if ($h -eq [IntPtr]::Zero) { exit 0 }; $sb = New-Object System.Text.StringBuilder(256); $null = $t::GetClassName($h, $sb, 256); $n = $sb.ToString(); if ($n -eq 'PseudoConsoleWindow') { exit 1 } else { exit 0 } } catch { exit 0 }" >nul 2>&1
+set "ps_rc=%errorlevel%"
+
+if "%ps_rc%"=="1" set "IS_WT=1"
+goto WTCheckDone
+
+:WTCheckDone
 
 :: If not Windows Terminal
 if "%IS_WT%"=="0" (

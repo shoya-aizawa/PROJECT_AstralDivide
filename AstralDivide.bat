@@ -15,7 +15,7 @@ reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 set "GAME_LAUNCHER=1"
 
 :: --- Call the game itself (maintains the route, passes arguments directly) ---
-call "%PROJECT_ROOT%\Src\Main\Run.bat" %~1 %~2
+call "%PROJECT_ROOT%\Src\Main\Run.bat" %*
 
 
 

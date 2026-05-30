@@ -34,6 +34,15 @@ if not "%errorlevel%"=="0" (
 )
 echo 40 > "%IPC_FILE%"
 
+:: [2.5] Remote Debugging Approval Block (Halt background progress until remote session is established)
+if "%REMOTE_MODE%"=="1" (
+    :WaitForRemoteApproval
+    if not exist "%TEMP%\remote_session.env" (
+        for /l %%d in (1,1,5) do sc query >nul
+        goto :WaitForRemoteApproval
+    )
+)
+
 :: [3] Profile Initialization & First Launch Wizard Check (Pre-verified environment guarantees safe wizard display)
 if not exist "%PROJECT_ROOT%\Config\user_config.env" (
     :: Create UI request file to signal frontend (Splash.bat) to show the setup wizards

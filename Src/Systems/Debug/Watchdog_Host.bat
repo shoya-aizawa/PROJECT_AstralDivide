@@ -48,9 +48,9 @@ echo !esc![5;8H!C_BORDER!──────────────────�
 :: Boot sequence text (Typewriter logs)
 call :LogLine 7  "Initializing system surveillance..."
 call :LogLine 9  "Accessing pseudo IPC directory..."
-call :LogLine 10 "  ➔ IPC Location: !IPC_DIR!"
+call :LogLine 10 "  - IPC Location: !IPC_DIR!"
 call :LogLine 12 "Resolving host target process..."
-call :LogLine 13 "  ➔ Target Host : [!TITLE!]"
+call :LogLine 13 "  - Target Host : [!TITLE!]"
 call :LogLine 15 "Injecting local process interception hooks..."
 
 :: Sleek radar spinning animation for activation

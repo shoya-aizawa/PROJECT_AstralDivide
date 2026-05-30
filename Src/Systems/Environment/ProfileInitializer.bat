@@ -9,6 +9,12 @@
 ::  - RCS_Util.bat / RCS_Const.bat preloaded by Run.bat
 :: ==========================================================
 
+set "PROJECT_ROOT=%~1"
+if "%PROJECT_ROOT%"=="" (
+    for %%A in ("%~dp0..\..\..") do set "PROJECT_ROOT=%%~fA"
+)
+for %%A in ("%PROJECT_ROOT%") do set "PROJECT_ROOT=%%~fA"
+
 call "%RCSU%" -trace INFO "%~n0" "init start"
 
 set "CFG_DIR=%PROJECT_ROOT%\Config"

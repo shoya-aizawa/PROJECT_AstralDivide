@@ -26,7 +26,11 @@ rem       [Internal Mechanics] -build, -decode
 rem       [Debug/Confirm]      -pretty
 rem ==============================================================
 @echo off
-chcp 65001 >nul
+:: Prevent duplicate chcp execution to avoid conhost font-reset bug
+if not "%CODEPAGE_SET%"=="1" (
+    chcp 65001 >nul
+    set "CODEPAGE_SET=1"
+)
 setlocal EnableExtensions EnableDelayedExpansion
 set "SELF=%~f0"
 
@@ -116,7 +120,12 @@ set "mod=%~2"
 set "msg=%~3"
 if not defined RCS_LOG_FILE call :log_init
 
-for /f %%t in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd_HH-mm-ss')"') do set "ts=%%t"
+:: Get timestamp using pure batch variable expansion (0ms overhead, prevents font-reset bug)
+set "t_date=%date%"
+set "t_time=%time: =0%"
+set "date_tag=%t_date:~0,4%-%t_date:~5,2%-%t_date:~8,2%"
+set "ts=%date_tag%_%t_time:~0,2%-%t_time:~3,2%-%t_time:~6,2%"
+
 set "line=[%ts%] [%lvl%] [%mod%] %msg%"
 >>"%RCS_LOG_FILE%" echo %line%
 if /i "%lvl%"=="ERR" (
@@ -129,7 +138,9 @@ rem ==============================================================
 if not defined RCS_LOG_DIR set "RCS_LOG_DIR=%PROJECT_ROOT%\Config\Logs"
 if not exist "%RCS_LOG_DIR%" md "%RCS_LOG_DIR%" >nul 2>&1
 
-for /f %%d in ('powershell -NoProfile -Command "(Get-Date).ToString('yyyy-MM-dd')"') do set "date_tag=%%d"
+:: Get date_tag using pure batch variable expansion
+set "t_date=%date%"
+set "date_tag=%t_date:~0,4%-%t_date:~5,2%-%t_date:~8,2%"
 set "RCS_LOG_FILE=%RCS_LOG_DIR%\AstralDivide_Session_%date_tag%.log"
 exit /b 0
 

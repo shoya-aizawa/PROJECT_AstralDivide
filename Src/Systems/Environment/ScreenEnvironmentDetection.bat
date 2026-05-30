@@ -1,6 +1,10 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
-chcp 65001 >nul
+:: Prevent duplicate chcp execution to avoid conhost font-reset bug
+if not "%CODEPAGE_SET%"=="1" (
+    chcp 65001 >nul
+    set "CODEPAGE_SET=1"
+)
 
 rem -----------------------------------------------------------------------------
 rem ScreenEnvironmentDetection.bat
@@ -42,6 +46,19 @@ if not defined RC_OK (
 
 :: Create screen cache directory safely
 if not exist "%screen_cache_dir%" md "%screen_cache_dir%" >nul 2>&1
+
+:: Resolve current font
+set "IS_CONSOLAS="
+if defined SELECTED_FONT (
+    if /i "%SELECTED_FONT%"=="Consolas" set "IS_CONSOLAS=1"
+)
+if not defined IS_CONSOLAS (
+    set "_u_cfg=!PROJECT_ROOT!\Config\user_config.env"
+    if exist "!_u_cfg!" (
+        findstr /i /c:"CONSOLE_FONT=Consolas" "!_u_cfg!" >nul
+        if not errorlevel 1 set "IS_CONSOLAS=1"
+    )
+)
 
 :: Trace Initialization log if RCSU exists
 set "LOG_PREFIX=env"
@@ -85,8 +102,13 @@ if not "%SPLASH_RUNNING%"=="1" (
         "%tools_dir%\cmdwiz.exe" fullscreen 1
         if exist "%RCSU%" call "%RCSU%" -trace INFO ScreenEnv "fullscreen=on [cmdwiz] rc=%errorlevel%"
     ) else (
-        :: F11 fullscreen fallback using WScript
-        powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')"
+        :: F11 fullscreen fallback using WScript (Hybrid branch to protect Consolas font)
+        if "%IS_CONSOLAS%"=="1" (
+            powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" > "%TEMP%\ad_ps_f11.tmp" 2>&1
+            if exist "%TEMP%\ad_ps_f11.tmp" del "%TEMP%\ad_ps_f11.tmp" >nul 2>&1
+        ) else (
+            powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" >nul 2>&1
+        )
         if exist "%RCSU%" call "%RCSU%" -trace INFO ScreenEnv "fullscreen=on [F11 fallback]"
         timeout /t 2 >nul
     )
@@ -94,11 +116,33 @@ if not "%SPLASH_RUNNING%"=="1" (
     if "%HAS_CMDWIZ%"=="1" "%tools_dir%\cmdwiz.exe" delay 10
 )
 
-:: [1] Probing monitor screen resolution via PowerShell
+:: [1] Probing monitor screen resolution via cmdwiz (0ms overhead, prevents font-reset bug)
 echo %esc%[96m  [1] Detecting screen resolution...%esc%[0m
 set "screen_width=" & set "screen_height="
-for /f "usebackq tokens=*" %%a in (`powershell -NoProfile -Command "Add-Type -AssemblyName System.Windows.Forms; $s=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; Write-Output $($s.Width); Write-Output $($s.Height)"`) do (
-    if not defined screen_width (set "screen_width=%%a") else set "screen_height=%%a"
+if "%HAS_CMDWIZ%"=="1" (
+    "%tools_dir%\cmdwiz.exe" getdisplaydim w scaled
+    set "screen_width=!errorlevel!"
+    "%tools_dir%\cmdwiz.exe" getdisplaydim h scaled
+    set "screen_height=!errorlevel!"
+) else (
+    :: Fallback to PowerShell (Hybrid branch to protect Consolas font)
+    if "%IS_CONSOLAS%"=="1" (
+        set "ps_out=%TEMP%\ad_ps_screen.tmp"
+        powershell -NoProfile -NonInteractive -InputFormat None -Command "Add-Type -AssemblyName System.Windows.Forms; $s=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; Write-Output $s.Width; Write-Output $s.Height" > "!ps_out!" 2>nul
+        set "idx=0"
+        for /f "usebackq delims=" %%A in ("!ps_out!") do (
+            if "!idx!"=="0" (
+                set "screen_width=%%A"
+                set "idx=1"
+            ) else (
+                set "screen_height=%%A"
+            )
+        )
+        if exist "!ps_out!" del "!ps_out!" >nul 2>&1
+    ) else (
+        for /f "usebackq tokens=1" %%A in (`powershell -NoProfile -NonInteractive -InputFormat None -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Width"`) do set "screen_width=%%A"
+        for /f "usebackq tokens=1" %%A in (`powershell -NoProfile -NonInteractive -InputFormat None -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Height"`) do set "screen_height=%%A"
+    )
 )
 
 set "BAD="
@@ -112,11 +156,34 @@ if defined BAD (
 echo %esc%[92m   [OK] Screen resolution: %screen_width% x %screen_height%%esc%[0m
 if "%HAS_CMDWIZ%"=="1" "%tools_dir%\cmdwiz.exe" delay 10
 
-:: [2] Detecting Console Window Grid sizes (Cols & Rows)
+:: [2] Detecting Console Window Grid sizes (Cols & Rows) via cmdwiz (0ms overhead, prevents font-reset bug)
 echo %esc%[96m  [2] Detecting console window size...%esc%[0m
 set "console_width=" & set "console_height="
-for /f "tokens=*" %%a in ('powershell -NoProfile -Command "$host.UI.RawUI.WindowSize.Width"') do set console_width=%%a
-for /f "tokens=*" %%a in ('powershell -NoProfile -Command "$host.UI.RawUI.WindowSize.Height"') do set console_height=%%a
+if "%HAS_CMDWIZ%"=="1" (
+    "%tools_dir%\cmdwiz.exe" getconsoledim w
+    set "console_width=!errorlevel!"
+    "%tools_dir%\cmdwiz.exe" getconsoledim h
+    set "console_height=!errorlevel!"
+) else (
+    :: Fallback to PowerShell (Hybrid branch to protect Consolas font)
+    if "%IS_CONSOLAS%"=="1" (
+        set "ps_out=%TEMP%\ad_ps_console.tmp"
+        powershell -NoProfile -NonInteractive -InputFormat None -Command "$host.UI.RawUI.WindowSize.Width; $host.UI.RawUI.WindowSize.Height" > "!ps_out!" 2>nul
+        set "idx=0"
+        for /f "usebackq delims=" %%A in ("!ps_out!") do (
+            if "!idx!"=="0" (
+                set "console_width=%%A"
+                set "idx=1"
+            ) else (
+                set "console_height=%%A"
+            )
+        )
+        if exist "!ps_out!" del "!ps_out!" >nul 2>&1
+    ) else (
+        for /f "usebackq tokens=1" %%A in (`powershell -NoProfile -NonInteractive -InputFormat None -Command "$host.UI.RawUI.WindowSize.Width"`) do set "console_width=%%A"
+        for /f "usebackq tokens=1" %%A in (`powershell -NoProfile -NonInteractive -InputFormat None -Command "$host.UI.RawUI.WindowSize.Height"`) do set "console_height=%%A"
+    )
+)
 
 set "BAD="
 for /f "delims=0123456789" %%x in ("%console_width%%console_height%") do set BAD=1
@@ -161,8 +228,13 @@ if not "%SPLASH_RUNNING%"=="1" (
     if "%HAS_CMDWIZ%"=="1" (
         "%tools_dir%\cmdwiz.exe" fullscreen 0
     ) else (
-        :: Toggle F11 again to restore window size
-        powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')"
+        :: Toggle F11 again to restore window size (Hybrid branch to protect Consolas font)
+        if "%IS_CONSOLAS%"=="1" (
+            powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" > "%TEMP%\ad_ps_f11.tmp" 2>&1
+            if exist "%TEMP%\ad_ps_f11.tmp" del "%TEMP%\ad_ps_f11.tmp" >nul 2>&1
+        ) else (
+            powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" >nul 2>&1
+        )
     )
     echo %esc%[2J%esc%[1;1H
     echo.
@@ -180,8 +252,8 @@ exit /b %RC_OK%
 rem ============================== Subroutines ===============================
 
 :Generate_Environment_Config
-    :: Ensure screen cache directory is fully created using robust PowerShell
-    powershell -NoProfile -Command "New-Item -ItemType Directory -Force -Path '!screen_cache_dir!'.Replace('\', '/')" >nul 2>&1
+    :: Ensure screen cache directory is fully created
+    if not exist "!screen_cache_dir!" md "!screen_cache_dir!" >nul 2>&1
 
     set "_tmp=!screen_cfg_file!.tmp"
     if exist "%_tmp%" del /q "%_tmp%" >nul 2>&1

@@ -24,6 +24,18 @@ set "TOOL_CHECKER=%PROJECT_ROOT%\Src\Systems\Launcher\ToolChecker.ps1"
 set "TOOLS_DIR=%PROJECT_ROOT%\Tools"
 set "USER_CONFIG=%PROJECT_ROOT%\Config\user_config.env"
 
+:: Load user config to detect current font selection
+set "IS_CONSOLAS="
+if defined SELECTED_FONT (
+    if /i "%SELECTED_FONT%"=="Consolas" set "IS_CONSOLAS=1"
+)
+if not defined IS_CONSOLAS (
+    if exist "%USER_CONFIG%" (
+        findstr /i /c:"CONSOLE_FONT=Consolas" "%USER_CONFIG%" >nul
+        if not errorlevel 1 set "IS_CONSOLAS=1"
+    )
+)
+
 if defined RCSU call "%RCSU%" -trace INFO BootEnvGuard "Starting Environment Guard validation."
 
 :: -----------------------------------------------------------------------------
@@ -47,7 +59,12 @@ if defined RCSU call "%RCSU%" -trace WARN BootEnvGuard "LaunchGuard.bat not foun
 :: Step 2: PowerShell Availability & Policy Check
 :: -----------------------------------------------------------------------------
 if defined RCSU call "%RCSU%" -trace INFO BootEnvGuard "Step 2: Testing PowerShell engine availability."
-powershell -NoProfile -Command "$PSVersionTable.PSVersion" >nul 2>&1
+if "%IS_CONSOLAS%"=="1" (
+    powershell -NoProfile -NonInteractive -InputFormat None -Command "$PSVersionTable.PSVersion" > "%TEMP%\ad_ps_ver.tmp" 2>&1
+    if exist "%TEMP%\ad_ps_ver.tmp" del "%TEMP%\ad_ps_ver.tmp" >nul 2>&1
+) else (
+    powershell -NoProfile -NonInteractive -InputFormat None -Command "$PSVersionTable.PSVersion" >nul 2>&1
+)
 if errorlevel 1 goto :ErrPowerShell
 if defined RCSU call "%RCSU%" -trace INFO BootEnvGuard "PowerShell verification completed successfully."
 
@@ -83,7 +100,7 @@ set "ANY_FAILED=0"
 
 if not exist "%TOOL_CHECKER%" goto :NoToolChecker
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%TOOL_CHECKER%" "%TOOLS_DIR%" > "%TEMP_OUT%" 2>nul
+powershell -NoProfile -NonInteractive -InputFormat None -ExecutionPolicy Bypass -File "%TOOL_CHECKER%" "%TOOLS_DIR%" > "%TEMP_OUT%" 2>nul
 if not exist "%TEMP_OUT%" goto :ErrDiagnostics
 
 :: Loop ONLY to capture variables to avoid nested parenthesis call bugs
@@ -204,12 +221,22 @@ endlocal & exit /b 5
 
 :UpdateConfigFallback
 rem Safely write EXTERNAL_TOOLS_BLOCKED=1 and force STANDARD quality profiles to Config\user_config.env
-powershell -NoProfile -Command "$cfg = '%USER_CONFIG%'.Replace('\', '/'); if (Test-Path $cfg) { $content = Get-Content $cfg; if ($content -match 'EXTERNAL_TOOLS_BLOCKED') { $content = $content -replace 'EXTERNAL_TOOLS_BLOCKED=.*', 'EXTERNAL_TOOLS_BLOCKED=1' } else { $content += 'EXTERNAL_TOOLS_BLOCKED=1' }; if ($content -match 'RENDER_QUALITY') { $content = $content -replace 'RENDER_QUALITY=.*', 'RENDER_QUALITY=MIDDLE' }; if ($content -match 'SYSTEM_RECOMMENDED_PROFILE') { $content = $content -replace 'SYSTEM_RECOMMENDED_PROFILE=.*', 'SYSTEM_RECOMMENDED_PROFILE=MIDDLE' }; Set-Content -Path $cfg -Value $content -Encoding UTF8 }" >nul 2>&1
+if "%IS_CONSOLAS%"=="1" (
+    powershell -NoProfile -Command "$cfg = '%USER_CONFIG%'.Replace('\', '/'); if (Test-Path $cfg) { $content = Get-Content $cfg; if ($content -match 'EXTERNAL_TOOLS_BLOCKED') { $content = $content -replace 'EXTERNAL_TOOLS_BLOCKED=.*', 'EXTERNAL_TOOLS_BLOCKED=1' } else { $content += 'EXTERNAL_TOOLS_BLOCKED=1' }; if ($content -match 'RENDER_QUALITY') { $content = $content -replace 'RENDER_QUALITY=.*', 'RENDER_QUALITY=MIDDLE' }; if ($content -match 'SYSTEM_RECOMMENDED_PROFILE') { $content = $content -replace 'SYSTEM_RECOMMENDED_PROFILE=.*', 'SYSTEM_RECOMMENDED_PROFILE=MIDDLE' }; Set-Content -Path $cfg -Value $content -Encoding UTF8 }" > "%TEMP%\ad_ps_cfg.tmp" 2>&1
+    if exist "%TEMP%\ad_ps_cfg.tmp" del "%TEMP%\ad_ps_cfg.tmp" >nul 2>&1
+) else (
+    powershell -NoProfile -Command "$cfg = '%USER_CONFIG%'.Replace('\', '/'); if (Test-Path $cfg) { $content = Get-Content $cfg; if ($content -match 'EXTERNAL_TOOLS_BLOCKED') { $content = $content -replace 'EXTERNAL_TOOLS_BLOCKED=.*', 'EXTERNAL_TOOLS_BLOCKED=1' } else { $content += 'EXTERNAL_TOOLS_BLOCKED=1' }; if ($content -match 'RENDER_QUALITY') { $content = $content -replace 'RENDER_QUALITY=.*', 'RENDER_QUALITY=MIDDLE' }; if ($content -match 'SYSTEM_RECOMMENDED_PROFILE') { $content = $content -replace 'SYSTEM_RECOMMENDED_PROFILE=.*', 'SYSTEM_RECOMMENDED_PROFILE=MIDDLE' }; Set-Content -Path $cfg -Value $content -Encoding UTF8 }" >nul 2>&1
+)
 echo EXTERNAL_TOOLS_BLOCKED=1 > "%TEMP%\ad_boot_diag_result.env"
 exit /b 0
 
 :UpdateConfigSuccess
 rem Safely clear block flags in user_config.env
-powershell -NoProfile -Command "$cfg = '%USER_CONFIG%'.Replace('\', '/'); if (Test-Path $cfg) { $content = Get-Content $cfg; if ($content -match 'EXTERNAL_TOOLS_BLOCKED') { $content = $content -replace 'EXTERNAL_TOOLS_BLOCKED=.*', 'EXTERNAL_TOOLS_BLOCKED=0' } else { $content += 'EXTERNAL_TOOLS_BLOCKED=0' }; Set-Content -Path $cfg -Value $content -Encoding UTF8 }" >nul 2>&1
+if "%IS_CONSOLAS%"=="1" (
+    powershell -NoProfile -Command "$cfg = '%USER_CONFIG%'.Replace('\', '/'); if (Test-Path $cfg) { $content = Get-Content $cfg; if ($content -match 'EXTERNAL_TOOLS_BLOCKED') { $content = $content -replace 'EXTERNAL_TOOLS_BLOCKED=.*', 'EXTERNAL_TOOLS_BLOCKED=0' } else { $content += 'EXTERNAL_TOOLS_BLOCKED=0' }; Set-Content -Path $cfg -Value $content -Encoding UTF8 }" > "%TEMP%\ad_ps_cfg.tmp" 2>&1
+    if exist "%TEMP%\ad_ps_cfg.tmp" del "%TEMP%\ad_ps_cfg.tmp" >nul 2>&1
+) else (
+    powershell -NoProfile -Command "$cfg = '%USER_CONFIG%'.Replace('\', '/'); if (Test-Path $cfg) { $content = Get-Content $cfg; if ($content -match 'EXTERNAL_TOOLS_BLOCKED') { $content = $content -replace 'EXTERNAL_TOOLS_BLOCKED=.*', 'EXTERNAL_TOOLS_BLOCKED=0' } else { $content += 'EXTERNAL_TOOLS_BLOCKED=0' }; Set-Content -Path $cfg -Value $content -Encoding UTF8 }" >nul 2>&1
+)
 echo EXTERNAL_TOOLS_BLOCKED=0 > "%TEMP%\ad_boot_diag_result.env"
 exit /b 0
