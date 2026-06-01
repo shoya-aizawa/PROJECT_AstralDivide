@@ -1,3 +1,4 @@
+@echo off
 rem ==============================================================
 rem  RCS_Util.bat v0.4  -  Return Code System Utility (Integrated)
 rem --------------------------------------------------------------
@@ -25,7 +26,6 @@ rem       [External Commands]  -trace, -throw, -return
 rem       [Internal Mechanics] -build, -decode
 rem       [Debug/Confirm]      -pretty
 rem ==============================================================
-@echo off
 :: Prevent duplicate chcp execution to avoid conhost font-reset bug
 if not "%CODEPAGE_SET%"=="1" (
     chcp 65001 >nul
@@ -62,10 +62,17 @@ endlocal & (
 rem ==============================================================
 :decode
 set "c=%~1"
-set /a rcs_s=c/10000000
-set /a rcs_dd=(c/100000) %% 100
-set /a rcs_rr=(c/1000) %% 100
-set /a rcs_ccc=c %% 1000
+set /a rcs_s_num=c/10000000
+set /a rcs_dd_num=(c/100000) %% 100
+set /a rcs_rr_num=(c/1000) %% 100
+set /a rcs_ccc_num=c %% 1000
+set "rcs_s=%rcs_s_num%"
+set "rcs_dd=0%rcs_dd_num%"
+set "rcs_dd=%rcs_dd:~-2%"
+set "rcs_rr=0%rcs_rr_num%"
+set "rcs_rr=%rcs_rr:~-2%"
+set "rcs_ccc=00%rcs_ccc_num%"
+set "rcs_ccc=%rcs_ccc:~-3%"
 endlocal & (
 	set "rcs_s=%rcs_s%"
 	set "rcs_dd=%rcs_dd%"
@@ -80,6 +87,8 @@ set "code=%~1"
 call "%SELF%" -decode %code%
 
 set "stype=FLOW"
+if "%rcs_s%"=="2" set "stype=INFO"
+if "%rcs_s%"=="3" set "stype=WARN"
 if "%rcs_s%"=="8" set "stype=CANCEL"
 if "%rcs_s%"=="9" set "stype=ERROR"
 

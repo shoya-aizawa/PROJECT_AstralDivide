@@ -1,8 +1,12 @@
 # Astral Divide — Run→Main Protocol (R2M) v2.2
 
+> [!WARNING]
+> **⚠️ 本書は旧仕様（R2M v2.2 草案）のアーカイブです。**
+> 最新の設計および実装仕様については [Astral_Divide_R2M_Protocol_v_2_2.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_R2M_Protocol_v_2_2.md) を参照してください。
+
 **Project:** PROJECT\_AstralDivide (HedgeHogSoft)
 **Doc Type:** Implementation Standard / .md
-**Status:** Draft v2.2
+**Status:** Archived (Old Spec)  
 **Date:** 2025-08-09 (JST)
 
 > 本版は **Watchdog を `start` ではなく `call` で同期実行**する設計へ修正したアップデートです。

@@ -3,11 +3,13 @@
 if exist "%src_display_tpl_dir%\StaticUIProfileSelector.bat" (
     call "%src_display_tpl_dir%\StaticUIProfileSelector.bat"
 )
+if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 
 
 :: 通常の初期化・分岐
 set "selector_mode=%1"
 if "%selector_mode%"=="" set "selector_mode=CONTINUE"
+if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "start mode=%selector_mode% quality=%RENDER_QUALITY%"
 
 :: 返り値の初期化
 set retcode=0
@@ -47,6 +49,14 @@ set slots_per_row=3
 
 :: 描画品質のデフォルト設定
 if not defined RENDER_QUALITY set "RENDER_QUALITY=HIGH"
+if not defined SLOT_BOX_WIDTH set "SLOT_BOX_WIDTH=22"
+if not defined SLOT_ROW_PITCH set "SLOT_ROW_PITCH=9"
+if not defined SLOT_TEXT_WIDTH set "SLOT_TEXT_WIDTH=16"
+if not defined SDS_ANCHOR_COL set "SDS_ANCHOR_COL=1"
+if not defined SDS_ANCHOR_ROW set "SDS_ANCHOR_ROW=1"
+if not defined SDS_DIALOG_COL set "SDS_DIALOG_COL=92"
+if not defined SDS_DIALOG_ROW set "SDS_DIALOG_ROW=20"
+if not defined SDS_USE_DYNAMIC set "SDS_USE_DYNAMIC=0"
 
 :: 描画品質に応じたカラーコード定義
 if /i "%RENDER_QUALITY%"=="LOW" (
@@ -124,6 +134,7 @@ exit /b 2099
     exit /b 1
 
 :Display_NoSaveData_Message
+    if "%SDS_USE_DYNAMIC%"=="1" goto :Display_NoSaveData_Message_Dynamic
     cls
     echo.
     echo. %esc%[91m┌─────────────────────────────────────────────┐%esc%[0m
@@ -136,6 +147,16 @@ exit /b 2099
     echo. %esc%[91m└─────────────────────────────────────────────┘%esc%[0m
     echo.
     echo. %esc%[96mpress any key to continue%esc%[0m
+    pause >nul
+    set "UI_ACTION=CANCEL"
+    exit /b %RC_OK%
+
+:Display_NoSaveData_Message_Dynamic
+    cls
+    call :Render_SaveDataSelector_Dynamic
+    call :Print_Centered 18 "No save data was found."
+    call :Print_Centered 20 "Start a new game first, then create save data."
+    call :Print_Centered 23 "Press any key to continue"
     pause >nul
     set "UI_ACTION=CANCEL"
     exit /b %RC_OK%
@@ -231,12 +252,19 @@ exit /b 2099
 :Display_SaveDataSelector
     :: 初回表示時のみ全体描画
     cls
+    if "%SDS_USE_DYNAMIC%"=="1" (
+        call :Render_SaveDataSelector_Dynamic
+        if %DEBUG_STATE%==1 (
+            call :Display_Debug_Info
+        )
+        exit /b 0
+    )
     if /i "%RENDER_QUALITY%"=="LOW" (
         :: LOW: Load single-border static fallback template
-        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\SelectSaveDataDisplay_LOW.txt") do (echo %%a)
+        call :Render_Template_Anchored "%src_display_tpl_dir%\SelectSaveDataDisplay_LOW.txt" %SDS_ANCHOR_COL% %SDS_ANCHOR_ROW%
     ) else (
         :: HIGH / MIDDLE: Load high-quality static templates (pre-rendered borders and title)
-        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\SelectSaveDataDisplay_%RENDER_QUALITY%.txt") do (echo %%a)
+        call :Render_Template_Anchored "%src_display_tpl_dir%\SelectSaveDataDisplay_%RENDER_QUALITY%.txt" %SDS_ANCHOR_COL% %SDS_ANCHOR_ROW%
     )
     if %DEBUG_STATE%==1 (
         call :Display_Debug_Info
@@ -244,15 +272,18 @@ exit /b 2099
     exit /b 0
 
 :Quick_Update_Display
+    if "%SDS_USE_DYNAMIC%"=="1" goto :Quick_Update_Display_Dynamic
     setlocal EnableDelayedExpansion
+    set /a "anchor_col=%SDS_ANCHOR_COL% - 1"
+    set /a "anchor_row=%SDS_ANCHOR_ROW% - 1"
     for /l %%i in (1,1,12) do (
         set /a "col_idx=(%%i - 1) %% 3"
         set /a "row_idx=(%%i - 1) / 3"
-        set /a "s_row=SLOT_POS_ROW + (row_idx * 9)"
-        if "!col_idx!"=="0" set "s_col=%SLOT_POS_COL_1%"
-        if "!col_idx!"=="1" set "s_col=%SLOT_POS_COL_2%"
-        if "!col_idx!"=="2" set "s_col=%SLOT_POS_COL_3%"
-        set /a "s_col_right=s_col + 21"
+        set /a "s_row=SLOT_POS_ROW + anchor_row + (row_idx * %SLOT_ROW_PITCH%)"
+        if "!col_idx!"=="0" set /a "s_col=%SLOT_POS_COL_1% + anchor_col"
+        if "!col_idx!"=="1" set /a "s_col=%SLOT_POS_COL_2% + anchor_col"
+        if "!col_idx!"=="2" set /a "s_col=%SLOT_POS_COL_3% + anchor_col"
+        set /a "s_col_right=s_col + (%SLOT_BOX_WIDTH% - 1)"
         set /a "r0=s_row"
         set /a "r1=s_row+1"
         set /a "r2=s_row+2"
@@ -277,7 +308,127 @@ exit /b 2099
     )
     exit /b 0
 
+:Quick_Update_Display_Dynamic
+    setlocal EnableDelayedExpansion
+    for /l %%i in (1,1,12) do (
+        set /a "col_idx=(%%i - 1) %% 3"
+        set /a "row_idx=(%%i - 1) / 3"
+        set /a "s_row=SLOT_POS_ROW + (row_idx * %SLOT_ROW_PITCH%)"
+        if "!col_idx!"=="0" set /a "s_col=%SLOT_POS_COL_1%"
+        if "!col_idx!"=="1" set /a "s_col=%SLOT_POS_COL_2%"
+        if "!col_idx!"=="2" set /a "s_col=%SLOT_POS_COL_3%"
+        set /a "s_col_right=s_col + (%SLOT_BOX_WIDTH% - 1)"
+        set /a "r0=s_row"
+        set /a "r1=s_row+1"
+        set /a "r2=s_row+2"
+        set /a "r3=s_row+3"
+        set /a "r4=s_row+4"
+        set /a "r5=s_row+5"
+        set "s_color=!slot_%%i_color!"
+        echo !esc![!r0!;!s_col!H!esc![!s_color!m+--------------------+!esc![0m
+        echo !esc![!r1!;!s_col!H!esc![!s_color!m^|!esc![0m[%%i] !slot_%%i_line_name!!esc![!s_color!m!esc![!r1!;!s_col_right!H^|!esc![0m
+        echo !esc![!r2!;!s_col!H!esc![!s_color!m^|!esc![0m    !slot_%%i_line_level!!esc![!s_color!m!esc![!r2!;!s_col_right!H^|!esc![0m
+        echo !esc![!r3!;!s_col!H!esc![!s_color!m^|!esc![0m    !slot_%%i_line_route!!esc![!s_color!m!esc![!r3!;!s_col_right!H^|!esc![0m
+        echo !esc![!r4!;!s_col!H!esc![!s_color!m^|                    ^|!esc![0m
+        echo !esc![!r5!;!s_col!H!esc![!s_color!m+--------------------+!esc![0m
+    )
+    endlocal
+    if %DEBUG_STATE%==1 (
+        call :Update_All_Debug_Info
+    )
+    exit /b 0
+
+:Render_Template_Anchored
+    setlocal EnableDelayedExpansion
+    set "template_file=%~1"
+    set "anchor_col=%~2"
+    set "anchor_row=%~3"
+    if not defined anchor_col set "anchor_col=1"
+    if not defined anchor_row set "anchor_row=1"
+    set /a "pad_cols=anchor_col-1"
+    set /a "pad_rows=anchor_row-1"
+    set "spacer=                                                                                                                                                                                                                                                                                                                                "
+    set "prefix=!spacer:~0,%pad_cols%!"
+    for /l %%r in (1,1,!pad_rows!) do echo.
+    for /f "usebackq delims= eol=#" %%a in ("!template_file!") do echo(!prefix!%%a
+    endlocal
+    exit /b 0
+
+:Render_SaveDataSelector_Dynamic
+    setlocal EnableDelayedExpansion
+    call :Draw_Box %SDS_FRAME_LEFT% %SDS_FRAME_TOP% %SDS_FRAME_RIGHT% %SDS_FRAME_BOTTOM%
+    call :Print_Centered %SDS_TITLE_ROW_1% "SAVE DATA SELECT"
+    call :Print_Centered %SDS_TITLE_ROW_2% "~ Select save data ~"
+    if "%SDS_SHOW_HELP_BOX%"=="1" (
+        call :Draw_Box %SDS_HELP_BOX_LEFT% %SDS_HELP_BOX_TOP% %SDS_HELP_BOX_RIGHT% %SDS_HELP_BOX_BOTTOM%
+        call :Print_Centered %SDS_HELP_TEXT_ROW% "WASD: select  F: enter  Q: back"
+    ) else (
+        call :Print_Centered %SDS_HELP_TEXT_ROW% "WASD: select  F: enter  Q: back"
+    )
+    if "%SDS_SHOW_FOOTER%"=="1" (
+        echo !esc![%SDS_FOOTER_ROW_1%;%SDS_FOOTER_LEFT_COL%HAstral Divide
+        echo !esc![%SDS_FOOTER_ROW_2%;%SDS_FOOTER_LEFT_COL%HVersion: v0.1.1
+        call :Print_Right %SDS_FOOTER_ROW_1% %SDS_FRAME_RIGHT% "Developed by HedgeHogSoft"
+        call :Print_Right %SDS_FOOTER_ROW_2% %SDS_FRAME_RIGHT% "(c) 2021-2026 RPGGAME."
+    )
+    endlocal
+    exit /b 0
+
+:Draw_Box
+    setlocal EnableDelayedExpansion
+    set "left=%~1"
+    set "top=%~2"
+    set "right=%~3"
+    set "bottom=%~4"
+    set /a "inner_width=right-left-1"
+    set /a "inner_top=top+1"
+    set /a "inner_bottom=bottom-1"
+    set "line="
+    for /l %%i in (1,1,!inner_width!) do set "line=!line!-"
+    echo !esc![!top!;!left!H+!line!+
+    for /l %%r in (!inner_top!,1,!inner_bottom!) do echo !esc![%%r;!left!H^|!esc![%%r;!right!H^|
+    echo !esc![!bottom!;!left!H+!line!+
+    endlocal
+    exit /b 0
+
+:Print_Centered
+    setlocal EnableDelayedExpansion
+    set "row=%~1"
+    set "text=%~2"
+    call :StrLen text text_len
+    set /a "col=((%CONSOLE_COLS% - text_len) / 2) + 1"
+    echo !esc![!row!;!col!H!text!
+    endlocal
+    exit /b 0
+
+:Print_Right
+    setlocal EnableDelayedExpansion
+    set "row=%~1"
+    set "right=%~2"
+    set "text=%~3"
+    call :StrLen text text_len
+    set /a "col=right-text_len"
+    if !col! LSS 1 set /a "col=1"
+    echo !esc![!row!;!col!H!text!
+    endlocal
+    exit /b 0
+
+:StrLen
+    setlocal EnableDelayedExpansion
+    set "s=!%~1!"
+    set /a len=0
+    :StrLenLoop
+    if defined s (
+        set "s=!s:~1!"
+        set /a len+=1
+        goto StrLenLoop
+    )
+    endlocal & set "%~2=%len%"
+    exit /b 0
+
 :Update_All_Debug_Info
+    call :Render_Debug_Overlay
+    exit /b 0
     :: デバッグタイトル維持（統一形式）
     echo %esc%[1;1H%esc%[K
     echo %esc%[1;1H%esc%[43;30m SaveDataSelector: Debug Mode %esc%[0m
@@ -413,6 +564,7 @@ exit /b 2099
     
     set "UI_ACTION=CANCEL"
     set "UI_PARAM="
+    if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "back mode=%selector_mode%"
     exit /b 0
 
 :Handle_Move_Left
@@ -705,6 +857,7 @@ exit /b 2099
             if %temp_confirmed%==1 (
                 set "UI_ACTION=CONTINUE"
                 set "UI_PARAM=%current_selected_slot%"
+                if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "continue slot=%current_selected_slot%"
                 if %DEBUG_STATE%==1 (
                     echo %esc%[15;1H%esc%[K%esc%[91m [DEBUG] Continue confirmed: slot=%current_selected_slot% %esc%[0m
                     timeout /t 2 >nul
@@ -714,17 +867,13 @@ exit /b 2099
                 exit /b 0
             )
         ) else (
-            echo %esc%[20;92H%esc%[41;97m このスロットにはデータがありません %esc%[0m
-            timeout /t 2 >nul
-            echo %esc%[20;92H%esc%[K
+            call :DlgShow "このスロットにはデータがありません" "41;97" 2
             exit /b 0
         )
     )
     
     if %current_selected_slot% gtr %max_available_slots% (
-        echo %esc%[20;92H%esc%[41;97m このスロットは開発中です %esc%[0m
-        timeout /t 1 >nul
-        echo %esc%[20;92H%esc%[K
+        call :DlgShow "このスロットは開発中です" "41;97" 1
         exit /b 0
     )
     
@@ -744,6 +893,7 @@ exit /b 2099
             if %errorlevel%==1 (
                 set "UI_ACTION=NEWGAME_OVERWRITE"
                 set "UI_PARAM=%current_selected_slot%"
+                if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "newgame overwrite slot=%current_selected_slot%"
                 exit /b 0
             ) else (
                 exit /b 0
@@ -753,6 +903,7 @@ exit /b 2099
             if %errorlevel%==1 (
                 set "UI_ACTION=NEWGAME_CREATE"
                 set "UI_PARAM=%current_selected_slot%"
+                if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "newgame create slot=%current_selected_slot%"
                 exit /b 0
             ) else (
                 exit /b 0
@@ -761,9 +912,7 @@ exit /b 2099
     )
 
     if %current_selected_slot% gtr %max_available_slots% (
-        echo %esc%[20;92H%esc%[41;97m This slot is under development %esc%[0m
-        timeout /t 1 >nul
-        echo %esc%[20;92H%esc%[K
+        call :DlgShow "This slot is under development" "41;97" 1
         exit /b 0
     )
 
@@ -773,10 +922,10 @@ exit /b 2099
 
 
 :Confirm_LoadGame
-    echo %esc%[20;92H%esc%[93m このデータをロードしますか？ (F=はい/Q=いいえ) %esc%[0m
+    call :DlgPrint "このデータをロードしますか？ (F=はい/Q=いいえ)" "93"
     call :Process_Dialog_Input "LOAD"
     set choice=%errorlevel%
-    echo %esc%[20;92H%esc%[K
+    call :DlgClear
     
     if %choice%==1 (
         exit /b 1
@@ -785,10 +934,10 @@ exit /b 2099
     )
 
 :Confirm_Overwrite
-    echo %esc%[20;92H%esc%[93m 既存のデータを上書きしますか？ (F=はい/Q=いいえ) %esc%[0m
+    call :DlgPrint "既存のデータを上書きしますか？ (F=はい/Q=いいえ)" "93"
     call :Process_Dialog_Input "OVERWRITE"
     set choice=%errorlevel%
-    echo %esc%[20;92H%esc%[K
+    call :DlgClear
     
     if %choice%==1 (
         exit /b 1
@@ -797,9 +946,9 @@ exit /b 2099
     )
 
 :Confirm_CreateNew
-    echo %esc%[20;92H%esc%[93m 新しいゲームを開始しますか？ (F=はい/Q=いいえ) %esc%[0m
+    call :DlgPrint "新しいゲームを開始しますか？ (F=はい/Q=いいえ)" "93"
     call :Process_Dialog_Input CREATE
-    echo %esc%[20;92H%esc%[K
+    call :DlgClear
 
     if %errorlevel%==1 (
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter3.wav"
@@ -814,10 +963,33 @@ exit /b 2099
 :Preview_SaveData
     set slot_num=%1
     if exist "%saves_active_dir%\SaveData_%slot_num%.txt" (
-        echo %esc%[20;92H%esc%[96m [Preview] Slot %slot_num% データ確認中... %esc%[0m
-        timeout /t 1 >nul
-        echo %esc%[20;92H%esc%[K
+        call :DlgShow "[Preview] Slot %slot_num% データ確認中..." "96" 1
     )
+    exit /b 0
+
+:DlgPrint
+    setlocal EnableDelayedExpansion
+    set "dialog_text=%~1"
+    set "dialog_color=%~2"
+    if "%dialog_color%"=="" set "dialog_color=93"
+    set /a "dialog_row=%SDS_DIALOG_ROW% + %SDS_ANCHOR_ROW% - 1"
+    set /a "dialog_col=%SDS_DIALOG_COL% + %SDS_ANCHOR_COL% - 1"
+    echo !esc![!dialog_row!;!dialog_col!H!esc![!dialog_color!m !dialog_text! !esc![0m
+    endlocal
+    exit /b 0
+
+:DlgClear
+    setlocal EnableDelayedExpansion
+    set /a "dialog_row=%SDS_DIALOG_ROW% + %SDS_ANCHOR_ROW% - 1"
+    set /a "dialog_col=%SDS_DIALOG_COL% + %SDS_ANCHOR_COL% - 1"
+    echo !esc![!dialog_row!;!dialog_col!H!esc![K
+    endlocal
+    exit /b 0
+
+:DlgShow
+    call :DlgPrint "%~1" "%~2"
+    timeout /t %~3 >nul
+    call :DlgClear
     exit /b 0
 
 :Process_Dialog_Input
@@ -940,6 +1112,22 @@ exit /b 2099
 :Display_Debug_Info
     :: デバッグ情報の初期表示
     call :Update_All_Debug_Info
+    exit /b 0
+
+:Render_Debug_Overlay
+    setlocal EnableDelayedExpansion
+    set /a "dbg_col=%SDS_ANCHOR_COL% + 2"
+    set /a "dbg_row=%SDS_ANCHOR_ROW% + 1"
+    set /a "dbg_row_2=dbg_row+1"
+    set /a "dbg_row_3=dbg_row+2"
+    set /a "dbg_row_4=dbg_row+3"
+    set /a "dbg_row_5=dbg_row+4"
+    echo !esc![!dbg_row!;!dbg_col!H!esc![48;5;235m!esc![38;5;220m SDS DEBUG                     !esc![0m
+    echo !esc![!dbg_row_2!;!dbg_col!H!esc![48;5;235m mode=!selector_mode! slot=!current_selected_slot!        !esc![0m
+    echo !esc![!dbg_row_3!;!dbg_col!H!esc![48;5;235m key=!key! seq=!hidden_sequence!              !esc![0m
+    echo !esc![!dbg_row_4!;!dbg_col!H!esc![48;5;235m anc=!SDS_ANCHOR_COL!,!SDS_ANCHOR_ROW! dlg=!SDS_DIALOG_COL!,!SDS_DIALOG_ROW! !esc![0m
+    echo !esc![!dbg_row_5!;!dbg_col!H!esc![48;5;235m act=!UI_ACTION! param=!UI_PARAM!            !esc![0m
+    endlocal
     exit /b 0
 
 :Refresh_Display
@@ -1155,16 +1343,21 @@ exit /b 2099
     exit /b 0
 
 :PadString
+    setlocal EnableDelayedExpansion
     set "orig_str=%~2"
     if "%orig_str%"=="" set "orig_str= "
     set "padded=%orig_str%                "
-    set "%1=%padded:~0,16%"
+    set "trimmed=!padded:~0,%SLOT_TEXT_WIDTH%!"
+    endlocal & set "%~1=%trimmed%"
     exit /b 0
 
 :PadString15
+    setlocal EnableDelayedExpansion
     set "orig_str=%~2"
     if "%orig_str%"=="" set "orig_str= "
     set "padded=%orig_str%               "
-    set "%1=%padded:~0,15%"
+    set /a "slot_text_width_15=%SLOT_TEXT_WIDTH% - 1"
+    set "trimmed=!padded:~0,%slot_text_width_15%!"
+    endlocal & set "%~1=%trimmed%"
     exit /b 0
 

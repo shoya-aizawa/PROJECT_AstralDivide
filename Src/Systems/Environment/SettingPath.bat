@@ -21,22 +21,6 @@ if defined PROJECT_ROOT (
    for %%I in ("%~dp0\..\..\..") do set "root_dir=%%~fI\"
 )
 
-rem ---Added: If SAVE_MODE is undefined, load profile.env and automate ---
-if not defined SAVE_MODE (
-  set "_cfg_guess=%root_dir%\Config"
-  if not defined CFG_DIR set "CFG_DIR=%_cfg_guess%"
-  if exist "%CFG_DIR%\profile.env" (
-    call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_DIR%\profile.env" >nul
-    set "RC=%errorlevel%"
-    if not "%RC%"=="%RC_OK%" (
-      rem Since it is an option read, it will not be dropped even if it fails (log only)
-      call "%RCSU%" -trace WARN SettingPath "LoadEnv optional rc=%RC% file=%CFG_DIR%\profile.env"
-    )
-  )
-)
-
-
-
 ::===== Under Assets ====================================================
 set "assets_dir=%root_dir%\Assets"
 set "assets_docs_dir=%assets_dir%\Docs"
@@ -96,7 +80,7 @@ if defined CFG_DIR (
    )
 )
 
-set "config_profile_file=%config_active_dir%\profile.env"
+set "config_profile_file=%config_active_dir%\user_config.env"
 set "config_cache_dir=%config_active_dir%\Cache"
 set "config_logs_dir=%config_active_dir%\Logs"
 

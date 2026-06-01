@@ -6,7 +6,20 @@ if not defined CONSOLE_COLS set "CONSOLE_COLS=90"
 if not defined CONSOLE_ROWS set "CONSOLE_ROWS=35"
 mode %CONSOLE_COLS%,%CONSOLE_ROWS%
 
-powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')"
+set "IS_CONSOLAS="
+if defined SELECTED_FONT if /i "%SELECTED_FONT%"=="Consolas" set "IS_CONSOLAS=1"
+if not defined IS_CONSOLAS if defined CONSOLE_FONT if /i "%CONSOLE_FONT%"=="Consolas" set "IS_CONSOLAS=1"
+if not defined IS_CONSOLAS if defined PROJECT_ROOT if exist "%PROJECT_ROOT%\Config\user_config.env" (
+    findstr /i /c:"CONSOLE_FONT=Consolas" "%PROJECT_ROOT%\Config\user_config.env" >nul
+    if not errorlevel 1 set "IS_CONSOLAS=1"
+)
+
+if "%IS_CONSOLAS%"=="1" (
+    powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" > "%TEMP%\ad_ps_main_f11.tmp" 2>&1
+    if exist "%TEMP%\ad_ps_main_f11.tmp" del "%TEMP%\ad_ps_main_f11.tmp" >nul 2>&1
+) else (
+    powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" >nul 2>&1
+)
 :: ==================================================
 :: Astral Divide - Main.bat (v0.1.2 planned)
 :: Role: Game Core / State Orchestrator
@@ -17,6 +30,8 @@ powershell -NoProfile -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh
 :: --------------------------------------------------
 if not "%~1"=="65001" goto :ENCODING_ERROR
 chcp %~1 >nul
+
+if not defined RCSU set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 
 :: DEV MODE (optional)
 if "%~2"=="DEV" (
@@ -30,23 +45,24 @@ if "%~2"=="DEV" (
 :: --------------------------------------------------
 call "%src_systems_dir%\InitializeModule.bat"
 if not "%errorlevel%"=="%RC_OK%" goto :FATAL_ERROR
-
+if exist "%RCSU%" call "%RCSU%" -trace INFO Main "InitializeModule ok"
 call "%src_savesys_dir%\SaveDataDetectSystem.bat"
 if not "%errorlevel%"=="%RC_OK%" goto :FATAL_ERROR
-
+if exist "%RCSU%" call "%RCSU%" -trace INFO Main "SaveDataDetectSystem ok"
+rem pause
 call "%src_display_dir%\BootCompleteDisplay.bat"
-
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat 30
-
+rem pause
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat %BGM_VOLUME%
+rem pause
 call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Title_Image.png" /b
-
-chcp 65001
 
 :: Apply user-configured font automatically
 if defined CONSOLE_FONT (
     if not "%EXTERNAL_TOOLS_BLOCKED%"=="1" (
         if exist "%tools_dir%\cmdwiz.exe" (
+            timeout /t 1 /nobreak >nul
             call "%tools_dir%\cmdwiz.exe" setfont "%tools_dir%\%CONSOLE_FONT%.fnt" >nul 2>&1
+            timeout /t 1 /nobreak >nul
         )
     )
 )
@@ -56,9 +72,11 @@ if defined CONSOLE_FONT (
 :: --------------------------------------------------
 :STATE_MAINMENU
     call :Reset_UI_Context
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_MAINMENU"
 
     call "%src_display_dir%\MainMenuModule.bat"
     if not "%errorlevel%"=="%RC_OK%" goto :UI_ERROR
+    call :Trace_UI_Return "MMM returned"
 
     call :Route_MainMenu_Action
     goto :STATE_MAINMENU
@@ -70,6 +88,7 @@ if defined CONSOLE_FONT (
 :: ==================================================
 
 :Route_MainMenu_Action
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "route action=%UI_ACTION%"
     if "%UI_ACTION%"=="MAINMENU_NEWGAME"   goto :STATE_NEWGAME
     if "%UI_ACTION%"=="MAINMENU_CONTINUE"  goto :STATE_CONTINUE
     if "%UI_ACTION%"=="MAINMENU_SETTINGS"  goto :STATE_SETTINGS
@@ -86,8 +105,10 @@ if defined CONSOLE_FONT (
 
 :STATE_NEWGAME
     call :Reset_UI_Context
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_NEWGAME"
     call "%src_savesys_dir%\SaveDataSelector.bat" NEWGAME
     if not "%errorlevel%"=="%RC_OK%" goto :STATE_MAINMENU
+    call :Trace_UI_Return "SDS NEWGAME returned"
 
     if "%UI_ACTION%"=="CANCEL" goto :STATE_MAINMENU
     if "%UI_ACTION%"=="NEWGAME_CREATE" (
@@ -103,8 +124,10 @@ if defined CONSOLE_FONT (
 
 :STATE_CONTINUE
     call :Reset_UI_Context
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_CONTINUE"
     call "%src_savesys_dir%\SaveDataSelector.bat" CONTINUE
     if not "%errorlevel%"=="%RC_OK%" goto :STATE_MAINMENU
+    call :Trace_UI_Return "SDS CONTINUE returned"
 
     if "%UI_ACTION%"=="CANCEL" goto :STATE_MAINMENU
     if "%UI_ACTION%"=="CONTINUE" (
@@ -115,6 +138,7 @@ if defined CONSOLE_FONT (
 
 
 :STATE_SETTINGS
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_SETTINGS"
     call "%src_display_dir%\SettingsMenu.bat"
     goto :STATE_MAINMENU
 
@@ -151,6 +175,14 @@ if defined CONSOLE_FONT (
 :Reset_UI_Context
     set UI_ACTION=
     set UI_PARAM=
+    exit /b 0
+
+:Trace_UI_Return
+    if not exist "%RCSU%" exit /b 0
+    set "_trace_param=%UI_PARAM%"
+    if not defined _trace_param set "_trace_param=(none)"
+    call "%RCSU%" -trace INFO Main "%~1 action=%UI_ACTION% param=%_trace_param%"
+    set "_trace_param="
     exit /b 0
 
 

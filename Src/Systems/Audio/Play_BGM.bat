@@ -14,6 +14,7 @@ setlocal
 set "FILE_PATH=%~1"
 set "MODE=%~2"
 set "VOLUME=%~3"
+if "%VOLUME%"=="" set "VOLUME=%BGM_VOLUME%"
 if "%VOLUME%"=="" set "VOLUME=50"
 
 set "BGM_PLAYER=%~dp0BgmPlayer.bat"

@@ -1,10 +1,14 @@
 # Astral Divide Run-To-Main Protocol (R2M) v1.0
 
+> [!WARNING]
+> **⚠️ 本書は旧仕様（v2.1）のアーカイブです。**
+> 最新の設計および実装仕様については [Astral_Divide_R2M_Protocol_v_2_2.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_R2M_Protocol_v_2_2.md) を参照してください。
+
 **Project:** PROJECT_AstralDivide / HedgeHogSoft  
 **Subsystem:** Process Synchronization & Verification  
 **Author:** 愛澤翔也 (HedgeHog)  
 **Date:** 2025-10-23  
-**Status:** Stable Draft
+**Status:** Archived (Old Spec)  
 
 ---
 

@@ -1,5 +1,10 @@
 # Interception Protocol Specification (IPS)
 
+> [!WARNING]
+> **⚠️ 重要：本設計書は旧仕様（IPS 草案）であり、現在は未実装です**
+> 本書に記載されているインターセプトプロトコル、および `.rendezvous` / `.command.in` ファイルを介した同期対話は現段階では未実装の将来計画（Draft）です。
+> 最新の設計方針については [Astral_Divide_Interception_Rvp_Spec_v_1.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_Interception_Rvp_Spec_v_1.md) を参照してください。
+
 ## 概要
 `Interception Protocol Specification` (IPS) は、RPGGAME2024 プロジェクトの `Main.bat`と `Run.bat` (ウォッチドッグ)の間で、モード=INTERCEPT時に違うバッチプロセス間で「部分的な指示パス交信」を行うためのプロトコルである。
 

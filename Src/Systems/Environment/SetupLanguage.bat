@@ -2,12 +2,12 @@
 setlocal EnableExtensions EnableDelayedExpansion
 rem ============================================================================
 rem SetupLanguage.bat  (RCS-integrated version)
-rem Role: Language selection / profile.env synchronization
+rem Role: Language selection / user_config.env synchronization
 rem ============================================================================
 rem RC MAP:
 rem 1-06-90-000 : OK
 rem 8-06-01-002 : User canceled
-rem 9-06-11-011 : profile.env parse failure
+rem 9-06-11-011 : user_config.env parse failure
 rem 9-06-10-012 : I/O write failure
 rem ============================================================================
 

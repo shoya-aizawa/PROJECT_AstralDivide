@@ -10,10 +10,14 @@
 @echo off
 @mode 90,35
 @for /f %%a in ('cmd /k prompt $e^<nul') do (set "esc=%%a")
-@if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
+
+:: Check if debug mode is requested in arguments to avoid opening a new window
+@set "IS_DEBUG_MODE=0"
+@echo "%*" | findstr /i "\-mode debug" >nul && set "IS_DEBUG_MODE=1"
+
+@if not "%IS_DEBUG_MODE%"=="1" if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
 @title Astral Divide - Booting.
 set "self_name=%~n0"
-
 rem================================================= Main Flow =================================================
 
 set "REMOTE_GAS_URL=https://script.google.com/macros/s/AKfycbwIOTx9BM2IwcIoHPyKJN529AkBUk7Kbadwxb4HzxYrHMUrV_2PX2BpbaPVhLuWphhK/exec"
@@ -30,6 +34,14 @@ if exist "%PROJECT_ROOT%\Config\user_config.env" (
     )
 )
 
+:: [0.1] Launch Token Guard (Direct execution prevention)
+set "LAUNCH_GUARD=%PROJECT_ROOT%\Src\Systems\Launcher\LaunchGuard.bat"
+if exist "%LAUNCH_GUARD%" (
+    call "%LAUNCH_GUARD%"
+)
+if exist "%LAUNCH_GUARD%" if not "%errorlevel%"=="0" (
+    exit /b %errorlevel%
+)
 
 
 
@@ -56,17 +68,22 @@ goto :Dev_ForceFirstLaunch_End
 
     set "_dev_cfg=%PROJECT_ROOT%\Config\user_config.env"
     if exist "%_dev_cfg%" (
-        echo %esc%[90mCleaning user_config.env...%esc%[0m
+        echo %esc%[90mClearing user_config.env ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
         del /q "%_dev_cfg%" >nul 2>&1
     )
     set "_dev_cache=%PROJECT_ROOT%\Config\Cache\Screen"
     if exist "%_dev_cache%" (
-        echo %esc%[90mCleaning screen cache...%esc%[0m
+        echo %esc%[90mClearing screen cache ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
         rd /s /q "%_dev_cache%" >nul 2>&1
+    )
+    set "_dev_se_cache=%PROJECT_ROOT%\Config\Cache\SEVariants"
+    if exist "%_dev_se_cache%" (
+        echo %esc%[90mClearing prewarmed SE variants ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
+        rd /s /q "%_dev_se_cache%" >nul 2>&1
     )
     set "_dev_logs=%PROJECT_ROOT%\Config\Logs"
     if exist "%_dev_logs%" (
-        echo %esc%[90mClearing all log files content...%esc%[0m
+        echo %esc%[90mClearing log files ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
         for %%F in ("%_dev_logs%\*.log") do (
             type nul > "%%F" 2>nul
         )
@@ -82,6 +99,7 @@ set "BUILD_PROFILE=release"
 set "INTERCEPT_MODE=0"
 set "REMOTE_MODE=0"
 set "REMOTE_ADMIN_MODE=0"
+set "FORCE_RENDER_QUALITY="
 
 :ParseArgsLoop
 if "%~1"=="" goto :ParseArgsEnd
@@ -96,6 +114,18 @@ if /i "%~1"=="-mode" (
         set "REMOTE_MODE=1"
     )
     if /i "%~2"=="remoteadmin" set "REMOTE_ADMIN_MODE=1"
+    shift
+)
+if /i "%~1"=="-quality" (
+    if /i "%~2"=="high" set "FORCE_RENDER_QUALITY=HIGH"
+    if /i "%~2"=="middle" set "FORCE_RENDER_QUALITY=MIDDLE"
+    if /i "%~2"=="low" set "FORCE_RENDER_QUALITY=LOW"
+    shift
+)
+if /i "%~1"=="--quality" (
+    if /i "%~2"=="high" set "FORCE_RENDER_QUALITY=HIGH"
+    if /i "%~2"=="middle" set "FORCE_RENDER_QUALITY=MIDDLE"
+    if /i "%~2"=="low" set "FORCE_RENDER_QUALITY=LOW"
     shift
 )
 shift
@@ -123,7 +153,8 @@ if "%REMOTE_ADMIN_MODE%"=="1" (
 @title Astral Divide - Loading...
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.bat" "%PROJECT_ROOT%"
 if not "%errorlevel%"=="0" (
-    set /a "RCS_FALLBACK=90640100 + %errorlevel%"
+    set "RCS_FALLBACK=%errorlevel%"
+    if "%RCS_FALLBACK%" LSS "10000000" set /a "RCS_FALLBACK=90640100 + %errorlevel%"
     set "RCS_MISSING_TAG=Splash/Initializer"
     goto :FailRun
 )
@@ -177,9 +208,17 @@ rem TODO call "%root_dir%\Src\Systems\Security\VerifySignatures.bat"
 :: [8] Initiate Main.bat
 :GoMain
 rem start "AstralDivide[v0.1.1]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.1]"
-start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.1]"
+if "%IS_DEBUG_MODE%"=="1" (
+    :: Run Main.bat directly using CALL in debug mode to keep execution in the same terminal
+    pushd "%src_main_dir%"
+    call Main.bat 65001 "AstralDivide[v0.1.1]"
+    popd
+) else (
+    start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.1]"
+)
 set launch_time=%time%
 call "%RCSU%" -trace INFO "%self_name%" "main launched time=%launch_time%"
+if defined FORCE_RENDER_QUALITY call "%RCSU%" -trace INFO "%self_name%" "forced render quality=%FORCE_RENDER_QUALITY%"
 
 :: Launch remote debugging log streamer if active
 if "%REMOTE_MODE%"=="1" (
@@ -207,8 +246,10 @@ if "%REMOTE_MODE%"=="1" (
 if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
 ( if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL) ) > "%runtime_ipc_dir%\.mode"
 
-rem Pass IPC_DIR to WD as an argument
-call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.1]"
+rem Pass IPC_DIR to WD as an argument (bypassed in debug mode to avoid nested wait/blocking)
+if not "%IS_DEBUG_MODE%"=="1" (
+    call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.1]"
+)
 
 
 :: [A] Cleanup Temporary Files
@@ -244,8 +285,9 @@ rem!========================================== Error & Exit sections ===========
 :: Initialization failure
 :FailFirstRun
 rem 直前のRCを人間可読表示
-call "%RCSU%" -pretty %errorlevel%
-call "%RCSU%" -trace ERR Run "first-run failed rc=%errorlevel%"
+set "FAIL_RC=%errorlevel%"
+call "%RCSU%" -pretty %FAIL_RC%
+call "%RCSU%" -trace ERR Run "first-run failed rc=%FAIL_RC%"
 echo %esc%[31m[E1300]%esc%[0m 初期設定に失敗しました。保存先や権限をご確認ください。
 pause >nul
 goto :ExitRun
@@ -276,6 +318,10 @@ if /i "%~1"=="-mode" if /i "%~2"=="debug" (
 :: Common exit(Utility)
 :ExitRun
 call "%RCSU%" -trace INFO Run "exit"
+if "%IS_DEBUG_MODE%"=="1" (
+    :: In debug mode, use exit /b to avoid closing the VSCode terminal session
+    exit /b 0
+)
 pause >nul
 exit
 rem!===========================================================================================================!

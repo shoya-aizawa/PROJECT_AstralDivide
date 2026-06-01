@@ -3,7 +3,7 @@ cls
 
 %tools_dir%\cmdbkg.exe "%assets_images_dir%\AD_Selenos_Ritual.png" /b
 
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_revelation_dir%\RevelationOfGod.wav" repeat 15
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_revelation_dir%\RevelationOfGod.wav" repeat %BGM_VOLUME%
 
 call "%~dp0EnterYourName.bat"
 

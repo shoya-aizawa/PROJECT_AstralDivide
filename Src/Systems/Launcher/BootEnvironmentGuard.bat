@@ -198,21 +198,21 @@ if defined RCSU (
     call "%RCSU%" -trace ERR BootEnvGuard "FATAL: PowerShell execution failed or is blocked by system policies."
     call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_COMPAT% 021 "PowerShell unavailable or execution blocked"
 )
-endlocal & exit /b 1
+endlocal & exit /b %errorlevel%
 
 :ErrConfigWrite
 if defined RCSU (
     call "%RCSU%" -trace ERR BootEnvGuard "FATAL: Write access denied in Config folder."
     call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "Config directory is not writable"
 )
-endlocal & exit /b 5
+endlocal & exit /b %errorlevel%
 
 :ErrSavesWrite
 if defined RCSU (
     call "%RCSU%" -trace ERR BootEnvGuard "FATAL: Write access denied in Saves folder."
     call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "Saves directory is not writable"
 )
-endlocal & exit /b 5
+endlocal & exit /b %errorlevel%
 
 
 :: =============================================================================

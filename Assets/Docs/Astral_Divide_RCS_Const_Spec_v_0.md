@@ -1,5 +1,9 @@
 # Astral Divide RCS Const Specification (v0.1a)
 
+> [!WARNING]
+> **⚠️ 本書は旧仕様（v0.1a）のアーカイブです。**
+> 最新の設計および実装仕様については [Astral_Divide_RCS_Protocol_v_0_4.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_RCS_Protocol_v_0_4.md) を参照してください。
+
 **Project:** PROJECT_AstralDivide / HedgeHogSoft  
 **Module:** `RCS_Const.bat`  
 **Version:** v0.1a (for RCS_Util v0.3a)  

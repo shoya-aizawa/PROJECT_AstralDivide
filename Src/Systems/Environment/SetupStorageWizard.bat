@@ -4,7 +4,7 @@ rem ============================================================================
 rem SetupStorageWizard.bat (RCS-integrated Edition)
 rem Role:
 rem   Determines the storage location (AppData / Project / Custom)
-rem   Persists to profile.env while preserving other keys
+rem   Persists to user_config.env while preserving other keys
 rem -----------------------------------------------------------------------------
 rem RC MAP:
 rem   1-06-90-000 : OK (Normal flow)
@@ -61,7 +61,7 @@ set "_t=%_sv_dir%\.__permtest__"
 )
 del /q "%_t%" >nul 2>&1
 
-rem --- Load existing profile.env ----------------------------------------------
+rem --- Load existing user_config.env ------------------------------------------
 set "_config_file=%PROJECT_ROOT%\Config\user_config.env"
 if exist "%_config_file%" (
     for /f "usebackq tokens=1,* delims==" %%A in ("%_config_file%") do (

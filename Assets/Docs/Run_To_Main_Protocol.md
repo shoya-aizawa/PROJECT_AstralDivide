@@ -1,5 +1,9 @@
 # RunToMain Protocol 設計書
 
+> [!WARNING]
+> **⚠️ 本書は旧仕様（v1未満）のアーカイブです。**
+> 最新の設計および実装仕様については [Astral_Divide_R2M_Protocol_v_2_2.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_R2M_Protocol_v_2_2.md) を参照してください。
+
 ## 概要
 `RunToMain Protocol` は、RPGGAME2024 プロジェクトにおける「Run.bat から Main.bat への」正式な起動フローを継ぐためのコミュニケーションプロトコルである。
 

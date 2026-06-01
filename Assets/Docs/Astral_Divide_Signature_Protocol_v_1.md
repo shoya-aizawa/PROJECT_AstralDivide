@@ -1,9 +1,14 @@
 # Astral Divide — 重要ファイルのデジタル署名検証仕様（Signature Protocol v1)
 
+> [!WARNING]
+> **⚠️ 重要：本設計書に記載されている機能は現在未実装です**
+> 本書に記載されているデジタル署名検証機能（VerifySignatures.bat および公開鍵暗号による整合性チェック）は、現段階では未実装の将来計画（Draft）です。
+> `Run.bat` 内の `Security Verification` 処理は TODO の状態となっています。
+
 **Project**: PROJECT_AstralDivide / HedgeHogSoft  
 **Scope**: バランス/進行に関わる“クリティカルな数値ファイル”の**改ざん検知**  
-**Status**: v1.0（Draft）  
-**Date**: 2025-08-09 (JST)
+**Status**: Unimplemented (Future Phase / Draft)  
+**Date**: 2026-05-31 (JST)
 
 ---
 

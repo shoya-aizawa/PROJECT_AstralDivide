@@ -1,8 +1,13 @@
 # ReturnCodeUtil.bat（RCU）仕様書 — RECS v1 Helper
 
+> [!WARNING]
+> **⚠️ 本書は旧仕様（ReturnCodeUtil / RECS v1）のアーカイブです。**
+> 現在は RCS_Util.bat v0.4 準拠の8桁エラーコード（`SDDRRCCC`）が使用されています。
+> 最新のエラーコード体系およびユーティリティ仕様については [Astral_Divide_Return_Error_Code_Standard_v_2.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_Return_Error_Code_Standard_v_2.md) を参照してください。
+
 **Project:** PROJECT\_AstralDivide / HedgeHogSoft\
 **File:** `Src/Systems/Debug/ReturnCodeUtil.bat`（例）\
-**Status:** Draft v1.0（実装準拠）\
+**Status:** Archived (Old Spec)\
 **Purpose:** 統一戻り値（RC: `S DD RR CCC` → 8桁）を **生成／整形／返却／記録** する小型CLI
 
 ---

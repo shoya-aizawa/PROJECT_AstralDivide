@@ -3,7 +3,7 @@ chcp 65001 >nul
 rem setlocal EnableExtensions EnableDelayedExpansion
 rem -----------------------------------------------------------------------------
 rem LoadEnv.bat  (RCSU/RC 統合版)
-rem Usage : call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "C:\path\to\profile.env"
+rem Usage : call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "C:\path\to\user_config.env"
 rem Format: lines like set "KEY=VALUE"
 rem Comment lines must start with '#'
 rem RC:
@@ -17,14 +17,8 @@ set "ENV_FILE=%~1"
 set "SILENT_MODE="
 if /i "%~2"=="SILENT" set "SILENT_MODE=1"
 
-if "%ENV_FILE%"=="" (
-    if not defined SILENT_MODE call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "arg missing"
-    exit /b 1
-)
-if not exist "%ENV_FILE%" (
-    if not defined SILENT_MODE call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "not found: %ENV_FILE%"
-    exit /b 2
-)
+if "%ENV_FILE%"=="" goto :ArgMissing
+if not exist "%ENV_FILE%" goto :FileMissing
 
 
 if exist "%ENV_FILE%" (
@@ -50,3 +44,20 @@ if not defined SILENT_MODE (
 ) else (
     exit /b %RC_OK%
 )
+exit /b %errorlevel%
+
+:ArgMissing
+if defined SILENT_MODE (
+    call "%RCSU%" -build %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012
+) else (
+    call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "arg missing"
+)
+exit /b %errorlevel%
+
+:FileMissing
+if defined SILENT_MODE (
+    call "%RCSU%" -build %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012
+) else (
+    call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "not found: %ENV_FILE%"
+)
+exit /b %errorlevel%

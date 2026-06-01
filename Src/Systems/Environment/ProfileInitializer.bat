@@ -1,13 +1,13 @@
 @echo off
-:: ==========================================================
-::  ProfileInitializer.bat (RCS Integrated)
-::  by HedgeHogSoft / PROJECT_AstralDivide
-:: ----------------------------------------------------------
-::  Role:
-::  - load or create user profile (first launch detection)
-::  Dependency:
-::  - RCS_Util.bat / RCS_Const.bat preloaded by Run.bat
-:: ==========================================================
+::: ==========================================================
+:::  ProfileInitializer.bat (RCS Integrated)
+:::  by HedgeHogSoft / PROJECT_AstralDivide
+::: ----------------------------------------------------------
+:::  Role:
+:::  - load finalized user profile written by the splash wizard
+:::  Dependency:
+:::  - RCS_Util.bat / RCS_Const.bat preloaded by Run.bat
+::: ==========================================================
 
 set "PROJECT_ROOT=%~1"
 if "%PROJECT_ROOT%"=="" (
@@ -26,52 +26,20 @@ if not exist "%CFG_DIR%" (
     call "%RCSU%" -trace INFO "%~n0" "config dir exists at {%CFG_DIR%}"
 )
 
-:: ===================== Main Flow =====================
+::: ===================== Main Flow =====================
 
-:: Detect first launch by checking profile existence
-if exist "%CFG_FILE%" (
-    call "%RCSU%" -trace INFO "%~n0" "profile found in {%CFG_FILE%}"
-    call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"
-    if not errorlevel %RC_OK% (
-        call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_PARSE% 011 "failed to parse profile"
-        exit /b %errorlevel%
-    )
-    call "%RCSU%" -trace INFO "%~n0" "profile loaded successfully"
-    set "FIRST_LAUNCH=0"
-    exit /b %RC_OK%
+if not exist "%CFG_FILE%" (
+    call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_IO% 012 "profile missing after splash bootstrap"
+    exit /b %errorlevel%
 )
 
-
-:: First Launch Detected
-:: Step [1] Setup Language
-call "%RCSU%" -trace INFO "%~n0" "first launch detected"
-set "FIRST_LAUNCH=1"
-call "%PROJECT_ROOT%\Src\Systems\Environment\SetupLanguage.bat"
-set "rc=%errorlevel%"
-
-:: Case1: Normal (FLOW)
-if "%rc%"=="%RCS_S_FLOW%%RCS_D_SYS%%RCS_R_SELECT%000" (
-    call "%RCSU%" -trace OK "%~n0" "language setup completed successfully"
+call "%RCSU%" -trace INFO "%~n0" "profile found in {%CFG_FILE%}"
+call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%CFG_FILE%"
+if not "%errorlevel%"=="%RC_OK%" (
+    call "%RCSU%" -trace ERR "%~n0" "profile load failed rc=%errorlevel%"
+    exit /b %errorlevel%
 )
 
-:: Case2: User canceled (CANCEL)
-if "%rc%"=="%RCS_S_CANCEL%%RCS_D_SYS%%RCS_R_SELECT%002" (
-    call "%RCSU%" -trace INFO "%~n0" "language setup canceled by user"
-)
-
-:: Case3: Known error (invalid /lang etc.)
-if "%rc%"=="9%RCS_D_SYS%%RCS_R_VALID%013" (
-    call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_VALID% 013 "language setup failed (invalid arg)"
-)
-
-:: Case4: Other / unknown error
-if "%rc:~0,1%"=="9" (
-    call "%RCSU%" -throw %RCS_S_ERR% %RCS_D_SYS% %RCS_R_VALID% 999 "Unexpected return code from SetupLanguage [%rc%]"
-    exit %errorlevel%
-)
-
-
-
-:: Step [2] Setup Storage (Save Location)
-call "%PROJECT_ROOT%\Src\Systems\Environment\SetupStorageWizard.bat"
-exit /b %errorlevel%
+call "%RCSU%" -trace INFO "%~n0" "profile loaded successfully"
+set "FIRST_LAUNCH=0"
+exit /b %RC_OK%

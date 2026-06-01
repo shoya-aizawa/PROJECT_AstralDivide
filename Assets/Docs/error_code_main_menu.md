@@ -1,4 +1,10 @@
 # MainMenu返り値設計書（MainMenu Errorlevel Reference Sheet）
+
+> [!WARNING]
+> **⚠️ 本書は旧仕様（4桁エラーコード時代）のアーカイブです。**
+> 現在は RCS (Return Code System v0.4) に基づく8桁エラーコード（`SDDRRCCC`）が使用されています。
+> 最新のエラーコード体系については [Astral_Divide_Return_Error_Code_Standard_v_2.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_Return_Error_Code_Standard_v_2.md) を参照してください。
+
 作成日: 2025/07/07  
 作成者: HedgeHog（Shoya）  
 最終更新: 2025/07/11（CONTINUEモード返り値体系の修正）

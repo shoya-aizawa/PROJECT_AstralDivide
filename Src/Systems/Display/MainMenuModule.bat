@@ -7,6 +7,8 @@ if exist "%src_display_tpl_dir%\StaticUIProfileSelector.bat" (
 rem call "%tools_dir%\cmdwiz.exe" setfont "%tools_dir%\Consolas.fnt"
 :: デバッグ状態継承（環境変数から）
 if not defined DEBUG_STATE set DEBUG_STATE=0
+if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
+if exist "%RCSU%" call "%RCSU%" -trace INFO MMM "start quality=%RENDER_QUALITY% debug=%DEBUG_STATE%"
 
 :: デバッグ状態確認出力
 if %DEBUG_STATE%==1 (
@@ -49,6 +51,10 @@ set max_menu_items=4
 
 :: 描画品質のデフォルト設定
 if not defined RENDER_QUALITY set "RENDER_QUALITY=HIGH"
+if not defined MENU_BOX_INNER_WIDTH set "MENU_BOX_INNER_WIDTH=20"
+if not defined MMM_ANCHOR_COL set "MMM_ANCHOR_COL=1"
+if not defined MMM_ANCHOR_ROW set "MMM_ANCHOR_ROW=1"
+if not defined MMM_USE_DYNAMIC set "MMM_USE_DYNAMIC=0"
 
 :: 描画品質に応じたカラーコード定義
 if /i "%RENDER_QUALITY%"=="LOW" (
@@ -160,12 +166,14 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     cls
 
     :: RENDER_QUALITY に応じたテンプレート表示
-    if /i "%RENDER_QUALITY%"=="LOW" (
+    if "%MMM_USE_DYNAMIC%"=="1" (
+        call :Render_MainMenu_Dynamic
+    ) else if /i "%RENDER_QUALITY%"=="LOW" (
         :: LOW: Load single-border static fallback template
-        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\MainMenuDisplay_LOW.txt") do (echo %%a)
+        call :Render_Template_Anchored "%src_display_tpl_dir%\MainMenuDisplay_LOW.txt" %MMM_ANCHOR_COL% %MMM_ANCHOR_ROW%
     ) else (
         :: HIGH / MIDDLE: Load high-quality static templates (pre-rendered AA and borders)
-        for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\MainMenuDisplay_%RENDER_QUALITY%.txt") do (echo %%a)
+        call :Render_Template_Anchored "%src_display_tpl_dir%\MainMenuDisplay_%RENDER_QUALITY%.txt" %MMM_ANCHOR_COL% %MMM_ANCHOR_ROW%
     )
 
     :: デバッグモード時の追加処理
@@ -244,7 +252,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
 
 
 :Handle_Select
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Enter.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
@@ -254,6 +262,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     if "%current_selected_menu%"=="2" set "UI_ACTION=MAINMENU_CONTINUE"
     if "%current_selected_menu%"=="3" set "UI_ACTION=MAINMENU_SETTINGS"
     if "%current_selected_menu%"=="4" set "UI_ACTION=EXIT"
+    if exist "%RCSU%" call "%RCSU%" -trace INFO MMM "select menu=%current_selected_menu% action=%UI_ACTION%"
     if %DEBUG_STATE%==1 (
         echo %esc%[8;1H%esc%[K%esc%[91m [DEBUG-MMM] Handle_Select: Menu=%current_selected_menu% UI_ACTION=%UI_ACTION% %esc%[0m
         echo %esc%[9;1H%esc%[K%esc%[93m [DEBUG-MMM] About to exit with code: 0 %esc%[0m
@@ -262,12 +271,12 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     exit /b 0
 
 :Handle_Move_Down
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav" >nul 2>&1
     call :Move_Down
     exit /b 0
 
 :Handle_Move_Up
-    start "" /b %tools_dir%\cmdwiz.exe playsound "%assets_sounds_fx_dir%\Move.wav"
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav" >nul 2>&1
     call :Move_Up
     exit /b 0
 
@@ -483,21 +492,129 @@ if /i "%RENDER_QUALITY%"=="LOW" (
 :: ========== 表示更新システム ==========
 
 :Quick_Update_Display
-    :: Update menu items selectively (anti-flicker) with 100% exact character alignment
     setlocal EnableDelayedExpansion
-    echo !esc![%MENU_POS_ROW_1%;%MENU_POS_COL%H!esc![%menu_1_color%m      New Game      !esc![0m
-    echo !esc![%MENU_POS_ROW_2%;%MENU_POS_COL%H!esc![%menu_2_color%m      Continue      !esc![0m
-    echo !esc![%MENU_POS_ROW_3%;%MENU_POS_COL%H!esc![%menu_3_color%m      Settings      !esc![0m
-    echo !esc![%MENU_POS_ROW_4%;%MENU_POS_COL%H!esc![%menu_4_color%m        Quit        !esc![0m
+    set /a "menu_col=%MENU_POS_COL% + %MMM_ANCHOR_COL% - 1"
+    set /a "menu_row_1=%MENU_POS_ROW_1% + %MMM_ANCHOR_ROW% - 1"
+    set /a "menu_row_2=%MENU_POS_ROW_2% + %MMM_ANCHOR_ROW% - 1"
+    set /a "menu_row_3=%MENU_POS_ROW_3% + %MMM_ANCHOR_ROW% - 1"
+    set /a "menu_row_4=%MENU_POS_ROW_4% + %MMM_ANCHOR_ROW% - 1"
+    set "menu_1_text=      New Game      "
+    set "menu_2_text=      Continue      "
+    set "menu_3_text=      Settings      "
+    set "menu_4_text=        Quit        "
+    echo !esc![!menu_row_1!;!menu_col!H!esc![%menu_1_color%m!menu_1_text:~0,%MENU_BOX_INNER_WIDTH%!!esc![0m
+    echo !esc![!menu_row_2!;!menu_col!H!esc![%menu_2_color%m!menu_2_text:~0,%MENU_BOX_INNER_WIDTH%!!esc![0m
+    echo !esc![!menu_row_3!;!menu_col!H!esc![%menu_3_color%m!menu_3_text:~0,%MENU_BOX_INNER_WIDTH%!!esc![0m
+    echo !esc![!menu_row_4!;!menu_col!H!esc![%menu_4_color%m!menu_4_text:~0,%MENU_BOX_INNER_WIDTH%!!esc![0m
     endlocal
-    :: デバッグモード時の統合更新
     if %DEBUG_STATE%==1 (
         call :Update_All_Debug_Info
     )
     exit /b 0
 
+:Render_Template_Anchored
+    setlocal EnableDelayedExpansion
+    set "template_file=%~1"
+    set "anchor_col=%~2"
+    set "anchor_row=%~3"
+    if not defined anchor_col set "anchor_col=1"
+    if not defined anchor_row set "anchor_row=1"
+    set /a "pad_cols=anchor_col-1"
+    set /a "pad_rows=anchor_row-1"
+    set "spacer=                                                                                                                                                                                                                                                                                                                                "
+    set "prefix=!spacer:~0,%pad_cols%!"
+    for /l %%r in (1,1,!pad_rows!) do echo.
+    for /f "usebackq delims= eol=#" %%a in ("!template_file!") do echo(!prefix!%%a
+    endlocal
+    exit /b 0
+
+:Render_MainMenu_Dynamic
+    setlocal EnableDelayedExpansion
+    call :Draw_Box %MMM_FRAME_LEFT% %MMM_FRAME_TOP% %MMM_FRAME_RIGHT% %MMM_FRAME_BOTTOM%
+    call :Print_Centered %MMM_TITLE_ROW% "ASTRAL DIVIDE"
+    call :Print_Centered %MMM_SUBTITLE_ROW_1% "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+    call :Print_Centered %MMM_SUBTITLE_ROW_2% "~ The Ones Who Sever the Stars ~"
+    call :Print_Centered %MMM_SUBTITLE_ROW_3% "=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-="
+    call :Draw_Box %MMM_MENU_BOX_LEFT% %MMM_MENU_BOX_TOP% %MMM_MENU_BOX_RIGHT% %MMM_MENU_BOX_BOTTOM%
+    call :Draw_HLine %MMM_MENU_DIVIDER_ROW% %MMM_MENU_DIVIDER_LEFT% %MMM_MENU_DIVIDER_RIGHT% "-"
+    call :Draw_Box %MMM_HELP_BOX_LEFT% %MMM_HELP_BOX_TOP% %MMM_HELP_BOX_RIGHT% %MMM_HELP_BOX_BOTTOM%
+    echo !esc![%MMM_HELP_TEXT_ROW%;%MMM_HELP_TEXT_COL%HW/S: select  F: enter
+    echo !esc![%MMM_FOOTER_ROW_1%;%MMM_FOOTER_LEFT_COL%HAstral Divide
+    echo !esc![%MMM_FOOTER_ROW_2%;%MMM_FOOTER_LEFT_COL%HVersion: v0.1.1 [Prototype Alpha]
+    call :Print_Right %MMM_FOOTER_ROW_1% %MMM_FRAME_RIGHT% "Developed by HedgeHogSoft"
+    call :Print_Right %MMM_FOOTER_ROW_2% %MMM_FRAME_RIGHT% "(c) 2024-2025 RPGGAME."
+    endlocal
+    exit /b 0
+
+:Draw_Box
+    setlocal EnableDelayedExpansion
+    set "left=%~1"
+    set "top=%~2"
+    set "right=%~3"
+    set "bottom=%~4"
+    set /a "inner_width=right-left-1"
+    set /a "inner_top=top+1"
+    set /a "inner_bottom=bottom-1"
+    set "line="
+    for /l %%i in (1,1,!inner_width!) do set "line=!line!-"
+    echo !esc![!top!;!left!H+!line!+
+    for /l %%r in (!inner_top!,1,!inner_bottom!) do echo !esc![%%r;!left!H^|!esc![%%r;!right!H^|
+    echo !esc![!bottom!;!left!H+!line!+
+    endlocal
+    exit /b 0
+
+:Draw_HLine
+    setlocal EnableDelayedExpansion
+    set "row=%~1"
+    set "left=%~2"
+    set "right=%~3"
+    set "char=%~4"
+    if "%char%"=="" set "char=-"
+    set /a "width=right-left+1"
+    set "line="
+    for /l %%i in (1,1,!width!) do set "line=!line!!char!"
+    echo !esc![!row!;!left!H!line!
+    endlocal
+    exit /b 0
+
+:Print_Centered
+    setlocal EnableDelayedExpansion
+    set "row=%~1"
+    set "text=%~2"
+    call :StrLen text text_len
+    set /a "col=((%CONSOLE_COLS% - text_len) / 2) + 1"
+    echo !esc![!row!;!col!H!text!
+    endlocal
+    exit /b 0
+
+:Print_Right
+    setlocal EnableDelayedExpansion
+    set "row=%~1"
+    set "right=%~2"
+    set "text=%~3"
+    call :StrLen text text_len
+    set /a "col=right-text_len"
+    if !col! LSS 1 set /a "col=1"
+    echo !esc![!row!;!col!H!text!
+    endlocal
+    exit /b 0
+
+:StrLen
+    setlocal EnableDelayedExpansion
+    set "s=!%~1!"
+    set /a len=0
+    :StrLenLoop
+    if defined s (
+        set "s=!s:~1!"
+        set /a len+=1
+        goto StrLenLoop
+    )
+    endlocal & set "%~2=%len%"
+    exit /b 0
+
 :Update_All_Debug_Info
-    :: デバッグタイトル維持（統一形式）
+    call :Render_Debug_Overlay
+    exit /b 0
     echo %esc%[1;1H%esc%[K
     echo %esc%[1;1H%esc%[43;30m MainMenuModule: Debug Mode %esc%[0m
     
@@ -590,6 +707,8 @@ if /i "%RENDER_QUALITY%"=="LOW" (
 
 
 :Display_Debug_Info
+    call :Render_Debug_Overlay
+    exit /b 0
     :: 現在時刻を取得
     set current_time=%time:~0,8%
 
@@ -639,6 +758,22 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     set key_log_line_4=
     set key_log_line_5=
 
+    exit /b 0
+
+:Render_Debug_Overlay
+    setlocal EnableDelayedExpansion
+    set /a "dbg_col=%MMM_ANCHOR_COL% + 2"
+    set /a "dbg_row=%MMM_ANCHOR_ROW% + 1"
+    set /a "dbg_row_2=dbg_row+1"
+    set /a "dbg_row_3=dbg_row+2"
+    set /a "dbg_row_4=dbg_row+3"
+    set /a "dbg_row_5=dbg_row+4"
+    echo !esc![!dbg_row!;!dbg_col!H!esc![48;5;235m!esc![38;5;220m MMM DEBUG                     !esc![0m
+    echo !esc![!dbg_row_2!;!dbg_col!H!esc![48;5;235m sel=!current_selected_menu! key=!key!             !esc![0m
+    echo !esc![!dbg_row_3!;!dbg_col!H!esc![48;5;235m seq=!hidden_sequence!                    !esc![0m
+    echo !esc![!dbg_row_4!;!dbg_col!H!esc![48;5;235m anc=!MMM_ANCHOR_COL!,!MMM_ANCHOR_ROW!                    !esc![0m
+    echo !esc![!dbg_row_5!;!dbg_col!H!esc![48;5;235m act=!UI_ACTION!                        !esc![0m
+    endlocal
     exit /b 0
 
 

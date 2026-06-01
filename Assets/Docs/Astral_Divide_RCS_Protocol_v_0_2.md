@@ -1,7 +1,12 @@
 # RCS — Return Code System (Protocol & Implementation Spec) v0.2  
+
+> [!WARNING]
+> **⚠️ 本書は旧仕様（v0.2）のアーカイブです。**
+> 最新の設計および実装仕様については [Astral_Divide_RCS_Protocol_v_0_4.md](file:///c:/Users/shoya/Desktop/AstralDivide/Assets/Docs/Astral_Divide_RCS_Protocol_v_0_4.md) を参照してください。
+
 **Project:** PROJECT_AstralDivide / HedgeHogSoft  
 **Doc type:** Design Spec (.md)  
-**Status:** Draft (adoptable)  
+**Status:** Archived (Old Spec)  
 **Date:** 2025-10-22 (JST)
 
 ---

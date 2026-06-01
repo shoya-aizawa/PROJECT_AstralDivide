@@ -96,8 +96,9 @@ if defined RCSU (
 )
 
 if "%SPLASH_RUNNING%"=="1" (
-    :: Return status 2 to frontend (Splash.bat) to show the WT warning inside the GUI frame synchronously
-    exit /b 2
+    >> "%TEMP%\splash_ui_req.tmp" echo NEED_WT_WARN
+    if defined RCSU call "%RCSU%" -trace WARN DetectTerminal "Queued WT warning for splash frontend."
+    exit /b %RC_OK%
 )
 
 :: Get ANSI escape sequence for styling
