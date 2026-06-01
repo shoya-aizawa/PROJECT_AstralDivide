@@ -1,0 +1,16 @@
+{pos:48:60}{unknown}{type:normal}……{var:player_name}。{/type}
+{delay:900}
+{pos:50:57}{unknown}{type:normal}忘れないようにしなくちゃ。{/type}
+{delay:850}
+{pos:52:61}{player_name_tag}{type:normal}じゃあ、君の名前は……{/type}
+{delay:850}
+{pos:54:36}{type:normal}{hi_white}その時、丘の下から別の少女の声が跳ねた。{/hi_white}{/type}
+{delay:700}
+{pos:56:30}{unknown}{type:normal}ねーえ！ こんなとこにいたの？ 探したんだから。{/type}
+{delay:700}
+{pos:58:54}{unknown}{type:normal}早く戻ろ！{/type}
+{delay:900}
+{pos:59:47}{type:normal}{hi_white}隣にいた少女は、はっとしたように立ち上がった。{/hi_white}{/type}
+{delay:700}
+{pos:61:46}{unknown}{type:normal}……ごめん。私、行かなきゃ。{/type}
+{delay:1000}

@@ -1,0 +1,20 @@
+{clear}
+{pos:40:62}{type:slow}{hi_white}残されたのは、夜風と星の光だけだった。{/hi_white}{/type}
+{delay:950}
+{pos:50:92}{player_name_tag}{type:normal}……行っちゃった。{/type}
+{delay:500}
+{pos:52:82}{player_name_tag}{type:normal}名前、聞けなかったな。{/type}
+{delay:1000}
+{pos:55:50}{type:normal}{hi_black}でも、さっき呼ばれた自分の名だけは、不思議なくらい耳に残っていた。{/hi_black}{/type}
+{delay:1200}
+{pos:58:84}{player_name_tag}{type:normal}また、会えるかな。{/type}
+{delay:950}
+{pos:61:46}{type:normal}{hi_black}遠くで誰かの笑い声がして、すぐに静けさへ溶けた。{/hi_black}{/type}
+{delay:1100}
+{clear}
+{pos:45:40}{type:normal}{hi_black}その夜の記憶が、ふたりの運命の最初の印になった。{/hi_black}{/type}
+{delay:1200}
+{pos:50:76}{type:slow}{cyan}PROLOGUE  -  星が降る丘  -{/cyan}{/type}
+{delay:1400}
+{pos:55:53}{type:normal}{hi_black}プロローグ仮実装はここまで。続きは次の開発段階で接続される。{/hi_black}{/type}
+{delay:1200}

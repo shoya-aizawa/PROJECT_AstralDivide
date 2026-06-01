@@ -15,8 +15,9 @@ set "PROGRESS_START=%~3"
 set "PROGRESS_END=%~4"
 
 set "SE_SOURCE_DIR=%PROJECT_ROOT%\Assets\Sounds\_SoundEffect"
-set "SE_CACHE_ROOT=%PROJECT_ROOT%\Config\Cache\SEVariants\v2"
+set "SE_CACHE_ROOT=%PROJECT_ROOT%\Config\Cache\SEVariants\v4"
 set "SE_BUILDER=%~dp0Build_SE_Variant.ps1"
+if not defined RCSU set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 
 if not exist "%SE_SOURCE_DIR%" exit /b 0
 if not exist "%SE_BUILDER%" exit /b 0
@@ -49,16 +50,26 @@ set /a "total_items=file_count*bucket_count"
 if %total_items% LEQ 0 exit /b 0
 
 set /a "done_items=0"
+set /a "generated_count=0"
+set /a "cache_hit_count=0"
+set /a "failed_count=0"
 if defined PROGRESS_FILE if not defined PROGRESS_START set "PROGRESS_START=0"
 if defined PROGRESS_FILE if not defined PROGRESS_END set "PROGRESS_END=100"
 if defined PROGRESS_FILE echo %PROGRESS_START% > "%PROGRESS_FILE%"
+if exist "%RCSU%" call "%RCSU%" -trace INFO PrewarmSE "start mode=%PREWARM_MODE% buckets=%SE_BUCKET_LIST% files=%file_count% total=%total_items% cache=%SE_CACHE_ROOT%"
 
 for %%V in (%SE_BUCKET_LIST%) do (
     if not "%%V"=="" (
         for %%F in ("%SE_SOURCE_DIR%\*.wav") do (
             set "TARGET_FILE=%SE_CACHE_ROOT%\%%~nF_v%%V%%~xF"
+            set "PREWARM_STATUS=cache-hit"
             if not exist "!TARGET_FILE!" (
                 powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SE_BUILDER%" -SourcePath "%%~fF" -OutputPath "!TARGET_FILE!" -Volume %%V >nul 2>&1
+                if exist "!TARGET_FILE!" (
+                    set "PREWARM_STATUS=generated"
+                ) else (
+                    set "PREWARM_STATUS=generate-failed"
+                )
             )
             set /a "done_items+=1"
             if defined PROGRESS_FILE (
@@ -66,9 +77,16 @@ for %%V in (%SE_BUCKET_LIST%) do (
                 set /a "progress_value=PROGRESS_START + ((done_items * progress_span) / total_items)"
                 echo !progress_value! > "%PROGRESS_FILE%"
             )
+            if /i "!PREWARM_STATUS!"=="generated" set /a "generated_count+=1"
+            if /i "!PREWARM_STATUS!"=="cache-hit" set /a "cache_hit_count+=1"
+            if /i "!PREWARM_STATUS!"=="generate-failed" (
+                set /a "failed_count+=1"
+                if exist "%RCSU%" call "%RCSU%" -trace WARN PrewarmSE "volume=%%V file=%%~nxF status=!PREWARM_STATUS! item=!done_items!/!total_items!"
+            )
         )
     )
 )
 
 if defined PROGRESS_FILE echo %PROGRESS_END% > "%PROGRESS_FILE%"
+if exist "%RCSU%" call "%RCSU%" -trace INFO PrewarmSE "complete total=%done_items% generated=%generated_count% cache_hit=%cache_hit_count% failed=%failed_count% cache=%SE_CACHE_ROOT%"
 exit /b 0

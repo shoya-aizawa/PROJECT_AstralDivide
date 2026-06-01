@@ -52,7 +52,8 @@ if exist "%RCSU%" call "%RCSU%" -trace INFO Main "SaveDataDetectSystem ok"
 rem pause
 call "%src_display_dir%\BootCompleteDisplay.bat"
 rem pause
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_starfall_dir%\StarFallHill.wav" repeat %BGM_VOLUME%
+call :Resolve_Menu_Bgm
+call "%src_audio_dir%\Play_BGM.bat" "%MENU_BGM_PATH%" repeat %BGM_VOLUME%
 rem pause
 call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Title_Image.png" /b
 
@@ -113,10 +114,12 @@ if defined CONSOLE_FONT (
     if "%UI_ACTION%"=="CANCEL" goto :STATE_MAINMENU
     if "%UI_ACTION%"=="NEWGAME_CREATE" (
         call :Start_NewGameSession %UI_PARAM% CreateNew
+        if "%errorlevel%"=="604" goto :STATE_MAINMENU
         goto :STATE_SCENARIO
     )
     if "%UI_ACTION%"=="NEWGAME_OVERWRITE" (
         call :Start_NewGameSession %UI_PARAM% Overwrite
+        if "%errorlevel%"=="604" goto :STATE_MAINMENU
         goto :STATE_SCENARIO
     )
     goto :STATE_MAINMENU
@@ -140,7 +143,23 @@ if defined CONSOLE_FONT (
 :STATE_SETTINGS
     if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_SETTINGS"
     call "%src_display_dir%\SettingsMenu.bat"
+    if "%UI_ACTION%"=="SYSTEM_INIT_RESET" goto :STATE_RESET_SYSTEM
     goto :STATE_MAINMENU
+
+
+:STATE_RESET_SYSTEM
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_RESET_SYSTEM"
+    call "%src_audio_dir%\Play_BGM.bat" "" stop
+    start "" /d "%PROJECT_ROOT%" cmd.exe /c call "%PROJECT_ROOT%\AstralDivide.bat" -first
+    if defined runtime_ipc_dir if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+    if defined runtime_ipc_dir > "%runtime_ipc_dir%\.stop" echo STOP
+    if defined runtime_ipc_dir > "%runtime_ipc_dir%\.restart_first" echo RESTART_ALREADY_STARTED
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "started new launcher and requested watchdog stop"
+    if "%IS_DEBUG_MODE%"=="1" (
+        exit /b 0
+    ) else (
+        exit
+    )
 
 
 :STATE_SCENARIO
@@ -164,7 +183,15 @@ if defined CONSOLE_FONT (
 :STATE_EXIT
     call "%src_audio_dir%\Play_BGM.bat" "" stop
     echo %esc%[6m%esc%[92mThank you for playing.%esc%[0m
-    exit /b 0
+    if defined runtime_ipc_dir if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+    if defined runtime_ipc_dir > "%runtime_ipc_dir%\.stop" echo STOP
+    if defined runtime_ipc_dir > "%runtime_ipc_dir%\.shutdown" echo SHUTDOWN
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "requested clean shutdown"
+    if "%IS_DEBUG_MODE%"=="1" (
+        exit /b 0
+    ) else (
+        exit
+    )
 
 
 
@@ -183,6 +210,14 @@ if defined CONSOLE_FONT (
     if not defined _trace_param set "_trace_param=(none)"
     call "%RCSU%" -trace INFO Main "%~1 action=%UI_ACTION% param=%_trace_param%"
     set "_trace_param="
+    exit /b 0
+
+
+:Resolve_Menu_Bgm
+    set "MENU_BGM_PATH=%assets_sounds_starfall_dir%\StarFallHill.wav"
+    if /i "%BGM_SOUNDTRACK%"=="ETERNAL" set "MENU_BGM_PATH=%PROJECT_ROOT%\Assets\Sounds\EternalGround\EternalGround.wav"
+    if /i "%BGM_SOUNDTRACK%"=="REVELATION" set "MENU_BGM_PATH=%PROJECT_ROOT%\Assets\Sounds\RevelationOfGod\RevelationOfGod.wav"
+    if /i "%BGM_SOUNDTRACK%"=="BATTLE" set "MENU_BGM_PATH=%PROJECT_ROOT%\Assets\Sounds\BattleMusic.wav"
     exit /b 0
 
 
@@ -220,7 +255,7 @@ if defined CONSOLE_FONT (
         call :Label_OverwriteSaveAndStartNewGame %1
         call :JumpToEpisode NewGame
     )
-    exit /b 0
+    exit /b %errorlevel%
 
 
 :Start_ContinueGameSession

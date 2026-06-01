@@ -1,2 +1,0 @@
-{pos:24:95}{type}{cyan}──── 星はその名を記した ──{/cyan}{/type}
-{pos:25:102}{yellow}「 {var:player_name} 」{/yellow}

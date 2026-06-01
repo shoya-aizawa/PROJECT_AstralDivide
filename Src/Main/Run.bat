@@ -251,6 +251,9 @@ if not "%IS_DEBUG_MODE%"=="1" (
     call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.1]"
 )
 
+if exist "%runtime_ipc_dir%\.restart_first" goto :RestartFirstLaunch
+if exist "%runtime_ipc_dir%\.shutdown" goto :ShutdownRequested
+
 
 :: [A] Cleanup Temporary Files
 rem TODO del /q "%runtime_ipc_dir%\*.tmp" 2>nul
@@ -260,6 +263,20 @@ rem TODO exit /b %RC%
 goto :ExitRun
 
 :: [C] Not Determined Yet
+
+:RestartFirstLaunch
+if exist "%RCSU%" call "%RCSU%" -trace INFO Run "restart-first requested from active session"
+del /q "%runtime_ipc_dir%\.restart_first" >nul 2>&1
+del /q "%runtime_ipc_dir%\.stop" >nul 2>&1
+if "%IS_DEBUG_MODE%"=="1" exit /b 0
+exit
+
+:ShutdownRequested
+if exist "%RCSU%" call "%RCSU%" -trace INFO Run "clean shutdown requested from active session"
+del /q "%runtime_ipc_dir%\.shutdown" >nul 2>&1
+del /q "%runtime_ipc_dir%\.stop" >nul 2>&1
+if "%IS_DEBUG_MODE%"=="1" exit /b 0
+exit
 
 :: [D] Not Determined Yet
 

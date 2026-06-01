@@ -19,6 +19,8 @@ if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems
 set "src_audio_dir=%PROJECT_ROOT%\Src\Systems\Audio"
 set "src_display_tpl_dir=%PROJECT_ROOT%\Src\Systems\Display\Templates"
 if not defined assets_sounds_fx_dir set "assets_sounds_fx_dir=%PROJECT_ROOT%\Assets\Sounds\FX"
+set "cmdwiz_path=%PROJECT_ROOT%\Tools\cmdwiz.exe"
+if not exist "%cmdwiz_path%" set "cmdwiz_path="
 
 if exist "%src_display_tpl_dir%\StaticUIProfileSelector.bat" (
     set "SUPPRESS_STATIC_UI_TRACE=1"
@@ -35,6 +37,7 @@ if not defined LANGUAGE set "LANGUAGE=ja-JP"
 if not defined SOUND_FX_ENABLED set "SOUND_FX_ENABLED=ON"
 if not defined SE_VOLUME set "SE_VOLUME=80"
 if not defined BGM_VOLUME set "BGM_VOLUME=30"
+if not defined BGM_SOUNDTRACK set "BGM_SOUNDTRACK=STARFALL"
 if not defined TUTORIAL set "TUTORIAL=ON"
 if not defined AUTO_SAVE set "AUTO_SAVE=ON"
 if not defined PREFERRED_RENDER_QUALITY set "PREFERRED_RENDER_QUALITY=auto"
@@ -43,14 +46,16 @@ set "SESSION_LANGUAGE=%LANGUAGE%"
 set "SESSION_SOUND_FX_ENABLED=%SOUND_FX_ENABLED%"
 set "SESSION_SE_VOLUME=%SE_VOLUME%"
 set "SESSION_BGM_VOLUME=%BGM_VOLUME%"
+set "SESSION_BGM_SOUNDTRACK=%BGM_SOUNDTRACK%"
 set "SESSION_TUTORIAL=%TUTORIAL%"
 set "SESSION_AUTO_SAVE=%AUTO_SAVE%"
 set "SESSION_PREFERRED_RENDER_QUALITY=%PREFERRED_RENDER_QUALITY%"
 set "ORIGINAL_BGM_VOLUME=%BGM_VOLUME%"
+set "ORIGINAL_BGM_SOUNDTRACK=%BGM_SOUNDTRACK%"
 
 for /f "delims=" %%a in ('echo prompt $E^| cmd /d') do set "esc=%%a"
 
-set "OPT_COUNT=9"
+set "OPT_COUNT=13"
 
 set "OPT_KEY_1=LANGUAGE"
 set "OPT_LABEL_1=Language"
@@ -119,21 +124,53 @@ set "OPT_TYPE_7=setting"
 set "OPT_KIND_7=choice"
 set "OPT_VISIBLE_7=1"
 
-set "OPT_LABEL_8=[ Confirm & Save ]"
-set "OPT_DESC_8=Save modified session changes safely to user_config.env."
-set "OPT_TYPE_8=action"
-set "OPT_ACTION_8=save"
+set "OPT_KEY_8=BGM_SOUNDTRACK"
+set "OPT_LABEL_8=BGM Soundtrack"
+set "OPT_VAL_8=%SESSION_BGM_SOUNDTRACK%"
+set "OPT_ALLOWED_8=STARFALL ETERNAL REVELATION BATTLE"
+set "OPT_DESC_8=Choose the currently used menu soundtrack and preview it instantly."
+set "OPT_TYPE_8=setting"
+set "OPT_KIND_8=choice"
 set "OPT_VISIBLE_8=1"
 
-set "OPT_LABEL_9=[ Cancel & Back ]"
-set "OPT_DESC_9=Discard setting edits and return to the Main Menu."
+set "OPT_LABEL_9=[ Version ]"
+set "OPT_DESC_9=View current build version and settings module milestone."
 set "OPT_TYPE_9=action"
-set "OPT_ACTION_9=back"
+set "OPT_ACTION_9=version"
 set "OPT_VISIBLE_9=1"
+
+set "OPT_LABEL_10=[ Credits ]"
+set "OPT_DESC_10=View music, project, and development credits."
+set "OPT_TYPE_10=action"
+set "OPT_ACTION_10=credits"
+set "OPT_VISIBLE_10=1"
+
+set "OPT_LABEL_11=[ Initialize Game System ]"
+set "OPT_DESC_11=Reset configuration, caches, and logs to first-launch state."
+set "OPT_TYPE_11=action"
+set "OPT_ACTION_11=initialize"
+set "OPT_VISIBLE_11=1"
+
+set "OPT_LABEL_12=[ Confirm & Save ]"
+set "OPT_DESC_12=Save modified session changes safely to user_config.env."
+set "OPT_TYPE_12=action"
+set "OPT_ACTION_12=save"
+set "OPT_VISIBLE_12=1"
+
+set "OPT_LABEL_13=[ Cancel & Back ]"
+set "OPT_DESC_13=Discard setting edits and return to the Main Menu."
+set "OPT_TYPE_13=action"
+set "OPT_ACTION_13=back"
+set "OPT_VISIBLE_13=1"
 
 set "current_selected=1"
 set "last_selected="
 set "last_help_idx="
+set "idle_tick=0"
+set "marquee_tick=0"
+set "marquee_offset=0"
+set "POLLING_ENABLED=0"
+if defined cmdwiz_path set "POLLING_ENABLED=1"
 
 if /i "%RENDER_QUALITY%"=="LOW" (
     set "color_selected=30;47"
@@ -152,14 +189,20 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     set "color_border=90"
 )
 
+call :Initialize_Help_Metadata
 call :Reflow_Settings_Layout
+if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
 
 :SettingsLoop
     call :Display_SettingsMenu
 :SettingsInputLoop
-    call :Quick_Update_Display
     call :GetChoice
-    call :HandleKey %choice%
+    if "%choice%"=="0" (
+        call :Handle_Idle_Tick
+    ) else (
+        call :HandleKey %choice%
+        if not defined UI_ACTION call :Quick_Update_Display
+    )
     if defined UI_ACTION (
         if exist "%RCSU%" call "%RCSU%" -trace INFO SettingsMenu "exit settings UI_ACTION=%UI_ACTION%"
         endlocal & (
@@ -168,6 +211,7 @@ call :Reflow_Settings_Layout
             set "SOUND_FX_ENABLED=%SOUND_FX_ENABLED%"
             set "SE_VOLUME=%SE_VOLUME%"
             set "BGM_VOLUME=%BGM_VOLUME%"
+            set "BGM_SOUNDTRACK=%BGM_SOUNDTRACK%"
             set "TUTORIAL=%TUTORIAL%"
             set "AUTO_SAVE=%AUTO_SAVE%"
             set "PREFERRED_RENDER_QUALITY=%PREFERRED_RENDER_QUALITY%"
@@ -231,13 +275,64 @@ call :Reflow_Settings_Layout
 
 
 :GetChoice
-    choice /n /c WSADFQ >nul
-    set "choice=%errorlevel%"
+    if "%POLLING_ENABLED%"=="1" (
+        call :PollChoice
+    ) else (
+        choice /n /c WSADFQ >nul
+        set "choice=%errorlevel%"
+    )
+    exit /b 0
+
+
+:Handle_Idle_Tick
+    set /a "idle_tick+=1"
+    set /a "marquee_tick+=1"
+    if %marquee_tick% geq 3 (
+        set "marquee_tick=0"
+        call :Advance_Help_Marquee
+    )
+    exit /b 0
+
+
+:PollChoice
+    set "choice=0"
+    "%cmdwiz_path%" getch noWait >nul 2>&1
+    set "scan_code=%errorlevel%"
+    if "%scan_code%"=="0" (
+        "%cmdwiz_path%" delay 10 >nul 2>&1
+        exit /b 0
+    )
+    if "%scan_code%"=="87" set "choice=1"
+    if "%scan_code%"=="83" set "choice=2"
+    if "%scan_code%"=="65" set "choice=3"
+    if "%scan_code%"=="68" set "choice=4"
+    if "%scan_code%"=="70" set "choice=5"
+    if "%scan_code%"=="81" set "choice=6"
+    if "%scan_code%"=="119" set "choice=1"
+    if "%scan_code%"=="115" set "choice=2"
+    if "%scan_code%"=="97" set "choice=3"
+    if "%scan_code%"=="100" set "choice=4"
+    if "%scan_code%"=="102" set "choice=5"
+    if "%scan_code%"=="113" set "choice=6"
+    if "%scan_code%"=="17" set "choice=1"
+    if "%scan_code%"=="31" set "choice=2"
+    if "%scan_code%"=="30" set "choice=3"
+    if "%scan_code%"=="32" set "choice=4"
+    if "%scan_code%"=="33" set "choice=5"
+    if "%scan_code%"=="16" set "choice=6"
+    if "%scan_code%"=="72" set "choice=1"
+    if "%scan_code%"=="80" set "choice=2"
+    if "%scan_code%"=="75" set "choice=3"
+    if "%scan_code%"=="77" set "choice=4"
+    if "%scan_code%"=="28" set "choice=5"
+    if "%scan_code%"=="1" set "choice=6"
     exit /b 0
 
 
 :HandleKey
     set "key=%1"
+    set "idle_tick=0"
+    set "marquee_tick=0"
     if "%key%"=="1" call :Move_Up
     if "%key%"=="2" call :Move_Down
     if "%key%"=="3" call :Cycle_Value -1
@@ -249,6 +344,10 @@ call :Reflow_Settings_Layout
             if defined ORIGINAL_BGM_VOLUME (
                 set "BGM_VOLUME=%ORIGINAL_BGM_VOLUME%"
                 call "%src_audio_dir%\BgmPlayer.bat" VOLUME %ORIGINAL_BGM_VOLUME% 120 >nul 2>&1
+            )
+            if defined ORIGINAL_BGM_SOUNDTRACK (
+                set "BGM_SOUNDTRACK=%ORIGINAL_BGM_SOUNDTRACK%"
+                call :Preview_Bgm_Soundtrack
             )
             call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
             set "UI_ACTION=MAINMENU"
@@ -262,6 +361,7 @@ call :Reflow_Settings_Layout
 
 :Move_Up
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav" >nul 2>&1
+    set "marquee_offset=0"
     :MoveUpLoop
     set /a "current_selected-=1"
     if %current_selected% lss 1 set "current_selected=%OPT_COUNT%"
@@ -271,6 +371,7 @@ call :Reflow_Settings_Layout
 
 :Move_Down
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav" >nul 2>&1
+    set "marquee_offset=0"
     :MoveDownLoop
     set /a "current_selected+=1"
     if %current_selected% gtr %OPT_COUNT% set "current_selected=1"
@@ -290,6 +391,7 @@ call :Reflow_Settings_Layout
         call :Cycle_Choice_Value %current_selected% %dir%
     )
 
+    call :Sync_Se_Audio_State %current_selected%
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav" >nul 2>&1
     call :Preview_Runtime_Option %current_selected%
     exit /b 0
@@ -318,6 +420,16 @@ call :Reflow_Settings_Layout
         )
     ) else if "%action%"=="back" (
         call :Handle_Back_Action
+    ) else if "%action%"=="version" (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
+        call :Show_Info_Dialog "VERSION INFORMATION" "Astral Divide v0.1.2" "Settings Module: Phase 1.5" "Build Profile: Prototype Alpha"
+        call :Display_SettingsMenu
+    ) else if "%action%"=="credits" (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
+        call :Show_Info_Dialog "CREDITS" "Developed by HedgeHogSoft" "Music sources: zippy / PeriTune" "(c) 2024-2026 RPGGAME."
+        call :Display_SettingsMenu
+    ) else if "%action%"=="initialize" (
+        call :Handle_Initialize_Action
     )
     exit /b 0
 
@@ -329,8 +441,30 @@ call :Reflow_Settings_Layout
             set "BGM_VOLUME=%ORIGINAL_BGM_VOLUME%"
             call "%src_audio_dir%\BgmPlayer.bat" VOLUME %ORIGINAL_BGM_VOLUME% 120 >nul 2>&1
         )
+        if defined ORIGINAL_BGM_SOUNDTRACK (
+            set "BGM_SOUNDTRACK=%ORIGINAL_BGM_SOUNDTRACK%"
+            call :Preview_Bgm_Soundtrack
+        )
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
         set "UI_ACTION=MAINMENU"
+    ) else (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
+        call :Display_SettingsMenu
+    )
+    exit /b 0
+
+
+:Handle_Initialize_Action
+    call :Show_Confirm_DialogEx "DANGER: Factory reset" "Reset to first-launch state?" WARN
+    if "!DIALOG_RES!"=="1" (
+        call :Show_Confirm_DialogEx "Launcher will reboot." "Clear user state and continue?" WARN
+        if "!DIALOG_RES!"=="1" (
+            call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
+            set "UI_ACTION=SYSTEM_INIT_RESET"
+        ) else (
+            call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
+            call :Display_SettingsMenu
+        )
     ) else (
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
         call :Display_SettingsMenu
@@ -353,12 +487,13 @@ call :Reflow_Settings_Layout
             call :Format_Range_Item !target_idx! item_text
         ) else (
             set "val=!OPT_VAL_%target_idx%!"
+            if "!OPT_KEY_%target_idx%!"=="BGM_SOUNDTRACK" call :Format_Soundtrack_Name "!val!" val
             set "padded_label=!label!                                        "
             set "item_text=!padded_label:~0,24! : [ !val! ]"
         )
     ) else (
-        set "padded_label=                  !label!                                   "
-        set "item_text=!padded_label:~0,36!"
+        set "item_text=!label!                                              "
+        set "item_text=!item_text:~0,42!"
     )
 
     set "item_text=!item_text!                                                            "
@@ -376,13 +511,55 @@ call :Reflow_Settings_Layout
     setlocal EnableDelayedExpansion
     set "help_idx=%~1"
     set "desc=!OPT_DESC_%help_idx%!"
+    set "scroll_text=!OPT_DESC_SCROLL_%help_idx%!"
+    call set /a "desc_len=%%OPT_DESC_LEN_%help_idx%%%"
     set /a "inner_width=%OPT_HELP_BOX_WIDTH% - 2"
     set /a "inner_col=%OPT_HELP_BOX_LEFT% + 1"
-    set "line=!desc!"
-    set "line=!line!                                                                                                                        "
-    set "line=!line:~0,%inner_width%!"
+    if !desc_len! leq !inner_width! (
+        set "line=!desc!"
+        set "line=!line!                                                                                                                        "
+        set "line=!line:~0,%inner_width%!"
+    ) else (
+        set "scroll_text=!desc!   "
+        set "scroll_text=!scroll_text!!desc!   "
+        set "line=!scroll_text:~%marquee_offset%,%inner_width%!"
+        set "line=!line!                                                                                                                        "
+        set "line=!line:~0,%inner_width%!"
+    )
     echo !esc![%OPT_HELP_TEXT_ROW%;!inner_col!H!line!
     endlocal
+    exit /b 0
+
+
+:Advance_Help_Marquee
+    setlocal EnableDelayedExpansion
+    set /a "inner_width=%OPT_HELP_BOX_WIDTH% - 2"
+    call set /a "desc_len=%%OPT_DESC_LEN_%current_selected%%%"
+    if !desc_len! gtr !inner_width! (
+        set /a "max_offset=desc_len + 3"
+        set /a "marquee_offset+=1"
+        if !marquee_offset! geq !max_offset! set "marquee_offset=0"
+        call :Render_Help_Text %current_selected%
+    ) else (
+        if not "%marquee_offset%"=="0" (
+            endlocal & (
+                set "marquee_offset=0"
+            )
+            call :Render_Help_Text %current_selected%
+            exit /b 0
+        )
+    )
+    for %%# in (!marquee_offset!) do endlocal & set "marquee_offset=%%#"
+    exit /b 0
+
+
+:Initialize_Help_Metadata
+    for /l %%i in (1,1,%OPT_COUNT%) do (
+        call set "meta_desc=%%OPT_DESC_%%i%%"
+        call :StrLen meta_desc meta_len
+        set "OPT_DESC_LEN_%%i=!meta_len!"
+        call set "OPT_DESC_SCROLL_%%i=%%meta_desc%%   %%meta_desc%%   "
+    )
     exit /b 0
 
 
@@ -431,6 +608,20 @@ call :Reflow_Settings_Layout
     exit /b 0
 
 
+:Sync_Se_Audio_State
+    set "target_idx=%~1"
+    call set "target_key=%%OPT_KEY_%target_idx%%%"
+    if /i "%target_key%"=="SE_VOLUME" (
+        call set "se_value=%%OPT_VAL_%target_idx%%%"
+        if "%se_value%"=="0" (
+            set "OPT_VAL_2=OFF"
+        ) else (
+            set "OPT_VAL_2=ON"
+        )
+    )
+    exit /b 0
+
+
 :Format_Range_Item
     setlocal EnableDelayedExpansion
     set "target_idx=%~1"
@@ -467,6 +658,7 @@ call :Reflow_Settings_Layout
     set "SOUND_FX_ENABLED=!OPT_VAL_2!"
     set "SE_VOLUME=!OPT_VAL_3!"
     set "BGM_VOLUME=!OPT_VAL_4!"
+    set "BGM_SOUNDTRACK=!OPT_VAL_8!"
     set "TUTORIAL=!OPT_VAL_5!"
     set "AUTO_SAVE=!OPT_VAL_6!"
     set "PREFERRED_RENDER_QUALITY=!OPT_VAL_7!"
@@ -484,6 +676,7 @@ call :Reflow_Settings_Layout
     if not defined CFG_SOUND_FX_ENABLED set "CFG_SOUND_FX_ENABLED=%SOUND_FX_ENABLED%"
     if not defined CFG_SE_VOLUME set "CFG_SE_VOLUME=%SE_VOLUME%"
     if not defined CFG_BGM_VOLUME set "CFG_BGM_VOLUME=%BGM_VOLUME%"
+    if not defined CFG_BGM_SOUNDTRACK set "CFG_BGM_SOUNDTRACK=%BGM_SOUNDTRACK%"
     if not defined CFG_TUTORIAL set "CFG_TUTORIAL=%TUTORIAL%"
     if not defined CFG_AUTO_SAVE set "CFG_AUTO_SAVE=%AUTO_SAVE%"
     if not defined CFG_PREFERRED_RENDER_QUALITY set "CFG_PREFERRED_RENDER_QUALITY=%PREFERRED_RENDER_QUALITY%"
@@ -497,6 +690,7 @@ call :Reflow_Settings_Layout
     set "CFG_SOUND_FX_ENABLED=%SOUND_FX_ENABLED%"
     set "CFG_SE_VOLUME=%SE_VOLUME%"
     set "CFG_BGM_VOLUME=%BGM_VOLUME%"
+    set "CFG_BGM_SOUNDTRACK=%BGM_SOUNDTRACK%"
     set "CFG_TUTORIAL=%TUTORIAL%"
     set "CFG_AUTO_SAVE=%AUTO_SAVE%"
     set "CFG_PREFERRED_RENDER_QUALITY=%PREFERRED_RENDER_QUALITY%"
@@ -506,6 +700,7 @@ call :Reflow_Settings_Layout
     set "FOUND_SOUND=0"
     set "FOUND_SE_VOLUME=0"
     set "FOUND_BGM_VOLUME=0"
+    set "FOUND_BGM_SOUNDTRACK=0"
     set "FOUND_TUTORIAL=0"
     set "FOUND_AUTO_SAVE=0"
     set "FOUND_PREF=0"
@@ -534,6 +729,11 @@ call :Reflow_Settings_Layout
                     if /i "%%K"=="BGM_VOLUME" (
                         echo BGM_VOLUME=!CFG_BGM_VOLUME!
                         set "FOUND_BGM_VOLUME=1"
+                        set "handled=1"
+                    )
+                    if /i "%%K"=="BGM_SOUNDTRACK" (
+                        echo BGM_SOUNDTRACK=!CFG_BGM_SOUNDTRACK!
+                        set "FOUND_BGM_SOUNDTRACK=1"
                         set "handled=1"
                     )
                     if /i "%%K"=="TUTORIAL" (
@@ -568,6 +768,7 @@ call :Reflow_Settings_Layout
         if "!FOUND_SOUND!"=="0" echo SOUND_FX_ENABLED=!CFG_SOUND_FX_ENABLED!
         if "!FOUND_SE_VOLUME!"=="0" echo SE_VOLUME=!CFG_SE_VOLUME!
         if "!FOUND_BGM_VOLUME!"=="0" echo BGM_VOLUME=!CFG_BGM_VOLUME!
+        if "!FOUND_BGM_SOUNDTRACK!"=="0" echo BGM_SOUNDTRACK=!CFG_BGM_SOUNDTRACK!
         if "!FOUND_TUTORIAL!"=="0" echo TUTORIAL=!CFG_TUTORIAL!
         if "!FOUND_AUTO_SAVE!"=="0" echo AUTO_SAVE=!CFG_AUTO_SAVE!
         if "!FOUND_PREF!"=="0" echo PREFERRED_RENDER_QUALITY=!CFG_PREFERRED_RENDER_QUALITY!
@@ -588,7 +789,71 @@ call :Reflow_Settings_Layout
     if /i "%target_key%"=="BGM_VOLUME" (
         set "BGM_VOLUME=!OPT_VAL_%target_idx%!"
         call "%src_audio_dir%\BgmPlayer.bat" VOLUME !BGM_VOLUME! 120 >nul 2>&1
+    ) else if /i "%target_key%"=="BGM_SOUNDTRACK" (
+        set "BGM_SOUNDTRACK=!OPT_VAL_%target_idx%!"
+        call :Preview_Bgm_Soundtrack
     )
+    exit /b 0
+
+
+:Preview_Bgm_Soundtrack
+    call :Resolve_Bgm_Soundtrack_Path "%BGM_SOUNDTRACK%" PREVIEW_BGM_PATH
+    if defined PREVIEW_BGM_PATH (
+        call "%src_audio_dir%\Play_BGM.bat" "" stop
+        call "%src_audio_dir%\Play_BGM.bat" "%PREVIEW_BGM_PATH%" repeat %BGM_VOLUME%
+    )
+    exit /b 0
+
+
+:Resolve_Bgm_Soundtrack_Path
+    set "%~2="
+    if /i "%~1"=="STARFALL" set "%~2=%PROJECT_ROOT%\Assets\Sounds\StarFallHill\StarFallHill.wav"
+    if /i "%~1"=="ETERNAL" set "%~2=%PROJECT_ROOT%\Assets\Sounds\EternalGround\EternalGround.wav"
+    if /i "%~1"=="REVELATION" set "%~2=%PROJECT_ROOT%\Assets\Sounds\RevelationOfGod\RevelationOfGod.wav"
+    if /i "%~1"=="BATTLE" set "%~2=%PROJECT_ROOT%\Assets\Sounds\BattleMusic.wav"
+    exit /b 0
+
+
+:Format_Soundtrack_Name
+    set "soundtrack_label=%~1"
+    if /i "%~1"=="STARFALL" set "soundtrack_label=StarFallHill"
+    if /i "%~1"=="ETERNAL" set "soundtrack_label=EternalGround"
+    if /i "%~1"=="REVELATION" set "soundtrack_label=RevelationOfGod"
+    if /i "%~1"=="BATTLE" set "soundtrack_label=BattleMusic"
+    set "%~2=%soundtrack_label%"
+    exit /b 0
+
+
+:Show_Info_Dialog
+    setlocal EnableDelayedExpansion
+    set "dialog_title=%~1"
+    set "line1=%~2"
+    set "line2=%~3"
+    set "line3=%~4"
+    set "dialog_fill_color=30;47"
+    set "dialog_border_color=30;107"
+
+    set /a "box_width=54"
+    set /a "box_height=9"
+    set /a "left=((%CONSOLE_COLS% - box_width) / 2) + 1"
+    set /a "top=((%CONSOLE_ROWS% - box_height) / 2) + 1"
+    set /a "right=left + box_width - 1"
+    set /a "bottom=top + box_height - 1"
+    set /a "row0=top + 1"
+    set /a "row1=top + 2"
+    set /a "row2=top + 3"
+    set /a "row3=top + 4"
+    set /a "row4=top + 6"
+
+    call :Draw_Dialog_Box !left! !top! !right! !bottom! "!dialog_fill_color!" "!dialog_border_color!"
+    call :Print_Centered_Color !row0! "!dialog_title!" "!dialog_fill_color!"
+    call :Print_Centered_Color !row1! "!line1!" "!dialog_fill_color!"
+    call :Print_Centered_Color !row2! "!line2!" "!dialog_fill_color!"
+    call :Print_Centered_Color !row3! "!line3!" "!dialog_fill_color!"
+    call :Print_Centered_Color !row4! "[F] Back  /  [Q] Back" "!dialog_fill_color!"
+
+    choice /c FQ /n >nul
+    endlocal
     exit /b 0
 
 
@@ -635,6 +900,15 @@ call :Reflow_Settings_Layout
     setlocal EnableDelayedExpansion
 
     set "dialog_title=%~1"
+    set "dialog_style=%~2"
+    set "dialog_fill_color=30;47"
+    set "dialog_border_color=30;107"
+    set "dialog_text_color=30;47"
+    if /i "!dialog_style!"=="WARN" (
+        set "dialog_fill_color=97;41"
+        set "dialog_border_color=97;101"
+        set "dialog_text_color=97;41"
+    )
 
     set /a "box_width=42"
     set /a "box_height=7"
@@ -643,28 +917,82 @@ call :Reflow_Settings_Layout
     set /a "right=left + box_width - 1"
     set /a "bottom=top + box_height - 1"
 
-    set "space_line="
-    set /a "inner_w=box_width - 2"
-    for /l %%i in (1,1,!inner_w!) do set "space_line=!space_line! "
-
-    for /l %%r in (!top!,1,!bottom!) do (
-        echo !esc![%%r;!left!H^|!space_line!^|
-    )
-
-    set "h_line="
-    for /l %%i in (1,1,!inner_w!) do set "h_line=!h_line!-"
-    echo !esc![!top!;!left!H+!h_line!+
-    echo !esc![!bottom!;!left!H+!h_line!+
-
     set /a "row_t=top + 2"
     set /a "row_a=top + 4"
-    call :Print_Centered !row_t! "!dialog_title!"
-    call :Print_Centered !row_a! "[Y]es  /  [N]o"
+    call :Draw_Dialog_Box !left! !top! !right! !bottom! "!dialog_fill_color!" "!dialog_border_color!"
+    call :Print_Centered_Color !row_t! "!dialog_title!" "!dialog_text_color!"
+    call :Print_Centered_Color !row_a! "[Y]es  /  [N]o" "!dialog_text_color!"
 
     choice /c YN /n >nul
     set "dialog_res=%errorlevel%"
 
     endlocal & set "DIALOG_RES=%dialog_res%"
+    exit /b 0
+
+
+:Show_Confirm_DialogEx
+    setlocal EnableDelayedExpansion
+
+    set "dialog_title=%~1"
+    set "dialog_line2=%~2"
+    set "dialog_style=%~3"
+    set "dialog_fill_color=30;47"
+    set "dialog_border_color=30;107"
+    set "dialog_text_color=30;47"
+    if /i "!dialog_style!"=="WARN" (
+        set "dialog_fill_color=97;41"
+        set "dialog_border_color=97;101"
+        set "dialog_text_color=97;41"
+    )
+
+    set /a "box_width=46"
+    set /a "box_height=8"
+    set /a "left=((%CONSOLE_COLS% - box_width) / 2) + 1"
+    set /a "top=((%CONSOLE_ROWS% - box_height) / 2) + 1"
+    set /a "right=left + box_width - 1"
+    set /a "bottom=top + box_height - 1"
+    set /a "row_t1=top + 2"
+    set /a "row_t2=top + 3"
+    set /a "row_a=top + 5"
+
+    call :Draw_Dialog_Box !left! !top! !right! !bottom! "!dialog_fill_color!" "!dialog_border_color!"
+    call :Print_Centered_Color !row_t1! "!dialog_title!" "!dialog_text_color!"
+    call :Print_Centered_Color !row_t2! "!dialog_line2!" "!dialog_text_color!"
+    call :Print_Centered_Color !row_a! "[Y]es  /  [N]o" "!dialog_text_color!"
+
+    choice /c YN /n >nul
+    set "dialog_res=%errorlevel%"
+
+    endlocal & set "DIALOG_RES=%dialog_res%"
+    exit /b 0
+
+
+:Draw_Dialog_Box
+    setlocal EnableDelayedExpansion
+    set "l=%~1"
+    set "t=%~2"
+    set "r=%~3"
+    set "b=%~4"
+    set "fill_color=%~5"
+    set "border_color=%~6"
+    set /a "box_w=r-l+1"
+    set /a "inner_w=box_w-2"
+    set /a "inner_t=t+1"
+    set /a "inner_b=b-1"
+    set "fill_line="
+    for /l %%i in (1,1,!box_w!) do set "fill_line=!fill_line! "
+    set "h_line="
+    for /l %%i in (1,1,!inner_w!) do set "h_line=!h_line!-"
+
+    for /l %%y in (!t!,1,!b!) do (
+        echo !esc![%%y;!l!H!esc![!fill_color!m!fill_line!!esc![0m
+    )
+    echo !esc![!t!;!l!H!esc![!border_color!m+!h_line!+!esc![0m
+    for /l %%y in (!inner_t!,1,!inner_b!) do (
+        echo !esc![%%y;!l!H!esc![!border_color!m^|!esc![0m!esc![%%y;!r!H!esc![!border_color!m^|!esc![0m
+    )
+    echo !esc![!b!;!l!H!esc![!border_color!m+!h_line!+!esc![0m
+    endlocal
     exit /b 0
 
 
@@ -695,6 +1023,18 @@ call :Reflow_Settings_Layout
     call :StrLen txt txt_len
     set /a "c=((%CONSOLE_COLS% - txt_len) / 2) + 1"
     echo !esc![!r!;!c!H!txt!
+    endlocal
+    exit /b 0
+
+
+:Print_Centered_Color
+    setlocal EnableDelayedExpansion
+    set "r=%~1"
+    set "txt=%~2"
+    set "color=%~3"
+    call :StrLen txt txt_len
+    set /a "c=((%CONSOLE_COLS% - txt_len) / 2) + 1"
+    echo !esc![!r!;!c!H!esc![!color!m!txt!!esc![0m
     endlocal
     exit /b 0
 

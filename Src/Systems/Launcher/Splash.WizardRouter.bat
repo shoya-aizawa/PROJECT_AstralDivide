@@ -15,6 +15,7 @@ if exist "%TEMP%\splash_ui_req.tmp" (
 if "%TRIGGER_WT_WARN%"=="1" call "%PROJECT_ROOT%\Src\Systems\Launcher\Wizards\WTWarningWizard.bat"
 
 if not "%TRIGGER_SETUP%"=="1" goto SkipSetupTrigger
+title Astral Divide - Loading... [Setup Wizard] waiting for user input...
 :: Import temporary environment validation cache to the parent shell
 if exist "%TEMP%\ad_boot_diag_result.env" (
     for /f "usebackq eol=# tokens=1,2 delims==" %%A in ("%TEMP%\ad_boot_diag_result.env") do (

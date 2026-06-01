@@ -1,18 +1,16 @@
 @echo off
+setlocal EnableExtensions
 cls
 
-%tools_dir%\cmdbkg.exe "%assets_images_dir%\AD_Selenos_Ritual.png" /b
-
-call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_revelation_dir%\RevelationOfGod.wav" repeat %BGM_VOLUME%
+%tools_dir%\cmdbkg.exe "%assets_images_dir%\AD_StarrySky.png" /b
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_dir%\静かな夜に.mp3" repeat %BGM_VOLUME%
 
 call "%~dp0EnterYourName.bat"
+set "scene_rc=%errorlevel%"
 
-
-
-
-timeout /t 1 >nul
-pause
-
-set retcode=55
 call "%src_audio_dir%\Play_BGM.bat" "" stop
-exit /b 55
+
+endlocal & (
+    if defined player_name set "player_name=%player_name%"
+    exit /b %scene_rc%
+)

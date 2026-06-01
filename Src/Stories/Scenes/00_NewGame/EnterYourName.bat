@@ -1,75 +1,85 @@
 @echo off
-:: EnterYourName.bat
-:: This script prompts the user to enter their name and displays it with some styling.
-:loop
-
-
-call :display
-
-call :scene Scene01
-
-
-
-set "player_name="
-
-:: Prompt for player name
-%tools_dir%\cmdwiz.exe setcursorpos 100 30
-echo 名前を入力:
-%tools_dir%\cmdwiz.exe setcursorpos 95 32
-set /p player_name="> "
-
-
-:: Input check (detect if player_name is empty)
 setlocal EnableDelayedExpansion
-if "%player_name%"=="" (
-   call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
-   %tools_dir%\cmdwiz.exe setcursorpos 90 30
-   echo %ESC%[90m※defaultのままでよろしいですか？%ESC%[0m
-   %tools_dir%\cmdwiz.exe delay 800
-   %tools_dir%\cmdwiz.exe setcursorpos 101 32
-   echo %ESC%[90m"シオン"%ESC%[0m
-   %tools_dir%\cmdwiz.exe setcursorpos 91 36
-   echo %ESC%[90m「はい」^(Y^) / 「いいえ」^(N^)%ESC%[0m
-   choice /c yn >nul
-   if !errorlevel!==1 (
-      endlocal
-      set "player_name=シオン"
-   ) else (
-      call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav"
-      endlocal
-      goto :loop
-   )
+for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
+
+:loop
+call :Display
+call :Scene "Scene00_PrologueIntro.txt"
+
+:input_name
+set "player_name="
+call :DrawInputBox
+%tools_dir%\cmdwiz.exe setcursorpos 95 56
+<nul set /p="%ESC%[96m名前を入力%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 92 58
+set /p player_name="%ESC%[93m> %ESC%[0m"
+
+if not defined player_name (
+    call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
+    %tools_dir%\cmdwiz.exe setcursorpos 88 61
+    <nul set /p="%ESC%[90m名を告げないままなら、この夜は%ESC%[0m"
+    %tools_dir%\cmdwiz.exe setcursorpos 96 62
+    <nul set /p="%ESC%[90m「シオン」と呼ばれる。 [Y/N]%ESC%[0m"
+    %tools_dir%\cmdwiz.exe setcursorpos 106 64
+    <nul set /p="%ESC%[90m……シオン%ESC%[0m"
+    choice /c YN /n >nul
+    if errorlevel 2 (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav"
+        %tools_dir%\cmdwiz.exe setcursorpos 82 61
+        <nul set /p="%ESC%[0K"
+        %tools_dir%\cmdwiz.exe setcursorpos 82 62
+        <nul set /p="%ESC%[0K"
+        %tools_dir%\cmdwiz.exe setcursorpos 82 64
+        <nul set /p="%ESC%[0K"
+        goto :input_name
+    )
+    set "player_name=シオン"
 )
 
-:: Display the entered name
 call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav"
-call :display
+call :Display
+call :Scene "Scene01_NameConfirmed.txt"
+call :Scene "Scene02_PrologueOutro.txt"
 
-call :scene Scene02
-
-:: 終了処理
-set "player_name=!player_name!"
-endlocal
-exit /b 0
-
-
-
-
-
-
-
-:display
-cls
-for /f "usebackq delims= eol=#" %%a in ("%src_display_tpl_dir%\EYNDisplay.txt") do (echo %%a)
-exit /b 0
-
-:scene
-rem setlocal enabledelayedexpansion
-for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%1_EnterYourName.txt") do (
-   set "line=%%L"
-   call :ProcessLine "%line%"
+endlocal & (
+    set "player_name=%player_name%"
 )
+exit /b 604
 
-:ProcessLine
-call "%src_display_mod_dir%\RenderControl_v2.3.bat" "%line%"
-exit /b
+:Display
+cls
+call :DrawDialogueGuide
+exit /b 0
+
+:Scene
+for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
+    set "line=%%L"
+    call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
+)
+exit /b 0
+
+:DrawDialogueGuide
+%tools_dir%\cmdwiz.exe setcursorpos 24 5
+<nul set /p="%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 24 63
+<nul set /p="%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 28 65
+<nul set /p="%ESC%[90m星が降る丘%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 186 65
+<nul set /p="%ESC%[90mprologue%ESC%[0m"
+exit /b 0
+
+:DrawInputBox
+%tools_dir%\cmdwiz.exe setcursorpos 82 54
+<nul set /p="%ESC%[90m┌────────────────────────────────────────────────────────────┐%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 82 55
+<nul set /p="%ESC%[90m│                                                            │%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 82 56
+<nul set /p="%ESC%[90m│                                                            │%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 82 57
+<nul set /p="%ESC%[90m│                                                            │%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 82 58
+<nul set /p="%ESC%[90m│                                                            │%ESC%[0m"
+%tools_dir%\cmdwiz.exe setcursorpos 82 59
+<nul set /p="%ESC%[90m└────────────────────────────────────────────────────────────┘%ESC%[0m"
+exit /b 0

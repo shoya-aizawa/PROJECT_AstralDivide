@@ -75,6 +75,15 @@ set "frame=0"
 set "state=0"
 set "keep_frame=0"
 set "cmdwiz_path=%PROJECT_ROOT%\Tools\cmdwiz.exe"
+set "splash_stage=Booting"
+set "splash_stage_start=0"
+set "splash_stage_end=100"
+set "last_title_pct="
+set "last_title_stage="
+set "title_tick=0"
+call :GetTimeCs splash_start_cs
+set "stage_start_cs=%splash_start_cs%"
+call :Update_Title
 
 :ProgressLoop
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.UpdateState.bat"
@@ -87,6 +96,7 @@ call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.WizardRouter.bat"
 
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.Progress.bat" read
 if not "!splash_exit_code!"=="0" goto LoopExit
+call :Update_Title
 
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.RenderFrame.bat"
 
@@ -142,3 +152,54 @@ if exist "%SPLASH_BGM%" (
 :: 3. End (Restore cursor and clear screen to transition to game)
 echo !esc![?25h!esc![2J!esc![1;1H
 endlocal & exit /b %splash_exit_code%
+
+:Update_Title
+set /a title_tick+=1
+if defined last_title_stage if not "!last_title_stage!"=="!splash_stage!" call :GetTimeCs stage_start_cs
+if defined last_title_pct if "!last_title_pct!"=="!pct!" if defined last_title_stage if "!last_title_stage!"=="!splash_stage!" if !title_tick! lss 10 exit /b 0
+set "last_title_pct=!pct!"
+set "last_title_stage=!splash_stage!"
+set "title_tick=0"
+
+if /i "!splash_stage!"=="Setup Wizard" (
+    title Astral Divide - Loading... [!splash_stage!] waiting for user input...
+    exit /b 0
+)
+if !pct! lss 10 (
+    title Astral Divide - Loading... [!splash_stage!] calculating...
+    exit /b 0
+)
+if !pct! geq 100 (
+    title Astral Divide - Loading... [!splash_stage!] almost done...
+    exit /b 0
+)
+
+call :GetTimeCs splash_now_cs
+set /a "elapsed_cs=splash_now_cs-stage_start_cs"
+if !elapsed_cs! lss 0 set /a "elapsed_cs+=8640000"
+set /a "elapsed_secs=(elapsed_cs + 50) / 100"
+if !elapsed_secs! lss 1 set /a "elapsed_secs=1"
+set /a "stage_span=splash_stage_end-splash_stage_start"
+set /a "stage_done=pct-splash_stage_start"
+if !stage_span! leq 0 set /a "stage_span=100"
+if !stage_done! leq 0 (
+    title Astral Divide - Loading... [!splash_stage!] calculating...
+    exit /b 0
+)
+set /a "stage_left=splash_stage_end-pct"
+if !stage_left! lss 0 set /a "stage_left=0"
+set /a "eta_secs=(elapsed_secs * stage_left) / stage_done"
+if !eta_secs! lss 1 set /a "eta_secs=1"
+title Astral Divide - Loading... [!splash_stage!] maybe !eta_secs! sec left...
+exit /b 0
+
+:GetTimeCs
+setlocal EnableDelayedExpansion
+set "t=!time: =0!"
+set /a "hh=1!t:~0,2! - 100"
+set /a "mm=1!t:~3,2! - 100"
+set /a "ss=1!t:~6,2! - 100"
+set /a "cc=1!t:~9,2! - 100"
+set /a "cs=((hh*3600)+(mm*60)+ss)*100+cc"
+endlocal & set "%~1=%cs%"
+exit /b 0

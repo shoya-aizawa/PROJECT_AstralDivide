@@ -890,7 +890,7 @@ exit /b 2099
     if %current_selected_slot% leq %max_available_slots% (
         if exist "%saves_active_dir%\SaveData_%current_selected_slot%.txt" (
             call :Confirm_Overwrite %current_selected_slot%
-            if %errorlevel%==1 (
+            if errorlevel 1 (
                 set "UI_ACTION=NEWGAME_OVERWRITE"
                 set "UI_PARAM=%current_selected_slot%"
                 if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "newgame overwrite slot=%current_selected_slot%"
@@ -900,7 +900,7 @@ exit /b 2099
             )
         ) else (
             call :Confirm_CreateNew %current_selected_slot%
-            if %errorlevel%==1 (
+            if errorlevel 1 (
                 set "UI_ACTION=NEWGAME_CREATE"
                 set "UI_PARAM=%current_selected_slot%"
                 if exist "%RCSU%" call "%RCSU%" -trace INFO SDS "newgame create slot=%current_selected_slot%"
@@ -948,9 +948,10 @@ exit /b 2099
 :Confirm_CreateNew
     call :DlgPrint "新しいゲームを開始しますか？ (F=はい/Q=いいえ)" "93"
     call :Process_Dialog_Input CREATE
+    set choice=%errorlevel%
     call :DlgClear
 
-    if %errorlevel%==1 (
+    if %choice%==1 (
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter3.wav"
         set retcode=1
         exit /b 1

@@ -31,8 +31,23 @@ try {
     if ($targetVolume -ge 100) {
         $gain = 1.0
     } else {
-        # Stronger-than-linear attenuation so UI volume changes are easier to hear.
-        $gain = [Math]::Pow(($targetVolume / 100.0), 2.2)
+        # Keep low-volume UI sounds clearly audible while preserving obvious step differences.
+        $gainMap = @{
+            90 = 0.86
+            80 = 0.74
+            70 = 0.63
+            60 = 0.53
+            50 = 0.44
+            40 = 0.36
+            30 = 0.29
+            20 = 0.23
+            10 = 0.18
+        }
+        if ($gainMap.ContainsKey($targetVolume)) {
+            $gain = [double]$gainMap[$targetVolume]
+        } else {
+            $gain = [Math]::Pow(($targetVolume / 100.0), 0.75)
+        }
     }
 
     $bytes = [System.IO.File]::ReadAllBytes($resolvedSource)

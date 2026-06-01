@@ -14,6 +14,15 @@ set "line=%~1"
 
 :: 再帰的なタグ処理（順次スキャンして除去＆再呼び出し）
 
+:: {id:name}
+echo !line! | findstr /c:"{id:" >nul
+if !errorlevel! == 0 (
+    for /f "tokens=1* delims=}" %%a in ("!line!") do (
+        set "line=%%b"
+    )
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
+    exit /b 0
+)
 
 
 
@@ -49,7 +58,7 @@ if !errorlevel! == 0 (
 :: {delay:n} Supports both single and mixed use
 if "!line:~0,7!"=="{delay:" (
     for /f "tokens=2 delims=:{}" %%a in ("!line!") do (
-        %tools_dir%\cmdwiz.exe delay %%a
+        if not defined RENDERCONTROL_FAST_PREVIEW %tools_dir%\cmdwiz.exe delay %%a
         set "line=!line:*}=!"
     )
     if defined line (
@@ -92,6 +101,24 @@ if !errorlevel! == 0 (
     exit /b 0
 )
 
+:: {unknown}
+echo !line! | findstr /b "{unknown}" >nul
+if !errorlevel! == 0 (
+    set "SPEAKER=%ESC%[91m[???]%ESC%[0m"
+    set "line=!line:*{unknown}=!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
+    exit /b 0
+)
+
+:: {player_name_tag}
+echo !line! | findstr /b "{player_name_tag}" >nul
+if !errorlevel! == 0 (
+    set "SPEAKER=%ESC%[36m[%player_name%]%ESC%[0m"
+    set "line=!line:*{player_name_tag}=!"
+    call "%~dp0RenderControl_v2.3.bat" "!line!"
+    exit /b 0
+)
+
 :: {both}
 echo !line! | findstr /b "{both}" >nul
 if !errorlevel! == 0 (
@@ -130,7 +157,11 @@ if !errorlevel! == 0 (
     set "inner=!inner:{/type}=!"
     call "%~dp0RenderMarkup_v2.3.bat" "!inner!" parsed
     if defined SPEAKER <nul set /p="!SPEAKER! "
-    call "%~dp0TypeWriter_v2.3.bat" "!parsed!" !type_speed!
+    if defined RENDERCONTROL_FAST_PREVIEW (
+        <nul set /p="!parsed!"
+    ) else (
+        call "%~dp0TypeWriter_v2.3.bat" "!parsed!" !type_speed!
+    )
     exit /b 0
 )
 
