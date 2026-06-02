@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_08_ToHill.png}
+{id:campth01_001}{pos:20:80}{type:slow}{hi_white}焚き火の輪を離れても、さっき耳にした声はいくつも頭に残っていた。{/hi_white}{/type}
+{delay:850}
+{id:campth01_002}{pos:24:82}{type:normal}{hi_black}前線の報告、配給のぼやき、眠れない子どもをあやす小さな声。{/hi_black}{/type}
+{delay:950}
+{id:campth01_003}{pos:57:150}{player}{type:normal}……みんな、眠れないんだ。{/type}
+{delay:850}
+{id:campth01_004}{pos:61:84}{type:normal}{hi_black}せめて少しだけ静かな場所を探すみたいに、君は丘への道を歩いた。{/hi_black}{/type}
+{delay:1000}

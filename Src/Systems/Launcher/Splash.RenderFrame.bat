@@ -144,25 +144,25 @@ if "!state!"=="0" (
         )
     )
     
-    set "FRAME_RENDER=!FRAME_RENDER!!esc![19;!status_col!H!C_TEXT!!status_msg!!dots!!esc![K"
+    set "FRAME_RENDER=!FRAME_RENDER!!esc![19;!status_col!H!C_TEXT!!status_msg!!dots!"
     set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H!C_TEXT![!C_LOAD!!bar!!C_TEXT!!space!] !pct!%% !C_RESET!"
     
     if !pct! GEQ 100 (
         set "state=2"
-        set "FRAME_RENDER=!FRAME_RENDER!!esc![19;30H!esc![K!C_TEXT!     SYSTEM READY.    !C_RESET!"
-        set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H!esc![K!C_TEXT!        Press any key to start...        !C_RESET!"
+        set "FRAME_RENDER=!FRAME_RENDER!!esc![19;30H!C_TEXT!     SYSTEM READY.               !C_RESET!"
+        set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H!C_TEXT!        Press any key to start...        !C_RESET!"
         if exist "!cmdwiz_path!" (
             call "!cmdwiz_path!" flushkeys >nul 2>&1
         )
     )
 ) else (
     if "!state!"=="2" (
-        set "FRAME_RENDER=!FRAME_RENDER!!esc![19;30H!esc![K!C_TEXT!     SYSTEM READY.    !C_RESET!"
+        set "FRAME_RENDER=!FRAME_RENDER!!esc![19;30H!C_TEXT!     SYSTEM READY.               !C_RESET!"
         set /a "blink=frame %% 20"
         if !blink! LSS 10 (
-            set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H!esc![K!C_TEXT!        Press any key to start...        !C_RESET!"
+            set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H!C_TEXT!        Press any key to start...        !C_RESET!"
         ) else (
-            set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H!esc![K"
+            set "FRAME_RENDER=!FRAME_RENDER!!esc![21;22H                                         "
         )
     )
 )

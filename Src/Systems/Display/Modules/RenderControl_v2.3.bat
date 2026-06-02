@@ -24,6 +24,20 @@ if !errorlevel! == 0 (
     exit /b 0
 )
 
+:: {bg:path_or_filename}
+echo !line! | findstr /b "{bg:" >nul
+if !errorlevel! == 0 (
+    for /f "tokens=1* delims=}" %%a in ("!line:*{bg:=!") do (
+        set "bg_spec=%%a"
+        set "line=%%b"
+    )
+    set "bg_path=!bg_spec!"
+    if not exist "!bg_path!" set "bg_path=%assets_images_dir%\!bg_spec!"
+    if exist "!bg_path!" %tools_dir%\cmdbkg.exe "!bg_path!" /b >nul 2>&1
+    if defined line call "%~dp0RenderControl_v2.3.bat" "!line!"
+    exit /b 0
+)
+
 
 
 

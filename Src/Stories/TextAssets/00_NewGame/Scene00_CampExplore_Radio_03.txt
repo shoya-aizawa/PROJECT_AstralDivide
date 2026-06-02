@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_02_Radio.png}
+{id:camp_radio03_001}{pos:18:82}{type:normal}{hi_black}ノイズのあいだから、抑えた口調の報告がわずかに聞き取れた。{/hi_black}{/type}
+{delay:700}
+{id:camp_radio03_002}{pos:50:36}{type:normal}「……国境西部にて停戦使節の目撃情報。真偽は不明……」{/type}
+{delay:850}
+{id:camp_radio03_003}{pos:53:36}{type:normal}「一方で、同方面の砲撃は断続的に継続している模様です」{/type}
+{delay:850}
+{id:camp_radio03_004}{pos:58:149}{player}{type:normal}停戦って言っても、すぐ終わるわけじゃないのか。{/type}
+{delay:900}

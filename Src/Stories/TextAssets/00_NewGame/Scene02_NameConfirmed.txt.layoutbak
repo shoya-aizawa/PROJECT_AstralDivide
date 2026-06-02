@@ -1,0 +1,19 @@
+{bg:StarFallHill_02_HiroineAppears.png}
+{id:scene01_001}{pos:48:45}{unknown}{type:normal}……{var:player_name}。{/type}
+{delay:900}
+{id:scene01_002}{pos:50:45}{unknown}{type:normal}覚えておくね。{/type}
+{delay:850}
+{id:scene01_003}{pos:51:161}{player_name_tag}{type:normal}じゃあ、君の名前は……{/type}
+{delay:850}
+{bg:StarFallHill_04_FriendArrives.png}
+{id:scene01_004}{pos:53:44}{type:normal}{hi_white}その時、丘の下から別の少女の声が跳ねた。{/hi_white}{/type}
+{delay:700}
+{id:scene01_005}{pos:56:45}{type:normal}「ねーえ！ こんなとこにいたの？ 探したんだから」{/type}
+{delay:700}
+{id:scene01_006}{pos:58:45}{type:normal}「早く戻ろ！」{/type}
+{delay:900}
+{id:scene01_007}{pos:60:44}{type:normal}{hi_white}隣にいた少女は、はっとしたように立ち上がった。{/hi_white}{/type}
+{delay:700}
+{bg:StarFallHill_05_PulledAway.png}
+{id:scene01_008}{pos:62:45}{unknown}{type:normal}……ごめん。私、行かなきゃ！{/type}
+{delay:1000}

@@ -9,7 +9,7 @@ if "!pct!"=="40" (
     if not defined REMOTE_LOGGED_IN (
         :: Import temporary environment validation cache to the parent shell
         if exist "%TEMP%\ad_boot_diag_result.env" (
-            for /f "usebackq eol=# tokens=1,2 delims==" %%A in ("%TEMP%\ad_boot_diag_result.env") do (
+            for /f "usebackq eol=# tokens=1,2 delims==" %%A in (`type "%TEMP%\ad_boot_diag_result.env" 2^>nul`) do (
                 set "%%A=%%B"
             )
             del "%TEMP%\ad_boot_diag_result.env" >nul 2>&1

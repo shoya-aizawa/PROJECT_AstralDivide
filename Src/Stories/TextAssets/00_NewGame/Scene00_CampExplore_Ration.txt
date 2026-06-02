@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_03_Ration.png}
+{id:camp_ration_001}{pos:18:82}{type:normal}{hi_black}配給箱の前で、疲れた顔の男が乾いた笑いを漏らしていた。{/hi_black}{/type}
+{delay:700}
+{id:camp_ration_002}{pos:50:36}{type:normal}「昨日よりまた薄いな。これじゃ子どもに回して終わりだ」{/type}
+{delay:850}
+{id:camp_ration_003}{pos:53:36}{type:normal}「文句を言う元気があるだけ、まだましかもしれないけどさ」{/type}
+{delay:900}
+{id:camp_ration_004}{pos:58:157}{player}{type:normal}みんな、ぎりぎりなんだ。{/type}
+{delay:850}

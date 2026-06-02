@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_02_Radio.png}
+{id:camp_radio01_001}{pos:18:82}{type:normal}{hi_black}古びた携帯ラジオから、かすれた声が途切れ途切れに流れていた。{/hi_black}{/type}
+{delay:700}
+{id:camp_radio01_002}{pos:50:36}{type:normal}「……北方第七線にて交戦継続。両軍とも損耗が激しく……」{/type}
+{delay:850}
+{id:camp_radio01_003}{pos:53:36}{type:normal}「王都側の補給隊は今夜未明にも再編される見込みです」{/type}
+{delay:850}
+{id:camp_radio01_004}{pos:58:157}{player}{type:normal}前線、まだ押し返せてないんだ。{/type}
+{delay:900}

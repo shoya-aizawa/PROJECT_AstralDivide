@@ -31,7 +31,7 @@ exit /b
 
 :Read
 if exist "%STATUS_FILE%" (
-    for /f "usebackq tokens=1,* delims==" %%A in ("%STATUS_FILE%") do (
+    for /f "usebackq tokens=1,* delims==" %%A in (`type "%STATUS_FILE%" 2^>nul`) do (
         if /i "%%A"=="RC" set "splash_exit_code=%%B"
         if /i "%%A"=="STAGE" set "splash_stage=%%B"
         if /i "%%A"=="RANGE_START" set "splash_stage_start=%%B"
@@ -39,7 +39,7 @@ if exist "%STATUS_FILE%" (
     )
 )
 if exist "%PROGRESS_FILE%" (
-    for /f "usebackq delims=" %%p in ("%PROGRESS_FILE%") do set "actual_pct=%%p"
+    for /f "usebackq delims=" %%p in (`type "%PROGRESS_FILE%" 2^>nul`) do set "actual_pct=%%p"
 )
 set /a "pct=!actual_pct!+0"
 exit /b

@@ -161,7 +161,7 @@ if not "%errorlevel%"=="0" (
 
 :: Load remote debugging session token if exists to parent shell scope
 if exist "%TEMP%\remote_session.env" (
-    for /f "usebackq eol=# tokens=1,2 delims==" %%A in ("%TEMP%\remote_session.env") do (
+    for /f "usebackq eol=# tokens=1,2 delims==" %%A in (`type "%TEMP%\remote_session.env" 2^>nul`) do (
         set "%%A=%%B"
     )
     del "%TEMP%\remote_session.env" >nul 2>&1

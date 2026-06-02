@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_07_Sentry.png}
+{id:camp_sentry_001}{pos:18:82}{type:normal}{hi_black}見回り兵は丘の先をじっと見て、仲間に低い声で言った。{/hi_black}{/type}
+{delay:750}
+{id:camp_sentry_002}{pos:50:36}{type:normal}「今夜は静かすぎる。こういう夜ほど嫌な感じがする」{/type}
+{delay:850}
+{id:camp_sentry_003}{pos:53:36}{type:normal}「子どもたちだけでも、もう少し奥に下げるべきかもな」{/type}
+{delay:900}
+{id:camp_sentry_004}{pos:58:157}{player}{type:normal}丘の向こうも、まだ危ないのかな。{/type}
+{delay:850}

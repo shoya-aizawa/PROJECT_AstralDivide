@@ -21,14 +21,14 @@
 
 ```bat
 call "C:\Users\shoya\Desktop\AstralDivide\Src\Systems\Debug\ScriptLayoutEditor.bat" ^
-  "C:\Users\shoya\Desktop\AstralDivide\Src\Stories\TextAssets\00_NewGame\Scene00_PrologueIntro.txt"
+  "C:\Users\shoya\Desktop\AstralDivide\Src\Stories\TextAssets\00_NewGame\Scene01_PrologueIntro.txt"
 ```
 
 背景指定:
 
 ```bat
 call "C:\Users\shoya\Desktop\AstralDivide\Src\Systems\Debug\ScriptLayoutEditor.bat" ^
-  "C:\Users\shoya\Desktop\AstralDivide\Src\Stories\TextAssets\00_NewGame\Scene00_PrologueIntro.txt" ^
+  "C:\Users\shoya\Desktop\AstralDivide\Src\Stories\TextAssets\00_NewGame\Scene01_PrologueIntro.txt" ^
   "C:\Users\shoya\Desktop\AstralDivide\Assets\Images\AD_StarrySky.png"
 ```
 

@@ -1,0 +1,7 @@
+{bg:RefugeeCamp_01_Wide.png}
+{id:campchoice_leave_001}{pos:18:84}{type:normal}{hi_black}これ以上ここにいたら、戦争の気配まで毛布みたいにまとわりつきそうだった。{/hi_black}{/type}
+{delay:800}
+{id:campchoice_leave_002}{pos:58:157}{player}{type:normal}……少しだけ、離れよう。{/type}
+{delay:750}
+{id:campchoice_leave_003}{pos:62:82}{type:normal}{hi_black}君は足音を殺しながら、灯りの少ない丘のほうへ歩き出した。{/hi_black}{/type}
+{delay:950}

@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_04_MotherChild.png}
+{id:camp_mother_001}{pos:18:82}{type:normal}{hi_black}母親は眠る子の額に触れ、起こさないよう囁いていた。{/hi_black}{/type}
+{delay:750}
+{id:camp_mother_002}{pos:50:36}{type:normal}「もう少しだけ我慢してね。朝になったら、お水ももらえるから」{/type}
+{delay:900}
+{id:camp_mother_003}{pos:54:36}{type:normal}「大丈夫。ここなら、きっと大丈夫だから」{/type}
+{delay:900}
+{id:camp_mother_004}{pos:58:157}{player}{type:normal}……。{/type}
+{delay:700}
