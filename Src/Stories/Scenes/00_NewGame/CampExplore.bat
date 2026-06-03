@@ -1,6 +1,7 @@
 @echo off
 setlocal EnableDelayedExpansion
 for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
+if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 
 set "BG_FILE=%assets_images_dir%\A_Nighttime_Settlement_of_War_Refugees.png"
 if exist "%BG_FILE%" %tools_dir%\cmdbkg.exe "%BG_FILE%" /b >nul 2>&1
@@ -10,8 +11,23 @@ call :RenderStatic
 call :RenderDynamic
 
 :explore_loop
-choice /c WASDFQ /n >nul
-set "pick=%errorlevel%"
+call :PollExploreInput
+if "%pick%"=="0" (
+    "%tools_dir%\cmdwiz.exe" delay 15 >nul 2>&1
+    goto :explore_loop
+)
+if "%pick%"=="PAUSE" (
+    if exist "%RCSU%" call "%RCSU%" -trace INFO CampExplore "pause requested current_spot=%current_spot% viewed=%viewed_count%"
+    call "%src_display_dir%\PauseManager.bat" ENTER FULL
+    set "pause_rc=!errorlevel!"
+    if exist "%RCSU%" call "%RCSU%" -trace INFO CampExplore "pause returned rc=!pause_rc!"
+    if "!pause_rc!"=="641" goto :exit_to_title
+    if "!pause_rc!"=="642" goto :exit_game
+    call :RenderStatic
+    set "prev_spot=0"
+    call :RenderDynamic
+    goto :explore_loop
+)
 if "%pick%"=="1" call :MoveUp & goto :explore_loop
 if "%pick%"=="2" call :MoveLeft & goto :explore_loop
 if "%pick%"=="3" call :MoveDown & goto :explore_loop
@@ -19,6 +35,41 @@ if "%pick%"=="4" call :MoveRight & goto :explore_loop
 if "%pick%"=="5" call :InspectCurrent & goto :explore_loop
 if "%pick%"=="6" call :TryLeave & if "!leave_confirmed!"=="1" goto :exit_explore
 goto :explore_loop
+
+:PollExploreInput
+set "pick=0"
+call "%tools_dir%\cmdwiz.exe" getch noWait >nul 2>&1
+set "key_code=%errorlevel%"
+if "%key_code%"=="0" exit /b 0
+
+if "%key_code%"=="87" set "pick=1"
+if "%key_code%"=="119" set "pick=1"
+if "%key_code%"=="23" set "pick=1"
+if "%key_code%"=="72" set "pick=1"
+if "%key_code%"=="65" set "pick=2"
+if "%key_code%"=="97" set "pick=2"
+if "%key_code%"=="1" if "%pick%"=="0" set "pick=2"
+if "%key_code%"=="75" if "%pick%"=="0" set "pick=2"
+if "%key_code%"=="83" set "pick=3"
+if "%key_code%"=="115" set "pick=3"
+if "%key_code%"=="19" set "pick=3"
+if "%key_code%"=="80" if "%pick%"=="0" set "pick=3"
+if "%key_code%"=="68" set "pick=4"
+if "%key_code%"=="100" set "pick=4"
+if "%key_code%"=="4" if "%pick%"=="0" set "pick=4"
+if "%key_code%"=="77" if "%pick%"=="0" set "pick=4"
+if "%key_code%"=="70" set "pick=5"
+if "%key_code%"=="102" set "pick=5"
+if "%key_code%"=="33" if "%pick%"=="0" set "pick=5"
+if "%key_code%"=="13" if "%pick%"=="0" set "pick=5"
+if "%key_code%"=="28" if "%pick%"=="0" set "pick=5"
+if "%key_code%"=="81" set "pick=6"
+if "%key_code%"=="113" set "pick=6"
+if "%key_code%"=="17" if "%pick%"=="0" set "pick=6"
+if "%key_code%"=="27" set "pick=PAUSE"
+if "%key_code%"=="112" if "%pick%"=="0" set "pick=PAUSE"
+if "%key_code%"=="25" if "%pick%"=="0" set "pick=PAUSE"
+exit /b 0
 
 :InitHotspots
 set "current_spot=4"
@@ -164,8 +215,9 @@ if "%seen_flag%"=="0" (
 call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav"
 call :Display
 call :Scene "%scene_file%"
-<nul set /p="%ESC%[65;74H%ESC%[90m何かキーを押して疎開キャンプ探索に戻る%ESC%[0m"
+<nul set /p="%ESC%[65;94H%ESC%[90m何かキーを押して疎開キャンプ探索に戻る%ESC%[0m"
 "%tools_dir%\cmdwiz.exe" getch >nul 2>&1
+%tools_dir%\cmdbkg.exe "%BG_FILE%" /b >nul 2>&1
 call :RenderStatic
 set "prev_spot=0"
 call :RenderDynamic
@@ -258,6 +310,7 @@ exit /b 0
 exit /b 0
 
 :exit_explore
+if exist "%RCSU%" call "%RCSU%" -trace INFO CampExplore "exit normal viewed=%viewed_count%"
 endlocal & (
     set "camp_explore_viewed_count=%viewed_count%"
     set "camp_seen_1=%spot_seen_1%"
@@ -268,3 +321,17 @@ endlocal & (
     set "camp_seen_6=%spot_seen_6%"
 )
 exit /b 0
+
+:exit_to_title
+if exist "%RCSU%" call "%RCSU%" -trace INFO CampExplore "exit to title viewed=%viewed_count%"
+endlocal & (
+    set "camp_explore_viewed_count=%viewed_count%"
+)
+exit /b 641
+
+:exit_game
+if exist "%RCSU%" call "%RCSU%" -trace INFO CampExplore "exit game viewed=%viewed_count%"
+endlocal & (
+    set "camp_explore_viewed_count=%viewed_count%"
+)
+exit /b 642

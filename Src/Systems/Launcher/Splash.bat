@@ -105,7 +105,7 @@ set "FRAME_RENDER=!FRAME_RENDER!!esc![24;80H!esc![?25l"
 <nul set /p ="!FRAME_RENDER!"
 
 :: Precise delay to smooth out rendering and make the animation fully enjoyable!
-for /L %%d in (1,1,11) do rem /? >nul 2>&1
+for /L %%d in (1,1,6) do rem /? >nul 2>&1
 
 :: State-specific Loop Control
 if !state! LSS 2 (

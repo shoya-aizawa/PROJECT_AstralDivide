@@ -343,11 +343,11 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
         if "!DIALOG_RES!"=="1" (
             if defined ORIGINAL_BGM_VOLUME (
                 set "BGM_VOLUME=%ORIGINAL_BGM_VOLUME%"
-                call "%src_audio_dir%\BgmPlayer.bat" VOLUME %ORIGINAL_BGM_VOLUME% 120 >nul 2>&1
+                if not defined PAUSE_SUPPRESS_BGM_PREVIEW call "%src_audio_dir%\BgmPlayer.bat" VOLUME %ORIGINAL_BGM_VOLUME% 120 >nul 2>&1
             )
             if defined ORIGINAL_BGM_SOUNDTRACK (
                 set "BGM_SOUNDTRACK=%ORIGINAL_BGM_SOUNDTRACK%"
-                call :Preview_Bgm_Soundtrack
+                if not defined PAUSE_SUPPRESS_BGM_PREVIEW call :Preview_Bgm_Soundtrack
             )
             call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
             set "UI_ACTION=MAINMENU"
@@ -408,7 +408,7 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
             call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
             call :Persist_Settings
             if not errorlevel 1 (
-                call "%src_audio_dir%\BgmPlayer.bat" VOLUME %BGM_VOLUME% 180 >nul 2>&1
+                if not defined PAUSE_SUPPRESS_BGM_PREVIEW call "%src_audio_dir%\BgmPlayer.bat" VOLUME %BGM_VOLUME% 180 >nul 2>&1
                 set "UI_ACTION=MAINMENU"
             ) else (
                 call :Display_SettingsMenu
@@ -439,11 +439,11 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
     if "!DIALOG_RES!"=="1" (
         if defined ORIGINAL_BGM_VOLUME (
             set "BGM_VOLUME=%ORIGINAL_BGM_VOLUME%"
-            call "%src_audio_dir%\BgmPlayer.bat" VOLUME %ORIGINAL_BGM_VOLUME% 120 >nul 2>&1
+            if not defined PAUSE_SUPPRESS_BGM_PREVIEW call "%src_audio_dir%\BgmPlayer.bat" VOLUME %ORIGINAL_BGM_VOLUME% 120 >nul 2>&1
         )
         if defined ORIGINAL_BGM_SOUNDTRACK (
             set "BGM_SOUNDTRACK=%ORIGINAL_BGM_SOUNDTRACK%"
-            call :Preview_Bgm_Soundtrack
+            if not defined PAUSE_SUPPRESS_BGM_PREVIEW call :Preview_Bgm_Soundtrack
         )
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
         set "UI_ACTION=MAINMENU"
@@ -785,6 +785,7 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
 
 :Preview_Runtime_Option
     set "target_idx=%~1"
+    if defined PAUSE_SUPPRESS_BGM_PREVIEW exit /b 0
     call set "target_key=%%OPT_KEY_%target_idx%%%"
     if /i "%target_key%"=="BGM_VOLUME" (
         set "BGM_VOLUME=!OPT_VAL_%target_idx%!"

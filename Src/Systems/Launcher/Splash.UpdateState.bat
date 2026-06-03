@@ -59,8 +59,8 @@ for /L %%i in (1,1,3) do (
         if !x! LEQ 1 set "act=0"
         if !x! GEQ 80 set "act=0"
     ) else (
-        :: Spawn a new star (only when logo fade is done: frame >= 82)
-        if !frame! GEQ 82 (
+        :: Spawn a new star (only when logo fade is done: frame >= 42)
+        if !frame! GEQ 42 (
             set /a "spawn=!RANDOM! %% 10"
             if !spawn! == 0 (
                 set "act=1"

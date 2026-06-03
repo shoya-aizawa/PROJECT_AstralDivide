@@ -22,13 +22,28 @@ set "BGM_PLAYER=%~dp0BgmPlayer.bat"
 if /i "%MODE%"=="stop" (
     :: Stop with a premium 1.5-second fade-out for a smooth transition!
     call "%BGM_PLAYER%" STOP 1500
+    endlocal & (
+        set "CURRENT_BGM_PATH="
+        set "CURRENT_BGM_MODE="
+        set "CURRENT_BGM_VOLUME="
+    )
+    exit /b 0
 ) else if /i "%MODE%"=="repeat" (
     :: Play and loop, featuring a smooth 500ms fade-in
     call "%BGM_PLAYER%" PLAY "%FILE_PATH%" %VOLUME% 500 1
+    endlocal & (
+        set "CURRENT_BGM_PATH=%FILE_PATH%"
+        set "CURRENT_BGM_MODE=repeat"
+        set "CURRENT_BGM_VOLUME=%VOLUME%"
+    )
+    exit /b 0
 ) else (
     :: Play once, featuring a smooth 500ms fade-in
     call "%BGM_PLAYER%" PLAY "%FILE_PATH%" %VOLUME% 500 0
+    endlocal & (
+        set "CURRENT_BGM_PATH=%FILE_PATH%"
+        set "CURRENT_BGM_MODE=play"
+        set "CURRENT_BGM_VOLUME=%VOLUME%"
+    )
+    exit /b 0
 )
-
-endlocal
-exit /b 0

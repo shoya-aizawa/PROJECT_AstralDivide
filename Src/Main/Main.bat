@@ -52,10 +52,8 @@ if exist "%RCSU%" call "%RCSU%" -trace INFO Main "SaveDataDetectSystem ok"
 rem pause
 call "%src_display_dir%\BootCompleteDisplay.bat"
 rem pause
-call :Resolve_Menu_Bgm
-call "%src_audio_dir%\Play_BGM.bat" "%MENU_BGM_PATH%" repeat %BGM_VOLUME%
-rem pause
-call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Title_Image.png" /b
+set "MAINMENU_NEEDS_REFRESH=1"
+call :Prepare_MainMenu_Presentation
 
 :: Apply user-configured font automatically
 if defined CONSOLE_FONT (
@@ -72,6 +70,7 @@ if defined CONSOLE_FONT (
 :: [2] Main State Loop
 :: --------------------------------------------------
 :STATE_MAINMENU
+    if "%MAINMENU_NEEDS_REFRESH%"=="1" call :Prepare_MainMenu_Presentation
     call :Reset_UI_Context
     if exist "%RCSU%" call "%RCSU%" -trace INFO Main "enter STATE_MAINMENU"
 
@@ -114,12 +113,22 @@ if defined CONSOLE_FONT (
     if "%UI_ACTION%"=="CANCEL" goto :STATE_MAINMENU
     if "%UI_ACTION%"=="NEWGAME_CREATE" (
         call :Start_NewGameSession %UI_PARAM% CreateNew
-        if "%errorlevel%"=="604" goto :STATE_MAINMENU
+        if errorlevel 642 goto :STATE_EXIT
+        if errorlevel 641 (
+            set "MAINMENU_NEEDS_REFRESH=1"
+            goto :STATE_MAINMENU
+        )
+        if errorlevel 604 goto :STATE_MAINMENU
         goto :STATE_SCENARIO
     )
     if "%UI_ACTION%"=="NEWGAME_OVERWRITE" (
         call :Start_NewGameSession %UI_PARAM% Overwrite
-        if "%errorlevel%"=="604" goto :STATE_MAINMENU
+        if errorlevel 642 goto :STATE_EXIT
+        if errorlevel 641 (
+            set "MAINMENU_NEEDS_REFRESH=1"
+            goto :STATE_MAINMENU
+        )
+        if errorlevel 604 goto :STATE_MAINMENU
         goto :STATE_SCENARIO
     )
     goto :STATE_MAINMENU
@@ -175,7 +184,21 @@ if defined CONSOLE_FONT (
     )
     if "%errorlevel%"=="604" (
         echo プレイヤーによって中断されました。
+        set "MAINMENU_NEEDS_REFRESH=1"
         goto :STATE_MAINMENU
+    )
+    if "%errorlevel%"=="641" (
+        echo Pause menu requested return to title.
+        set "MAINMENU_NEEDS_REFRESH=1"
+        goto :STATE_MAINMENU
+    )
+    if "%errorlevel%"=="642" (
+        echo Pause menu requested exit.
+        goto :STATE_EXIT
+    )
+    if "%errorlevel%"=="606" (
+        echo Pause menu requested exit.
+        goto :STATE_EXIT
     )
     goto :STATE_SCENARIO
 
@@ -210,6 +233,14 @@ if defined CONSOLE_FONT (
     if not defined _trace_param set "_trace_param=(none)"
     call "%RCSU%" -trace INFO Main "%~1 action=%UI_ACTION% param=%_trace_param%"
     set "_trace_param="
+    exit /b 0
+
+:Prepare_MainMenu_Presentation
+    call :Resolve_Menu_Bgm
+    call "%src_audio_dir%\Play_BGM.bat" "%MENU_BGM_PATH%" repeat %BGM_VOLUME%
+    call "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\AD_Title_Image.png" /b
+    set "MAINMENU_NEEDS_REFRESH=0"
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "mainmenu presentation refreshed"
     exit /b 0
 
 

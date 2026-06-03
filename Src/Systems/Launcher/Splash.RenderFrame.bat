@@ -28,19 +28,19 @@ for /L %%y in (2,1,23) do (
 )
 set "FRAME_RENDER=!FRAME_RENDER!!C_RESET!"
 
-:: -- Logo Animation Logic --
-set /a "i_HHS = frame / 4"
+:: -- Logo Animation Logic (2x speed) --
+set /a "i_HHS = frame / 2"
 if !i_HHS! GTR !MAX_PAL! set "i_HHS=!MAX_PAL!"
 
-set /a "i_C2 = (frame - 20) / 4"
+set /a "i_C2 = (frame - 10) / 2"
 if !i_C2! LSS 0 set "i_C2=0"
 if !i_C2! GTR !MAX_PAL! set "i_C2=!MAX_PAL!"
 
-set /a "i_C4 = (frame - 35) / 4"
+set /a "i_C4 = (frame - 18) / 2"
 if !i_C4! LSS 0 set "i_C4=0"
 if !i_C4! GTR !MAX_PAL! set "i_C4=!MAX_PAL!"
 
-set /a "i_C6 = (frame - 50) / 4"
+set /a "i_C6 = (frame - 26) / 2"
 if !i_C6! LSS 0 set "i_C6=0"
 if !i_C6! GTR !MAX_PAL! set "i_C6=!MAX_PAL!"
 
@@ -57,9 +57,9 @@ set "D5=!esc![10;6H!C_HHS!!A5_1!!C_C2!!A5_2!!C_HHS!!A5_3!!C_C4!!A5_4!!C_HHS!!A5_
 set "D6=!esc![11;6H!C_HHS!!A6_1!!C_C2!!A6_2!!C_HHS!!A6_3!!C_C4!!A6_4!!C_HHS!!A6_5!!C_C6!!A6_6!"
 set "FRAME_RENDER=!FRAME_RENDER!!D1!!D2!!D3!!D4!!D5!!D6!"
 
-:: Typewriter effect for "P R E S E N T S"
-if !frame! GEQ 82 (
-    set /a "p_chars=(frame - 82) / 2"
+:: Typewriter effect for "P R E S E N T S" (2x speed and earlier onset)
+if !frame! GEQ 42 (
+    set /a "p_chars=(frame - 42) * 1"
     if !p_chars! GTR 15 set "p_chars=15"
     for %%c in (!p_chars!) do set "C_PRESENTS=!PRESENTS_TEXT:~0,%%c!"
     set "FRAME_RENDER=!FRAME_RENDER!!esc![14;33H!C_TEXT!!C_PRESENTS!"

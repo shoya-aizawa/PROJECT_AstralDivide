@@ -7,6 +7,10 @@ set "current_location=疎開キャンプ"
 call :Display
 call :Scene "Scene00_CampIntro.txt"
 call "%~dp0CampExplore.bat"
+set "camp_rc=%errorlevel%"
+if defined RCSU if exist "%RCSU%" call "%RCSU%" -trace INFO EnterYourName "CampExplore returned rc=%camp_rc%"
+if "%camp_rc%"=="641" exit /b 641
+if "%camp_rc%"=="642" exit /b 642
 call :PlayCampToHillTransition
 set "current_location=星が降る丘"
 call :Display
