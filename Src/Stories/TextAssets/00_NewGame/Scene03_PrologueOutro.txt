@@ -2,13 +2,13 @@
 {bg:StarFallHill_06_AloneAgain.png}
 {id:scene02_001}{pos:19:96}{type:slow}{hi_white}残されたのは、夜風と星の光だけだった。{/hi_white}{/type}
 {delay:950}
-{id:scene02_002}{pos:51:103}{player_name_tag}{type:normal}……行っちゃった。{/type}
+{id:scene02_002}{se:TextSE.wav:late}{pos:51:103}{player_name_tag}{type:normal}……行っちゃった。{/type}
 {delay:500}
-{id:scene02_003}{pos:55:103}{player_name_tag}{type:normal}名前、聞けなかったな。{/type}
+{id:scene02_003}{se:TextSE.wav:now}{pos:55:103}{player_name_tag}{type:normal}名前、聞けなかったな。{/type}
 {delay:1000}
 {id:scene02_004}{pos:26:82}{type:normal}{hi_black}でも、さっき呼ばれた自分の名だけは、不思議なくらい耳に残っていた。{/hi_black}{/type}
 {delay:1200}
-{id:scene02_005}{pos:59:103}{player_name_tag}{type:normal}また、会えるかな。{/type}
+{id:scene02_005}{se:TextSE.wav:late}{pos:59:103}{player_name_tag}{type:normal}また、会えるかな。{/type}
 {delay:950}
 {id:scene02_006}{pos:33:90}{type:normal}{hi_black}遠くで誰かの笑い声がして、すぐに静けさへ溶けた。{/hi_black}{/type}
 {delay:1100}

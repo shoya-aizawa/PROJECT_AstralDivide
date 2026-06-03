@@ -366,8 +366,8 @@ exit /b 2099
         call :Print_Centered %SDS_HELP_TEXT_ROW% "WASD: select  F: enter  Q: back"
     )
     if "%SDS_SHOW_FOOTER%"=="1" (
-        echo !esc![%SDS_FOOTER_ROW_1%;%SDS_FOOTER_LEFT_COL%HAstral Divide
-        echo !esc![%SDS_FOOTER_ROW_2%;%SDS_FOOTER_LEFT_COL%HVersion: v0.1.1
+        echo !esc![%SDS_FOOTER_ROW_1%;%SDS_FOOTER_LEFT_COL%H%app_title%
+        echo !esc![%SDS_FOOTER_ROW_2%;%SDS_FOOTER_LEFT_COL%HVersion: %app_version%
         call :Print_Right %SDS_FOOTER_ROW_1% %SDS_FRAME_RIGHT% "Developed by HedgeHogSoft"
         call :Print_Right %SDS_FOOTER_ROW_2% %SDS_FRAME_RIGHT% "(c) 2021-2026 RPGGAME."
     )

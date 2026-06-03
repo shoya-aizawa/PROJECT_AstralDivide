@@ -14,4 +14,4 @@
 {id:camp00_007}{pos:58:157}{player}{type:normal}……丘。{/type}
 {delay:700}
 {id:camp00_008}{pos:61:82}{type:normal}{hi_black}喧騒から少し離れたくて、君は誰にも気づかれないよう立ち上がった。{/hi_black}{/type}
-{delay:1100}
+{pause}

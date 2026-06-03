@@ -32,5 +32,5 @@
 │                                 └───────────────────────────┘                            │
 │                                                                                        │
 │ Astral Divide                                                 Developed by HedgeHogSoft │
-│ Version: v0.1.1 [Prototype Alpha]                                 (c) 2024-2025 RPGGAME. │
+│ Version: v0.2.0 [Prototype Alpha]                                 (c) 2024-2025 RPGGAME. │
 └────────────────────────────────────────────────────────────────────────────────────────┘

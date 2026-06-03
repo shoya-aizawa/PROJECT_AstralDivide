@@ -5,5 +5,5 @@
 {delay:850}
 {id:camp_sentry_003}{pos:53:36}{type:normal}「子どもたちだけでも、もう少し奥に下げるべきかもな」{/type}
 {delay:900}
-{id:camp_sentry_004}{pos:58:157}{player}{type:normal}丘の向こうも、まだ危ないのかな。{/type}
+{id:camp_sentry_004}{se:TextSE.wav:now}{pos:58:157}{player}{type:normal}丘の向こうも、まだ危ないのかな。{/type}
 {delay:850}

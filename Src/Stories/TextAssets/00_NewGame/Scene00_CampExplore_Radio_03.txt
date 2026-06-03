@@ -5,5 +5,5 @@
 {delay:850}
 {id:camp_radio03_003}{pos:53:36}{type:normal}「一方で、同方面の砲撃は断続的に継続している模様です」{/type}
 {delay:850}
-{id:camp_radio03_004}{pos:58:149}{player}{type:normal}停戦って言っても、すぐ終わるわけじゃないのか。{/type}
+{id:camp_radio03_004}{se:TextSE.wav:now}{pos:58:149}{player}{type:normal}停戦って言っても、すぐ終わるわけじゃないのか。{/type}
 {delay:900}

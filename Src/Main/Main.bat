@@ -21,7 +21,7 @@ if "%IS_CONSOLAS%"=="1" (
     powershell -NoProfile -NonInteractive -InputFormat None -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys('{F11}')" >nul 2>&1
 )
 :: ==================================================
-:: Astral Divide - Main.bat (v0.1.2 planned)
+:: Astral Divide - Main.bat (v0.2.0)
 :: Role: Game Core / State Orchestrator
 :: ==================================================
 

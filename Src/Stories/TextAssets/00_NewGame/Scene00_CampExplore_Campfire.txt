@@ -5,5 +5,5 @@
 {delay:750}
 {id:camp_fire_003}{pos:53:36}{type:normal}「ほんと？ じゃあ、願いごとしたら戦争も終わるかな」{/type}
 {delay:850}
-{id:camp_fire_004}{pos:58:157}{player}{type:normal}丘……やっぱり、行ってみよう。{/type}
+{id:camp_fire_004}{se:TextSE.wav:late}{pos:58:157}{player}{type:normal}丘……やっぱり、行ってみよう。{/type}
 {delay:900}

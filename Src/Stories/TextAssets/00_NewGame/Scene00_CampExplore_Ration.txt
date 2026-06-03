@@ -5,5 +5,5 @@
 {delay:850}
 {id:camp_ration_003}{pos:53:36}{type:normal}「文句を言う元気があるだけ、まだましかもしれないけどさ」{/type}
 {delay:900}
-{id:camp_ration_004}{pos:58:157}{player}{type:normal}みんな、ぎりぎりなんだ。{/type}
+{id:camp_ration_004}{se:TextSE.wav:now}{pos:58:157}{player}{type:normal}みんな、ぎりぎりなんだ。{/type}
 {delay:850}

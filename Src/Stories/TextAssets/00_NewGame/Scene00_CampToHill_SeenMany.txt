@@ -5,7 +5,7 @@
 {delay:1000}
 {id:campth02_003}{pos:28:84}{type:normal}{hi_black}同じ空の下にいるのに、みんな違うものを怖がっている気がした。{/hi_black}{/type}
 {delay:1000}
-{id:campth02_004}{pos:57:151}{player}{type:normal}……だから、あの丘に行ってみたくなった。{/type}
+{id:campth02_004}{se:TextSE.wav:late}{pos:57:151}{player}{type:normal}……だから、あの丘に行ってみたくなった。{/type}
 {delay:850}
 {id:campth02_005}{pos:61:84}{type:normal}{hi_black}喧騒から少し離れるたび、星の光だけがかえって近づいてくるようだった。{/hi_black}{/type}
 {delay:1100}

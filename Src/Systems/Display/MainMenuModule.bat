@@ -539,8 +539,8 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     call :Draw_HLine %MMM_MENU_DIVIDER_ROW% %MMM_MENU_DIVIDER_LEFT% %MMM_MENU_DIVIDER_RIGHT% "-"
     call :Draw_Box %MMM_HELP_BOX_LEFT% %MMM_HELP_BOX_TOP% %MMM_HELP_BOX_RIGHT% %MMM_HELP_BOX_BOTTOM%
     echo !esc![%MMM_HELP_TEXT_ROW%;%MMM_HELP_TEXT_COL%HW/S: select  F: enter
-    echo !esc![%MMM_FOOTER_ROW_1%;%MMM_FOOTER_LEFT_COL%HAstral Divide
-    echo !esc![%MMM_FOOTER_ROW_2%;%MMM_FOOTER_LEFT_COL%HVersion: v0.1.1 [Prototype Alpha]
+    echo !esc![%MMM_FOOTER_ROW_1%;%MMM_FOOTER_LEFT_COL%H%app_title%
+    echo !esc![%MMM_FOOTER_ROW_2%;%MMM_FOOTER_LEFT_COL%HVersion: %app_version_display%
     call :Print_Right %MMM_FOOTER_ROW_1% %MMM_FRAME_RIGHT% "Developed by HedgeHogSoft"
     call :Print_Right %MMM_FOOTER_ROW_2% %MMM_FRAME_RIGHT% "(c) 2024-2025 RPGGAME."
     endlocal

@@ -62,7 +62,7 @@
 │                                                                                                        │   W/S: select  F: enter   │                                                                                                        │
 │                                                                                                        └───────────────────────────┘                                                                                                        │
 │ Astral Divide                                                                                                                                                                                                     Developed by HedgeHogSoft │
-│ Version: v0.1.1 [Prototype Alpha]                                                                                                                                                                                    (c) 2024-2025 RPGGAME. │
+│ Version: v0.2.0 [Prototype Alpha]                                                                                                                                                                                    (c) 2024-2025 RPGGAME. │
 └─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ### The reason for subtracting 1 from the actual width and height is to prevent the console from automatically scrolling when text is printed at the very bottom or right edge of the window.
 ### By making the display area slightly smaller than the maximum, we avoid unwanted scrolling and keep the layout stable.

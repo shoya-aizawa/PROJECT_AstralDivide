@@ -207,14 +207,14 @@ rem TODO call "%root_dir%\Src\Systems\Security\VerifySignatures.bat"
 
 :: [8] Initiate Main.bat
 :GoMain
-rem start "AstralDivide[v0.1.1]" /max cmd /c %src_main_dir%\Main.bat 65001 "AstralDivide[v0.1.1]"
+rem start "%app_window_title%" /max cmd /c %src_main_dir%\Main.bat 65001 "%app_window_title%"
 if "%IS_DEBUG_MODE%"=="1" (
     :: Run Main.bat directly using CALL in debug mode to keep execution in the same terminal
     pushd "%src_main_dir%"
-    call Main.bat 65001 "AstralDivide[v0.1.1]"
+    call Main.bat 65001 "%app_window_title%"
     popd
 ) else (
-    start /d "%src_main_dir%" Main.bat 65001 "AstralDivide[v0.1.1]"
+    start /d "%src_main_dir%" Main.bat 65001 "%app_window_title%"
 )
 set launch_time=%time%
 call "%RCSU%" -trace INFO "%self_name%" "main launched time=%launch_time%"
@@ -248,7 +248,7 @@ if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
 
 rem Pass IPC_DIR to WD as an argument (bypassed in debug mode to avoid nested wait/blocking)
 if not "%IS_DEBUG_MODE%"=="1" (
-    call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "AstralDivide[v0.1.1]"
+    call "%src_debug_dir%\Watchdog_Host.bat" "%runtime_ipc_dir%" "%app_window_title%"
 )
 
 if exist "%runtime_ipc_dir%\.restart_first" goto :RestartFirstLaunch

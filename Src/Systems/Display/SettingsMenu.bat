@@ -234,8 +234,8 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
     call :Draw_Box %OPT_HELP_BOX_LEFT% %OPT_HELP_BOX_TOP% %OPT_HELP_BOX_RIGHT% %OPT_HELP_BOX_BOTTOM%
 
     if "%OPT_SHOW_FOOTER%"=="1" (
-        echo !esc![%OPT_FOOTER_ROW_1%;%OPT_FOOTER_LEFT_COL%HAstral Divide
-        echo !esc![%OPT_FOOTER_ROW_2%;%OPT_FOOTER_LEFT_COL%HVersion: v0.1.2 [Settings Phase 1.5]
+        echo !esc![%OPT_FOOTER_ROW_1%;%OPT_FOOTER_LEFT_COL%H%app_title%
+        echo !esc![%OPT_FOOTER_ROW_2%;%OPT_FOOTER_LEFT_COL%HVersion: %app_version_display%
         call :Print_Right %OPT_FOOTER_ROW_1% %OPT_FRAME_RIGHT% "!OPT_FOOTER_RIGHT_TEXT_1!"
         call :Print_Right %OPT_FOOTER_ROW_2% %OPT_FRAME_RIGHT% "!OPT_FOOTER_RIGHT_TEXT_2!"
     )
@@ -422,7 +422,7 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
         call :Handle_Back_Action
     ) else if "%action%"=="version" (
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
-        call :Show_Info_Dialog "VERSION INFORMATION" "Astral Divide v0.1.2" "Settings Module: Phase 1.5" "Build Profile: Prototype Alpha"
+        call :Show_Info_Dialog "VERSION INFORMATION" "%app_title% %app_version%" "Render Module: %render_module_version%" "Build Profile: %app_build_label%"
         call :Display_SettingsMenu
     ) else if "%action%"=="credits" (
         call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1

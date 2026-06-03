@@ -21,6 +21,15 @@ if defined PROJECT_ROOT (
    for %%I in ("%~dp0\..\..\..") do set "root_dir=%%~fI\"
 )
 
+::===== Version info ====================================================
+set "app_version=v0.2.0"
+set "app_build_label=Prototype Alpha"
+set "render_module_version=v3.0"
+set "app_title=Astral Divide"
+set "app_title_compact=AstralDivide"
+set "app_version_display=%app_version% [%app_build_label%]"
+set "app_window_title=%app_title_compact%[%app_version%]"
+
 ::===== Under Assets ====================================================
 set "assets_dir=%root_dir%\Assets"
 set "assets_docs_dir=%assets_dir%\Docs"
@@ -104,6 +113,13 @@ rem --- Export the variables defined so far to the parent scope ----------------
 endlocal & (
   set "esc=%esc%"
   set "root_dir=%root_dir%"
+  set "app_version=%app_version%"
+  set "app_build_label=%app_build_label%"
+  set "render_module_version=%render_module_version%"
+  set "app_title=%app_title%"
+  set "app_title_compact=%app_title_compact%"
+  set "app_version_display=%app_version_display%"
+  set "app_window_title=%app_window_title%"
   set "assets_dir=%assets_dir%"
   set "assets_docs_dir=%assets_docs_dir%"
   set "assets_images_dir=%assets_images_dir%"
