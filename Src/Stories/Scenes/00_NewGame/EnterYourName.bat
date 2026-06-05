@@ -3,6 +3,7 @@ setlocal EnableDelayedExpansion
 for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 
 :loop
+set "CURRENT_SKIP_POLICY=1"
 set "current_location=疎開キャンプ"
 call :Display
 call :Scene "Scene00_CampIntro.txt"
@@ -11,13 +12,29 @@ set "camp_rc=%errorlevel%"
 if defined RCSU if exist "%RCSU%" call "%RCSU%" -trace INFO EnterYourName "CampExplore returned rc=%camp_rc%"
 if "%camp_rc%"=="641" exit /b 641
 if "%camp_rc%"=="642" exit /b 642
+set "CURRENT_SKIP_POLICY=1"
 call :PlayCampToHillTransition
 set "current_location=星が降る丘"
 call :Display
 call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_dir%\静かな夜に.mp3" repeat %BGM_VOLUME%
 call :Scene "Scene01_PrologueIntro.txt"
+if "%errorlevel%"=="8" set "SCENARIO_SKIP_ACTIVE=1"
 
 :input_name
+set "CURRENT_SKIP_POLICY=2"
+if "%SCENARIO_SKIP_ACTIVE%"=="1" (
+    call :DrawConfirmSkipName
+    choice /c YN /n >nul
+    if errorlevel 2 (
+        set "SCENARIO_SKIP_ACTIVE="
+        call :Display
+        goto :input_name_start
+    )
+    set "player_name=シオン"
+    goto :after_name_input
+)
+
+:input_name_start
 set "player_name="
 call :DrawInputBox
 <nul set /p="%ESC%[40;100H%ESC%[96m名前を入力%ESC%[0m"
@@ -35,11 +52,12 @@ if not defined player_name (
         <nul set /p="%ESC%[45;87H%ESC%[0K"
         <nul set /p="%ESC%[46;87H%ESC%[0K"
         <nul set /p="%ESC%[48;87H%ESC%[0K"
-        goto :input_name
+        goto :input_name_start
     )
     set "player_name=シオン"
 )
 
+:after_name_input
 call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav"
 set "current_location=星が降る丘"
 call :Display
@@ -74,8 +92,13 @@ exit /b 0
 :Scene
     set "current_scene=%~1"
     set "current_save_supported=0"
+    set "scene_skipped=0"
     call :DrawTextInputGuide
     for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
+        if "!SCENARIO_SKIP_ACTIVE!"=="1" (
+            set "scene_skipped=1"
+            goto :scene_skip_break
+        )
         set "line=%%L"
         call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
         echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
@@ -84,7 +107,9 @@ exit /b 0
             call :DrawTextInputGuide
         )
     )
+:scene_skip_break
     set "SCENARIO_SKIP_ACTIVE="
+    if "%scene_skipped%"=="1" exit /b 8
     exit /b 0
 
 :DrawTextInputGuide
@@ -124,4 +149,13 @@ exit /b 0
 for /l %%r in (38,1,46) do (
     <nul set /p="%ESC%[%%r;85H%ESC%[0K"
 )
+exit /b 0
+
+:DrawConfirmSkipName
+cls
+call :DrawDialogueGuide
+<nul set /p="%ESC%[38;75H%ESC%[90m┌──────────────────────────────────────────────────────────────┐%ESC%[0m"
+<nul set /p="%ESC%[40;79H%ESC%[97m名前入力をスキップし、デフォルト名「シオン」で進めますか？%ESC%[0m"
+<nul set /p="%ESC%[42;88H%ESC%[93m[Y] はい (スキップ)   [N] いいえ (自分で入力)%ESC%[0m"
+<nul set /p="%ESC%[44;75H%ESC%[90m└──────────────────────────────────────────────────────────────┘%ESC%[0m"
 exit /b 0

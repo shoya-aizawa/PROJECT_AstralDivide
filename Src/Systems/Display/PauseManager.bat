@@ -226,9 +226,11 @@ call set "lite_band_fill=%%lite_fill:~0,%lite_width%%%"
 
 set "lite_title=一時停止"
 set "lite_hint=P / Esc: 戻る  K: スキップ"
+if "%CURRENT_SKIP_POLICY%"=="0" set "lite_hint=P / Esc: 戻る"
 set /a "lite_col_title=((lite_width - 6) / 2) + 1"
 if !lite_col_title! LSS 1 set "lite_col_title=1"
 set /a "lite_col_hint=((lite_width - 34) / 2) + 1"
+if "%CURRENT_SKIP_POLICY%"=="0" set /a "lite_col_hint=((lite_width - 16) / 2) + 1"
 if !lite_col_hint! LSS 1 set "lite_col_hint=1"
 exit /b 0
 
@@ -346,8 +348,10 @@ if "%pause_menu_key%"=="1" set "pause_menu_action=RESUME"
 if "%pause_menu_key%"=="80" if not defined pause_menu_action set "pause_menu_action="
 if "%pause_menu_key%"=="112" if not defined pause_menu_action set "pause_menu_action=RESUME"
 if "%pause_menu_key%"=="25" if not defined pause_menu_action set "pause_menu_action=RESUME"
-if "%pause_menu_key%"=="75" set "pause_menu_action=SKIP"
-if "%pause_menu_key%"=="107" set "pause_menu_action=SKIP"
+if not "%CURRENT_SKIP_POLICY%"=="0" (
+    if "%pause_menu_key%"=="75" set "pause_menu_action=SKIP"
+    if "%pause_menu_key%"=="107" set "pause_menu_action=SKIP"
+)
 exit /b 0
 
 :PollPauseMenuKey

@@ -2,6 +2,7 @@
 setlocal EnableDelayedExpansion
 for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
+set "CURRENT_SKIP_POLICY=1"
 
 set "BG_FILE=%assets_images_dir%\A_Nighttime_Settlement_of_War_Refugees.png"
 if exist "%BG_FILE%" %tools_dir%\cmdbkg.exe "%BG_FILE%" /b >nul 2>&1
@@ -11,6 +12,10 @@ call :RenderStatic
 call :RenderDynamic
 
 :explore_loop
+if "%SCENARIO_SKIP_ACTIVE%"=="1" (
+    if exist "%RCSU%" call "%RCSU%" -trace INFO CampExplore "skipping camp explore loop, preserving current state"
+    goto :exit_explore
+)
 call :PollExploreInput
 if "%pick%"=="0" (
     "%tools_dir%\cmdwiz.exe" delay 15 >nul 2>&1
@@ -371,8 +376,13 @@ call :DrawDialogueGuide
 exit /b 0
 
 :Scene
+    set "scene_skipped=0"
     call :DrawTextInputGuide
     for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
+        if "!SCENARIO_SKIP_ACTIVE!"=="1" (
+            set "scene_skipped=1"
+            goto :scene_skip_break
+        )
         set "line=%%L"
         call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
         echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
@@ -381,7 +391,9 @@ exit /b 0
             call :DrawTextInputGuide
         )
     )
+:scene_skip_break
     set "SCENARIO_SKIP_ACTIVE="
+    if "%scene_skipped%"=="1" exit /b 8
     exit /b 0
 
 :DrawTextInputGuide
