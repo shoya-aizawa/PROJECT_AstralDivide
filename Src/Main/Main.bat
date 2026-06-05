@@ -253,8 +253,14 @@ if defined CONSOLE_FONT (
 
 
 :JumpToEpisode
+    set "SCENARIO_SKIP_ACTIVE="
+    set "current_save_supported=0"
+    set "resume_storyroute="
+    set "resume_scene="
+    set "resume_location="
     if "%~1"=="NewGame"  call "%src_scene_newgame_dir%\NewGame.bat"
     if "%~1"=="Prologue" call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
+    if "%~1"=="PrologueComplete" call "%src_scene_newgame_dir%\PrologueComplete.bat"
     if "%~1"=="Episode_1" call "%src_stories_dir%\Episode_01\EntryPoint.bat"
     exit /b %errorlevel%
 
@@ -268,7 +274,7 @@ if defined CONSOLE_FONT (
 
 :Start_NewGameSession
     :: デバッグ情報
-    if defined DEBUG_STATE if %DEBUG_STATE%==1 (
+    if "%DEBUG_STATE%"=="1" (
         echo [DEBUG-Main] Starting NewGame_%2 in Slot:%1 - waiting for load...
         timeout /t 2 >nul
     )
@@ -279,6 +285,11 @@ if defined CONSOLE_FONT (
     timeout /t 3
     call :Label_IsSelectedSaveData %1
     call :Label_PlayerStatus_Initialize
+    set "current_save_slot=%1"
+
+    :: Reset camp explore variables for new session
+    set "camp_explore_viewed_count=0"
+    for /l %%I in (1,1,6) do set "camp_seen_%%I=0"
 
     if "%2"=="CreateNew" (
         call :JumpToEpisode NewGame
@@ -290,8 +301,10 @@ if defined CONSOLE_FONT (
 
 
 :Start_ContinueGameSession
+    call "%src_audio_dir%\Play_BGM.bat" "" stop
     call :Label_IsSelectedSaveData %1
     call :Load_SaveData %1
+    set "current_save_slot=%1"
     exit /b 0
 
 

@@ -15,7 +15,5 @@
 {clear}
 {id:scene02_007}{pos:29:90}{type:normal}{hi_black}その夜の記憶が、ふたりの運命の最初の印になった。{/hi_black}{/type}
 {delay:1200}
-{id:scene02_008}{pos:35:100}{type:slow}{cyan}PROLOGUE  -  星が降る丘  -{/cyan}{/type}
+{id:scene02_008}{pos:35:100}{type:slow}{cyan}PROLOGUE  -  星の夢  -{/cyan}{/type}
 {delay:1400}
-{id:scene02_009}{pos:39:85}{type:normal}{hi_black}プロローグ仮実装はここまで。続きは次の開発段階で接続される。{/hi_black}{/type}
-{delay:1200}

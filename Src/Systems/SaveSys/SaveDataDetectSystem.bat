@@ -1,13 +1,13 @@
 chcp 65001 >nul
 
-rem セーブデータ検出システム
-rem File_SaveDataConfig.txtからファイル名を読み込む
+rem Save data detection system
+rem Read filename from File_SaveDataConfig.txt
 
 set save_exist_count=0
 for /f "delims=" %%b in (%saves_active_dir%\SaveDataConfig.txt) do (
     call :Label_SaveDataBooleanValue %%b
 )
-rem セーブデータ選択画面のUIにかかわる変数の初期化
+rem Initialize variables related to save data selection UI
 call "%src_savesys_dir%\SelectSaveData_Initialize.bat"
 
 

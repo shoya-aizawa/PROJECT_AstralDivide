@@ -1,3 +1,4 @@
 # Astral Divide player bootstrap defaults
 player_name=
+player_level=0
 player_storyroute=NewGame

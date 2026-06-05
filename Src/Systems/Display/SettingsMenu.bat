@@ -18,6 +18,7 @@ if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems
 
 set "src_audio_dir=%PROJECT_ROOT%\Src\Systems\Audio"
 set "src_display_tpl_dir=%PROJECT_ROOT%\Src\Systems\Display\Templates"
+if not defined src_savesys_dir set "src_savesys_dir=%PROJECT_ROOT%\Src\Systems\SaveSys"
 if not defined assets_sounds_fx_dir set "assets_sounds_fx_dir=%PROJECT_ROOT%\Assets\Sounds\FX"
 set "cmdwiz_path=%PROJECT_ROOT%\Tools\cmdwiz.exe"
 if not exist "%cmdwiz_path%" set "cmdwiz_path="
@@ -55,7 +56,7 @@ set "ORIGINAL_BGM_SOUNDTRACK=%BGM_SOUNDTRACK%"
 
 for /f "delims=" %%a in ('echo prompt $E^| cmd /d') do set "esc=%%a"
 
-set "OPT_COUNT=13"
+set "OPT_COUNT=14"
 
 set "OPT_KEY_1=LANGUAGE"
 set "OPT_LABEL_1=Language"
@@ -151,17 +152,23 @@ set "OPT_TYPE_11=action"
 set "OPT_ACTION_11=initialize"
 set "OPT_VISIBLE_11=1"
 
-set "OPT_LABEL_12=[ Confirm & Save ]"
-set "OPT_DESC_12=Save modified session changes safely to user_config.env."
+set "OPT_LABEL_12=[ Delete Save Data ]"
+set "OPT_DESC_12=Select and permanently delete specific save data slots."
 set "OPT_TYPE_12=action"
-set "OPT_ACTION_12=save"
+set "OPT_ACTION_12=delete_saves"
 set "OPT_VISIBLE_12=1"
 
-set "OPT_LABEL_13=[ Cancel & Back ]"
-set "OPT_DESC_13=Discard setting edits and return to the Main Menu."
+set "OPT_LABEL_13=[ Confirm & Save ]"
+set "OPT_DESC_13=Save modified session changes safely to user_config.env."
 set "OPT_TYPE_13=action"
-set "OPT_ACTION_13=back"
+set "OPT_ACTION_13=save"
 set "OPT_VISIBLE_13=1"
+
+set "OPT_LABEL_14=[ Cancel & Back ]"
+set "OPT_DESC_14=Discard setting edits and return to the Main Menu."
+set "OPT_TYPE_14=action"
+set "OPT_ACTION_14=back"
+set "OPT_VISIBLE_14=1"
 
 set "current_selected=1"
 set "last_selected="
@@ -430,6 +437,10 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
         call :Display_SettingsMenu
     ) else if "%action%"=="initialize" (
         call :Handle_Initialize_Action
+    ) else if "%action%"=="delete_saves" (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
+        call "%src_savesys_dir%\SaveDataDeleter.bat"
+        call :Display_SettingsMenu
     )
     exit /b 0
 

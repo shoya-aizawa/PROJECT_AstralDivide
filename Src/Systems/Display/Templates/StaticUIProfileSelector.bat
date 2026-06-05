@@ -247,7 +247,7 @@ if "%SDS_USE_DYNAMIC%"=="1" (
     set /a "SDS_FRAME_BOTTOM=%CONSOLE_ROWS% - 1"
     set /a "SDS_TITLE_ROW_1=2"
     set /a "SDS_TITLE_ROW_2=4"
-    set /a "SDS_HELP_TEXT_ROW=6"
+    set /a "SDS_HELP_TEXT_ROW=%CONSOLE_ROWS% - 5"
     set /a "SDS_HELP_BOX_WIDTH=28"
     set /a "SDS_HELP_BOX_HEIGHT=3"
     set "SDS_SHOW_HELP_BOX=1"
@@ -258,7 +258,7 @@ if "%SDS_USE_DYNAMIC%"=="1" (
         set /a "SDS_SLOT_POS_ROW=10"
     )
     call set /a "SDS_HELP_BOX_LEFT=((%CONSOLE_COLS% - %%SDS_HELP_BOX_WIDTH%%) / 2) + 1"
-    set /a "SDS_HELP_BOX_TOP=5"
+    set /a "SDS_HELP_BOX_TOP=%CONSOLE_ROWS% - 6"
     call set /a "SDS_HELP_BOX_RIGHT=%%SDS_HELP_BOX_LEFT%% + %%SDS_HELP_BOX_WIDTH%% - 1"
     call set /a "SDS_HELP_BOX_BOTTOM=%%SDS_HELP_BOX_TOP%% + %%SDS_HELP_BOX_HEIGHT%% - 1"
     set /a "SLOT_BOX_WIDTH=22"
@@ -274,8 +274,8 @@ if "%SDS_USE_DYNAMIC%"=="1" (
     call set /a "SLOT_POS_COL_1=%%SDS_GRID_LEFT%%"
     call set /a "SLOT_POS_COL_2=%%SDS_GRID_LEFT%% + %SLOT_BOX_WIDTH% + %%SDS_SLOT_GAP%%"
     call set /a "SLOT_POS_COL_3=%%SDS_GRID_LEFT%% + (2 * (%SLOT_BOX_WIDTH% + %%SDS_SLOT_GAP%%))"
-    call set /a "SDS_DIALOG_ROW=%SDS_SLOT_POS_ROW%-1"
-    call :ClampMin SDS_DIALOG_ROW 7
+    call set /a "SDS_DIALOG_ROW=%SDS_SLOT_POS_ROW%-2"
+    call :ClampMin SDS_DIALOG_ROW 6
     call set /a "SDS_DIALOG_COL=((%CONSOLE_COLS% - 30) / 2) + 1"
     set "SDS_SHOW_FOOTER=1"
     if %CONSOLE_ROWS% LSS 40 set "SDS_SHOW_FOOTER=0"

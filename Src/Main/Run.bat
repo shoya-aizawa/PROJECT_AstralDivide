@@ -16,7 +16,7 @@
 @echo "%*" | findstr /i "\-mode debug" >nul && set "IS_DEBUG_MODE=1"
 
 @if not "%IS_DEBUG_MODE%"=="1" if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
-@title Astral Divide - Booting.
+@title Astral Divide - Booting
 set "self_name=%~n0"
 rem================================================= Main Flow =================================================
 
@@ -60,6 +60,13 @@ goto :Dev_ForceFirstLaunch_End
 
 :Dev_ForceFirstLaunch
     echo %esc%[93m[DEV] Force First Launch option detected.%esc%[0m
+    set "PIN_INPUT="
+    set /p "PIN_INPUT=Enter PIN code to authorize initialization: "
+    if not "%PIN_INPUT%"=="0903" (
+        echo %esc%[91m[ERROR] Invalid PIN code. Initialization aborted.%esc%[0m
+        timeout /t 2 >nul
+        goto :Dev_ForceFirstLaunch_End
+    )
     if not defined PROJECT_ROOT (
         for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
     )
@@ -68,25 +75,30 @@ goto :Dev_ForceFirstLaunch_End
 
     set "_dev_cfg=%PROJECT_ROOT%\Config\user_config.env"
     if exist "%_dev_cfg%" (
-        echo %esc%[90mClearing user_config.env ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
+        echo %esc%[90mClearing user_config.env ...%esc%[0m %esc%[92m        [ OK ]%esc%[0m
         del /q "%_dev_cfg%" >nul 2>&1
     )
     set "_dev_cache=%PROJECT_ROOT%\Config\Cache\Screen"
     if exist "%_dev_cache%" (
-        echo %esc%[90mClearing screen cache ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
+        echo %esc%[90mClearing screen cache ...%esc%[0m %esc%[92m           [ OK ]%esc%[0m
         rd /s /q "%_dev_cache%" >nul 2>&1
     )
     set "_dev_se_cache=%PROJECT_ROOT%\Config\Cache\SEVariants"
     if exist "%_dev_se_cache%" (
-        echo %esc%[90mClearing prewarmed SE variants ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
+        echo %esc%[90mClearing prewarmed SE variants ...%esc%[0m %esc%[92m  [ OK ]%esc%[0m
         rd /s /q "%_dev_se_cache%" >nul 2>&1
     )
     set "_dev_logs=%PROJECT_ROOT%\Config\Logs"
     if exist "%_dev_logs%" (
-        echo %esc%[90mClearing log files ...%esc%[0m %esc%[92m[ OK ]%esc%[0m
+        echo %esc%[90mClearing log files ...%esc%[0m %esc%[92m              [ OK ]%esc%[0m
         for %%F in ("%_dev_logs%\*.log") do (
             type nul > "%%F" 2>nul
         )
+    )
+    set "_dev_saves=%PROJECT_ROOT%\Saves"
+    if exist "%_dev_saves%" (
+        echo %esc%[90mClearing save data files ...%esc%[0m %esc%[92m        [ OK ]%esc%[0m
+        del /f /s /q "%_dev_saves%\*" >nul 2>&1
     )
     timeout /t 1 >nul
     goto :Dev_ForceFirstLaunch_End

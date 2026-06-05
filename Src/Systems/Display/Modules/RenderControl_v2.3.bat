@@ -5,6 +5,17 @@ for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 
 setlocal EnableDelayedExpansion
 set "line=%~1"
+if "%SCENARIO_SKIP_ACTIVE%"=="1" set "RENDERCONTROL_FAST_PREVIEW=1"
+call :MainWrapper "!line!"
+set "RC=%errorlevel%"
+endlocal & (
+    set "SCENARIO_SKIP_ACTIVE=%SCENARIO_SKIP_ACTIVE%"
+    exit /b %RC%
+)
+
+:MainWrapper
+set "line=%~1"
+set "PAUSE_MANAGER=%src_display_dir%\PauseManager.bat"
 
 echo !line! | findstr /c:"{id:" >nul
 if !errorlevel! == 0 (
@@ -44,7 +55,7 @@ if !errorlevel! == 0 (
 
 if "!line:~0,7!"=="{delay:" (
     for /f "tokens=2 delims=:{}" %%a in ("!line!") do (
-        if not defined RENDERCONTROL_FAST_PREVIEW %tools_dir%\cmdwiz.exe delay %%a
+        if not defined RENDERCONTROL_FAST_PREVIEW call :WaitDelayOrAdvance "%%a"
         set "line=!line:*}=!"
     )
     if defined line call "%~dp0RenderControl_v2.3.bat" "!line!"
@@ -212,16 +223,28 @@ if !errorlevel! == 0 (
 call "%~dp0RenderMarkup_v2.3.bat" "!line!" parsed
 if defined SPEAKER <nul set /p=!SPEAKER!
 <nul set /p=!parsed!
-endlocal
 exit /b 0
 
 :WaitForAdvanceKey
 if exist "%tools_dir%\cmdwiz.exe" (
     %tools_dir%\cmdwiz.exe flushkeys >nul 2>&1
-    %tools_dir%\cmdwiz.exe getch >nul 2>&1
+    call :WaitForAdvanceLoop
 ) else (
     pause >nul
 )
+exit /b 0
+
+:WaitForAdvanceLoop
+%tools_dir%\cmdwiz.exe getch noWait >nul 2>&1
+set "wait_key=%errorlevel%"
+if "%wait_key%"=="0" (
+    %tools_dir%\cmdwiz.exe delay 15 >nul 2>&1
+    if "%SCENARIO_SKIP_ACTIVE%"=="1" exit /b 0
+    goto :WaitForAdvanceLoop
+)
+call :HandleLitePauseKey "%wait_key%" "RENDER_WAIT"
+if "%SCENARIO_SKIP_ACTIVE%"=="1" exit /b 0
+if "!pause_key_consumed!"=="1" goto :WaitForAdvanceLoop
 exit /b 0
 
 :WaitAutoOrAdvance
@@ -238,7 +261,13 @@ if !pause_remaining! LSS 1 exit /b 0
 
 :WaitAutoLoop
 %tools_dir%\cmdwiz.exe getch noWait >nul 2>&1
-if not "%errorlevel%"=="0" exit /b 0
+set "wait_key=%errorlevel%"
+if not "%wait_key%"=="0" (
+    call :HandleLitePauseKey "%wait_key%" "RENDER_AUTO"
+    if "%SCENARIO_SKIP_ACTIVE%"=="1" exit /b 0
+    if "!pause_key_consumed!"=="1" goto :WaitAutoLoop
+    exit /b 0
+)
 
 if !pause_remaining! LEQ 15 (
     %tools_dir%\cmdwiz.exe delay !pause_remaining! >nul 2>&1
@@ -248,3 +277,73 @@ if !pause_remaining! LEQ 15 (
 %tools_dir%\cmdwiz.exe delay 15 >nul 2>&1
 set /a "pause_remaining-=15"
 goto :WaitAutoLoop
+
+:WaitDelayOrAdvance
+set "pause_ms=%~1"
+if not defined pause_ms set "pause_ms=0"
+if not exist "%tools_dir%\cmdwiz.exe" (
+    if %pause_ms% GTR 0 timeout /t 1 >nul
+    exit /b 0
+)
+
+set /a "pause_remaining=%pause_ms%"
+if !pause_remaining! LSS 1 exit /b 0
+%tools_dir%\cmdwiz.exe flushkeys >nul 2>&1
+
+:WaitDelayLoop
+%tools_dir%\cmdwiz.exe getch noWait >nul 2>&1
+set "wait_key=%errorlevel%"
+if not "%wait_key%"=="0" (
+    call :HandleLitePauseKey "%wait_key%" "RENDER_DELAY"
+    if "%SCENARIO_SKIP_ACTIVE%"=="1" exit /b 0
+    if "!pause_key_consumed!"=="1" goto :WaitDelayLoop
+    call :HandleAdvanceKey "%wait_key%"
+    if "!advance_key_consumed!"=="1" exit /b 0
+)
+
+if !pause_remaining! LEQ 15 (
+    %tools_dir%\cmdwiz.exe delay !pause_remaining! >nul 2>&1
+    exit /b 0
+)
+
+%tools_dir%\cmdwiz.exe delay 15 >nul 2>&1
+set /a "pause_remaining-=15"
+goto :WaitDelayLoop
+
+:HandleLitePauseKey
+set "incoming_key=%~1"
+set "pause_source=%~2"
+set "pause_key_consumed=0"
+set "is_pause_key=0"
+
+if "%incoming_key%"=="27" set "is_pause_key=1"
+if "%incoming_key%"=="1" set "is_pause_key=1"
+if "%incoming_key%"=="112" set "is_pause_key=1"
+if "%incoming_key%"=="25" set "is_pause_key=1"
+
+if "%is_pause_key%"=="0" exit /b 0
+
+set "pause_key_consumed=1"
+if exist "%PAUSE_MANAGER%" call "%PAUSE_MANAGER%" ENTER LITE "%pause_source%"
+if "%errorlevel%"=="8" (
+    set "SCENARIO_SKIP_ACTIVE=1"
+)
+exit /b 0
+
+:HandleAdvanceKey
+set "incoming_key=%~1"
+set "advance_key_consumed=0"
+set "is_advance_key=0"
+
+if "%incoming_key%"=="13" set "is_advance_key=1"
+if "%incoming_key%"=="28" set "is_advance_key=1"
+if "%incoming_key%"=="32" set "is_advance_key=1"
+if "%incoming_key%"=="33" set "is_advance_key=1"
+if "%incoming_key%"=="57" set "is_advance_key=1"
+if "%incoming_key%"=="70" set "is_advance_key=1"
+if "%incoming_key%"=="102" set "is_advance_key=1"
+
+if "%is_advance_key%"=="0" exit /b 0
+
+set "advance_key_consumed=1"
+exit /b 0

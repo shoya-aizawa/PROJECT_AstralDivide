@@ -3,17 +3,28 @@
 for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 
 setlocal EnableDelayedExpansion
+set "line=%~1"
+set "speed=%~2"
+call :MainWrapper "!line!" "!speed!"
+set "RC=%errorlevel%"
+endlocal & (
+    set "SCENARIO_SKIP_ACTIVE=%SCENARIO_SKIP_ACTIVE%"
+    exit /b %RC%
+)
 
+:MainWrapper
 set "line=%~1"
 set "speed=%~2"
 if not defined speed set "speed=100"
 
 set "CMDWIZ=%tools_dir%\cmdwiz.exe"
+set "PAUSE_MANAGER=%src_display_dir%\PauseManager.bat"
 set /a "accelerated_speed=%speed% / 4"
 if !accelerated_speed! lss 10 set "accelerated_speed=10"
 
 set "tw_accel_mode=0"
 set "tw_skip_line=0"
+if "%SCENARIO_SKIP_ACTIVE%"=="1" set "tw_skip_line=1"
 set /a i=0
 
 call :InitTypeSe
@@ -188,7 +199,30 @@ if not exist "%CMDWIZ%" exit /b 0
 set "tw_key=%errorlevel%"
 if "%tw_key%"=="0" exit /b 0
 
+call :HandlePauseKey "%tw_key%"
+if "!tw_pause_handled!"=="1" exit /b 0
+
 call :HandleAdvanceKey "%tw_key%"
+exit /b 0
+
+:HandlePauseKey
+set "incoming_key=%~1"
+set "tw_pause_handled=0"
+set "is_pause_key=0"
+
+if "%incoming_key%"=="27" set "is_pause_key=1"
+if "%incoming_key%"=="1" set "is_pause_key=1"
+if "%incoming_key%"=="112" set "is_pause_key=1"
+if "%incoming_key%"=="25" set "is_pause_key=1"
+
+if "%is_pause_key%"=="0" exit /b 0
+
+set "tw_pause_handled=1"
+if exist "%PAUSE_MANAGER%" call "%PAUSE_MANAGER%" ENTER LITE TYPEWRITER
+if "%errorlevel%"=="8" (
+    set "SCENARIO_SKIP_ACTIVE=1"
+    set "tw_skip_line=1"
+)
 exit /b 0
 
 :HandleAdvanceKey
@@ -213,5 +247,4 @@ if "%tw_accel_mode%"=="1" (
 exit /b 0
 
 :done
-endlocal
 exit /b

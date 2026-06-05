@@ -14,6 +14,7 @@ if "%camp_rc%"=="642" exit /b 642
 call :PlayCampToHillTransition
 set "current_location=星が降る丘"
 call :Display
+call "%src_audio_dir%\Play_BGM.bat" "%assets_sounds_dir%\静かな夜に.mp3" repeat %BGM_VOLUME%
 call :Scene "Scene01_PrologueIntro.txt"
 
 :input_name
@@ -25,7 +26,7 @@ set /p player_name="%ESC%[93m> %ESC%[0m"
 
 if not defined player_name (
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Move.wav"
-    <nul set /p="%ESC%[45;93H%ESC%[90m名を告げないままなら、この夜は%ESC%[0m"
+    <nul set /p="%ESC%[45;93H%ESC%[90m名を告げないままなら、これから君は%ESC%[0m"
     <nul set /p="%ESC%[46;101H%ESC%[90m「シオン」と呼ばれる。 [Y/N]%ESC%[0m"
     <nul set /p="%ESC%[42;99H%ESC%[90mシオン%ESC%[0m"
     choice /c YN /n >nul
@@ -44,11 +45,16 @@ set "current_location=星が降る丘"
 call :Display
 call :Scene "Scene02_NameConfirmed.txt"
 call :Scene "Scene03_PrologueOutro.txt"
+call "%src_display_dir%\ChapterResult.bat" "Prologue" "星の夢" "StarFallHill_06_AloneAgain.png" "PrologueComplete"
+set "result_rc=%errorlevel%"
 
 endlocal & (
     set "player_name=%player_name%"
+    set "player_level=%player_level%"
+    set "prologue_completed=%prologue_completed%"
+    set "player_storyroute=%player_storyroute%"
 )
-exit /b 604
+exit /b %result_rc%
 
 :Display
 cls
@@ -56,6 +62,7 @@ call :DrawDialogueGuide
 exit /b 0
 
 :PlayCampToHillTransition
+call "%src_audio_dir%\Play_BGM.bat" "" stop
 set "current_location=丘への道"
 call :Display
 set "camp_transition_scene=Scene00_CampToHill_SeenNone.txt"
@@ -65,13 +72,27 @@ call :Scene "%camp_transition_scene%"
 exit /b 0
 
 :Scene
-for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
-    set "line=%%L"
-    call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
-    echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
-    if !errorlevel! == 0 call :DrawDialogueGuide
-)
+    set "current_scene=%~1"
+    set "current_save_supported=0"
+    call :DrawTextInputGuide
+    for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
+        set "line=%%L"
+        call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
+        echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
+        if !errorlevel! == 0 (
+            call :DrawDialogueGuide
+            call :DrawTextInputGuide
+        )
+    )
+    set "SCENARIO_SKIP_ACTIVE="
+    exit /b 0
+
+:DrawTextInputGuide
+<nul set /p="%ESC%[64;24H%ESC%[0K"
+<nul set /p="%ESC%[64;108H%ESC%[90mF/Space: 早送り  P/Esc: ポーズ%ESC%[0m"
 exit /b 0
+
+
 
 :DrawDialogueGuide
 <nul set /p="%ESC%[5;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
@@ -79,7 +100,7 @@ exit /b 0
 <nul set /p="%ESC%[63;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
 <nul set /p="%ESC%[64;24H%ESC%[0K"
 <nul set /p="%ESC%[65;28H%ESC%[90m現在地: %current_location%%ESC%[0m"
-<nul set /p="%ESC%[65;186H%ESC%[90mprologue%ESC%[0m"
+<nul set /p="%ESC%[65;172H%ESC%[90mPrologue: 星の夢%ESC%[0m"
 exit /b 0
 
 :DrawInputBox
@@ -89,4 +110,18 @@ exit /b 0
 <nul set /p="%ESC%[41;87H%ESC%[90m│                                                            │%ESC%[0m"
 <nul set /p="%ESC%[42;87H%ESC%[90m│                                                            │%ESC%[0m"
 <nul set /p="%ESC%[43;87H%ESC%[90m└────────────────────────────────────────────────────────────┘%ESC%[0m"
+exit /b 0
+
+:DrawSavePromptBox
+<nul set /p="%ESC%[38;85H%ESC%[90m┌──────────────────────────────────────────────────────────────┐%ESC%[0m"
+for /l %%r in (39,1,45) do (
+    <nul set /p="%ESC%[%%r;85H%ESC%[90m│                                                              │%ESC%[0m"
+)
+<nul set /p="%ESC%[46;85H%ESC%[90m└──────────────────────────────────────────────────────────────┘%ESC%[0m"
+exit /b 0
+
+:ClearSavePromptBox
+for /l %%r in (38,1,46) do (
+    <nul set /p="%ESC%[%%r;85H%ESC%[0K"
+)
 exit /b 0

@@ -8,6 +8,7 @@ for /f "eol=# usebackq delims=" %%L in ("scene.txt") do (
     set "line=%%L"
     call :ProcessLine "!line!"
 )
+set "SCENARIO_SKIP_ACTIVE="
 
 
 echo.

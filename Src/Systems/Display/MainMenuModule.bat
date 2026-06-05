@@ -11,7 +11,7 @@ if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems
 if exist "%RCSU%" call "%RCSU%" -trace INFO MMM "start quality=%RENDER_QUALITY% debug=%DEBUG_STATE%"
 
 :: デバッグ状態確認出力
-if %DEBUG_STATE%==1 (
+if "%DEBUG_STATE%"=="1" (
     echo %esc%[K%esc%[93m [DEBUG-MMM] MMM Starting: DEBUG_STATE=%DEBUG_STATE% %esc%[0m
     timeout /t 2 >nul
 )
@@ -94,7 +94,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     call :GetChoice
     call :HandleKey %choice%
     if defined UI_ACTION (
-        if %DEBUG_STATE%==1 (
+        if "%DEBUG_STATE%"=="1" (
             echo %esc%[10;2H%esc%[K%esc%[91m[DEBUG-MMM] UI_ACTION: %UI_ACTION% %esc%[0m
             timeout /t 1 >nul
         )
@@ -177,7 +177,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     )
 
     :: デバッグモード時の追加処理
-    if %DEBUG_STATE%==1 (
+    if "%DEBUG_STATE%"=="1" (
         :: デバッグタイトルを表示
         echo %esc%[1;1H%esc%[43;30m MainMenuModule: Debug Mode %esc%[0m
 
@@ -214,7 +214,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
 
 :Process_Common_Key_Tasks
     set key=%1
-    if %DEBUG_STATE%==1 (
+    if "%DEBUG_STATE%"=="1" (
         call :Add_Key_Log %key%
         if %debug_breakpoint_enabled%==1 (
             if %debug_breakpoint_hit%==0 (
@@ -253,7 +253,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
 
 :Handle_Select
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter.wav" >nul 2>&1
-    if %DEBUG_STATE%==1 (
+    if "%DEBUG_STATE%"=="1" (
         call :Update_All_Debug_Info
         timeout /t 1 >nul
     )
@@ -263,7 +263,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     if "%current_selected_menu%"=="3" set "UI_ACTION=MAINMENU_SETTINGS"
     if "%current_selected_menu%"=="4" set "UI_ACTION=EXIT"
     if exist "%RCSU%" call "%RCSU%" -trace INFO MMM "select menu=%current_selected_menu% action=%UI_ACTION%"
-    if %DEBUG_STATE%==1 (
+    if "%DEBUG_STATE%"=="1" (
         echo %esc%[8;1H%esc%[K%esc%[91m [DEBUG-MMM] Handle_Select: Menu=%current_selected_menu% UI_ACTION=%UI_ACTION% %esc%[0m
         echo %esc%[9;1H%esc%[K%esc%[93m [DEBUG-MMM] About to exit with code: 0 %esc%[0m
         timeout /t 2 >nul
@@ -507,7 +507,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     echo !esc![!menu_row_3!;!menu_col!H!esc![%menu_3_color%m!menu_3_text:~0,%MENU_BOX_INNER_WIDTH%!!esc![0m
     echo !esc![!menu_row_4!;!menu_col!H!esc![%menu_4_color%m!menu_4_text:~0,%MENU_BOX_INNER_WIDTH%!!esc![0m
     endlocal
-    if %DEBUG_STATE%==1 (
+    if "%DEBUG_STATE%"=="1" (
         call :Update_All_Debug_Info
     )
     exit /b 0
@@ -666,7 +666,7 @@ if /i "%RENDER_QUALITY%"=="LOW" (
     exit /b 0
 
 :Toggle_Debug_Mode
-    if %DEBUG_STATE%==0 (
+    if "%DEBUG_STATE%"=="0" (
         set DEBUG_STATE=1
         set debug_initialized=
         echo %esc%[1;1H%esc%[43;30m [DEBUG] FALSE -^> TRUE %esc%[0m

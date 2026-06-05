@@ -16,9 +16,11 @@ for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 
 set "ACTION=%~1"
 set "MODE=%~2"
+set "SOURCE=%~3"
 if "%MODE%"=="" set "MODE=FULL"
 
 if /i "%ACTION%"=="POLL" goto :Poll
+if /i "%ACTION%"=="CONSUME" goto :Consume
 if /i "%ACTION%"=="ENTER" goto :Enter
 if /i "%ACTION%"=="RESUME" goto :Resume
 if /i "%ACTION%"=="RESET" exit /b 0
@@ -27,14 +29,18 @@ exit /b 0
 :Poll
 call :PollPauseKey
 if "!pause_key_hit!"=="1" (
-    if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause key detected mode=%MODE% key=%pause_key_code%"
-    call "%~f0" ENTER %MODE%
+    if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause key detected mode=%MODE% source=%SOURCE% key=%pause_key_code%"
+    call "%~f0" ENTER %MODE% %SOURCE%
     exit /b !errorlevel!
 )
 exit /b 0
 
+:Consume
+exit /b 0
+
 :Enter
 if /i "%MODE%"=="FULL" goto :EnterFull
+if /i "%MODE%"=="LITE" goto :EnterLite
 exit /b 0
 
 :EnterFull
@@ -77,17 +83,29 @@ if "!pause_menu_action!"=="SETTINGS" (
 )
 if "!pause_menu_action!"=="TITLE" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause return-to-title selected"
-    call :ConfirmDanger "Return to title?" "Unsaved progress will be lost."
+    call :ConfirmDanger "タイトルへ戻りますか？" "未保存の進行は失われます。"
     if not "!pause_confirm_ok!"=="1" goto :PauseMenuLoop
     call :StopBgm
     exit /b 641
 )
 if "!pause_menu_action!"=="EXIT" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause exit selected"
-    call :ConfirmDanger "Exit game?" "Unsaved progress will be lost."
+    call :ConfirmDanger "ゲームを終了しますか？" "未保存の進行は失われます。"
     if not "!pause_confirm_ok!"=="1" goto :PauseMenuLoop
     call :StopBgm
     exit /b 642
+)
+if "!pause_menu_action!"=="SAVE_AND_EXIT" (
+    if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause save_and_exit selected"
+    call :ConfirmDanger "セーブして終了しますか？" "スロット%current_save_slot%に進行を保存します。"
+    if not "!pause_confirm_ok!"=="1" goto :PauseMenuLoop
+    call :ExecuteSaveAndExit
+    if "!save_success!"=="1" (
+        call :StopBgm
+        exit /b 642
+    ) else (
+        goto :PauseMenuLoop
+    )
 )
 if "!pause_menu_action!"=="DISABLED" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause disabled item selected"
@@ -97,6 +115,35 @@ if "!pause_menu_action!"=="DISABLED" (
     goto :PauseMenuLoop
 )
 goto :PauseMenuLoop
+
+:EnterLite
+if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "enter lite pause source=%SOURCE%"
+set "PAUSE_BGM_VOLUME=%BGM_VOLUME%"
+if not defined PAUSE_BGM_VOLUME set "PAUSE_BGM_VOLUME=30"
+set "PAUSE_BGM_PATH=%CURRENT_BGM_PATH%"
+set "PAUSE_BGM_MODE=%CURRENT_BGM_MODE%"
+if not defined PAUSE_BGM_MODE set "PAUSE_BGM_MODE=repeat"
+call :PauseBgm
+call :FlushPauseKeys
+
+:LitePauseLoop
+call :RenderLitePause
+call :PollLiteResumeKey
+if "!pause_menu_action!"=="RESUME" (
+    if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "lite pause resume selected source=%SOURCE%"
+    call :ClearLitePauseOverlay
+    call :FlushPauseKeys
+    call :ResumeBgm
+    exit /b 0
+)
+if "!pause_menu_action!"=="SKIP" (
+    if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "lite pause skip selected source=%SOURCE%"
+    call :ClearLitePauseOverlay
+    call :FlushPauseKeys
+    call :ResumeBgm
+    exit /b 8
+)
+goto :LitePauseLoop
 
 :PauseBgm
 if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause bgm fadeout start"
@@ -135,15 +182,69 @@ if exist "%src_audio_dir%\BgmPlayer.bat" (
 )
 exit /b 0
 
+:RenderLitePause
+setlocal EnableDelayedExpansion
+call :PrepareLiteOverlayMetrics
+<nul set /p="!ESC![s"
+for /l %%r in (!lite_band_top!,1,!lite_band_bottom!) do (
+    echo !ESC![%%r;1H!ESC![48;5;236m!lite_band_fill!!ESC![0m
+)
+echo !ESC![!lite_row_title!;!lite_col_title!H!ESC![97;48;5;236mPAUSED!ESC![0m
+echo !ESC![!lite_row_hint!;!lite_col_hint!H!ESC![250;48;5;236m!lite_hint!!ESC![0m
+<nul set /p="!ESC![u"
+endlocal
+exit /b 0
+
+:ClearLitePauseOverlay
+setlocal EnableDelayedExpansion
+call :PrepareLiteOverlayMetrics
+<nul set /p="!ESC![s"
+for /l %%r in (!lite_band_top!,1,!lite_band_bottom!) do (
+    echo !ESC![%%r;1H!ESC![0K
+)
+<nul set /p="!ESC![u"
+endlocal
+exit /b 0
+
+:PrepareLiteOverlayMetrics
+set "lite_width=%CONSOLE_WIDTH%"
+if not defined lite_width set "lite_width=%CONSOLE_COLS%"
+if not defined lite_width set "lite_width=170"
+set "lite_height=%CONSOLE_HEIGHT%"
+if not defined lite_height set "lite_height=%CONSOLE_ROWS%"
+if not defined lite_height set "lite_height=45"
+
+set /a "lite_center_row=lite_height / 2"
+if !lite_center_row! LSS 3 set "lite_center_row=3"
+set /a "lite_band_top=lite_center_row - 1"
+set /a "lite_band_bottom=lite_center_row + 2"
+set /a "lite_row_title=lite_center_row"
+set /a "lite_row_hint=lite_center_row + 1"
+
+set "lite_fill=                                                                                                                                                                                                                                                "
+call set "lite_band_fill=%%lite_fill:~0,%lite_width%%%"
+
+set "lite_title=一時停止"
+set "lite_hint=P / Esc: 戻る  K: スキップ"
+set /a "lite_col_title=((lite_width - 6) / 2) + 1"
+if !lite_col_title! LSS 1 set "lite_col_title=1"
+set /a "lite_col_hint=((lite_width - 34) / 2) + 1"
+if !lite_col_hint! LSS 1 set "lite_col_hint=1"
+exit /b 0
+
+:FlushPauseKeys
+if exist "%tools_dir%\cmdwiz.exe" call "%tools_dir%\cmdwiz.exe" flushkeys >nul 2>&1
+exit /b 0
+
 :RenderFullPauseMenu
 cls
-echo %ESC%[18;84H%ESC%[96mPAUSED%ESC%[0m
-echo %ESC%[20;72H%ESC%[90mW/S or Arrow Keys  F/Enter: Select  Q/Esc/P: Resume%ESC%[0m
-call :RenderPauseItem 1 "Resume"
-call :RenderPauseItem 2 "Settings"
-call :RenderPauseItem 3 "Return to Title"
-call :RenderPauseItem 4 "Exit Game"
-call :RenderPauseItem 5 "Save and Exit [Unavailable]"
+echo %ESC%[18;84H%ESC%[96m一時停止%ESC%[0m
+echo %ESC%[20;68H%ESC%[90mW/S or Arrow: 移動  F/Enter: 決定  Q/Esc/P: 戻る%ESC%[0m
+call :RenderPauseItem 1 "再開"
+call :RenderPauseItem 2 "設定"
+call :RenderPauseItem 3 "タイトルへ戻る"
+call :RenderPauseItem 4 "ゲーム終了"
+call :RenderPauseItem 5 "セーブして終了"
 exit /b 0
 
 :RenderPauseItem
@@ -153,16 +254,11 @@ set "item_text=%~2"
 set /a item_row=24 + (item_idx - 1) * 2
 set "prefix=  "
 set "color=%ESC%[37m"
-if "%item_idx%"=="5" set "color=%ESC%[90m"
 if "!item_idx!"=="%pause_selected%" (
     set "prefix=> "
-    if "%item_idx%"=="5" (
-        set "color=%ESC%[90m"
-    ) else (
-        set "color=%ESC%[93m"
-    )
+    set "color=%ESC%[93m"
 )
-echo !ESC![!item_row!;76H!color!!prefix!!item_text!%ESC%[0m
+echo !ESC![!item_row!;72H!color!!prefix!!item_text!%ESC%[0m
 endlocal
 exit /b 0
 
@@ -179,21 +275,23 @@ if "%confirm_key%"=="0" (
     goto :ConfirmDangerLoop
 )
 
-if /i "%confirm_key%"=="89" set "pause_confirm_ok=1"
-if /i "%confirm_key%"=="121" set "pause_confirm_ok=1"
+if /i "%confirm_key%"=="70" set "pause_confirm_ok=1"
+if /i "%confirm_key%"=="102" set "pause_confirm_ok=1"
 if "%confirm_key%"=="13" set "pause_confirm_ok=1"
 if "%confirm_key%"=="28" set "pause_confirm_ok=1"
-if "%confirm_key%"=="78" set "pause_confirm_ok=0"
-if "%confirm_key%"=="110" set "pause_confirm_ok=0"
+if "%confirm_key%"=="81" set "pause_confirm_ok=0"
+if "%confirm_key%"=="113" set "pause_confirm_ok=0"
 if "%confirm_key%"=="27" set "pause_confirm_ok=0"
 if "%confirm_key%"=="1" set "pause_confirm_ok=0"
+if "%confirm_key%"=="112" set "pause_confirm_ok=0"
+if "%confirm_key%"=="25" set "pause_confirm_ok=0"
 exit /b 0
 
 :RenderConfirmDialog
 setlocal EnableDelayedExpansion
 set "dialog_title=%~1"
 set "dialog_text=%~2"
-set /a "left=64"
+set /a "left=104"
 set /a "top=27"
 set /a "width=56"
 set /a "right=left + width - 1"
@@ -211,8 +309,8 @@ echo !ESC![!top!;!left!H!ESC![97;41m+-------------------------------------------
 echo !ESC![!bottom!;!left!H!ESC![97;41m+------------------------------------------------------+!ESC![0m
 echo !ESC![!top!;!text_col!H!ESC![97;41m!dialog_title!!ESC![0m
 echo !ESC![!text_row!;!text_col!H!ESC![97m!dialog_text!!ESC![0m
-echo !ESC![!confirm_row!;!text_col!H!ESC![93mY / Enter: Confirm!ESC![0m
-echo !ESC![!cancel_row!;!text_col!H!ESC![90mN / Esc: Cancel!ESC![0m
+echo !ESC![!confirm_row!;!text_col!H!ESC![93mF / Enter: 決定!ESC![0m
+echo !ESC![!cancel_row!;!text_col!H!ESC![90mQ / Esc: 戻る!ESC![0m
 endlocal
 exit /b 0
 
@@ -226,6 +324,30 @@ if "%pause_key_code%"=="27" set "pause_key_hit=1"
 if "%pause_key_code%"=="112" set "pause_key_hit=1"
 if "%pause_key_code%"=="1" set "pause_key_hit=1"
 if "%pause_key_code%"=="25" set "pause_key_hit=1"
+exit /b 0
+
+:PollLiteResumeKey
+set "pause_menu_action="
+if not exist "%tools_dir%\cmdwiz.exe" (
+    set "pause_menu_action=RESUME"
+    exit /b 0
+)
+
+:LitePollLoop
+call "%tools_dir%\cmdwiz.exe" getch noWait >nul 2>&1
+set "pause_menu_key=%errorlevel%"
+if "%pause_menu_key%"=="0" (
+    call "%tools_dir%\cmdwiz.exe" delay 15 >nul 2>&1
+    goto :LitePollLoop
+)
+
+if "%pause_menu_key%"=="27" set "pause_menu_action=RESUME"
+if "%pause_menu_key%"=="1" set "pause_menu_action=RESUME"
+if "%pause_menu_key%"=="80" if not defined pause_menu_action set "pause_menu_action="
+if "%pause_menu_key%"=="112" if not defined pause_menu_action set "pause_menu_action=RESUME"
+if "%pause_menu_key%"=="25" if not defined pause_menu_action set "pause_menu_action=RESUME"
+if "%pause_menu_key%"=="75" set "pause_menu_action=SKIP"
+if "%pause_menu_key%"=="107" set "pause_menu_action=SKIP"
 exit /b 0
 
 :PollPauseMenuKey
@@ -272,6 +394,56 @@ if "%pause_menu_action%"=="SELECT" (
     if "%pause_selected%"=="2" set "pause_menu_action=SETTINGS"
     if "%pause_selected%"=="3" set "pause_menu_action=TITLE"
     if "%pause_selected%"=="4" set "pause_menu_action=EXIT"
-    if "%pause_selected%"=="5" set "pause_menu_action=DISABLED"
+    if "%pause_selected%"=="5" set "pause_menu_action=SAVE_AND_EXIT"
+)
+exit /b 0
+
+:ExecuteSaveAndExit
+set "save_success=0"
+if not "%current_save_supported%"=="1" (
+    if exist "%RCSU%" call "%RCSU%" -trace WARN PauseManager "save_and_exit unavailable current_scene=%current_scene% route=%resume_storyroute%"
+    <nul set /p="%ESC%[22;66H%ESC%[91mこの地点では、続きから再開できるセーブをまだ作成できません。%ESC%[0m"
+    if exist "%src_audio_dir%\Play_SE.bat" if defined assets_sounds_fx_dir (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
+    )
+    "%tools_dir%\cmdwiz.exe" delay 1800 >nul 2>&1
+    exit /b 0
+)
+
+if not defined current_save_slot (
+    if exist "%RCSU%" call "%RCSU%" -throw 9 02 30 002 "Save and exit failed: current_save_slot undefined"
+    <nul set /p="%ESC%[22;72H%ESC%[91mエラー: スロットが選択されていません。%ESC%[0m"
+    if exist "%src_audio_dir%\Play_SE.bat" if defined assets_sounds_fx_dir (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
+    )
+    "%tools_dir%\cmdwiz.exe" delay 1500 >nul 2>&1
+    exit /b 0
+)
+
+<nul set /p="%ESC%[22;72H%ESC%[96mセーブデータを書き込んでいます...%ESC%[0m"
+
+    set "temp_save_point=%current_scene%"
+    if not defined temp_save_point set "temp_save_point=manual_save"
+    if defined resume_storyroute set "player_storyroute=%resume_storyroute%"
+    if defined resume_scene set "current_scene=%resume_scene%"
+    if defined resume_location set "current_location=%resume_location%"
+
+    call "%src_savesys_dir%\SaveDataWriter.bat" MANUAL "%current_save_slot%" "%temp_save_point%"
+set "writer_rc=%errorlevel%"
+
+<nul set /p="%ESC%[22;72H%ESC%[0K"
+if "%writer_rc%"=="0" (
+    set "save_success=1"
+    <nul set /p="%ESC%[22;72H%ESC%[92mセーブ完了しました。ゲームを終了します。%ESC%[0m"
+    if exist "%src_audio_dir%\Play_SE.bat" if defined assets_sounds_fx_dir (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav" >nul 2>&1
+    )
+    "%tools_dir%\cmdwiz.exe" delay 1200 >nul 2>&1
+) else (
+    <nul set /p="%ESC%[22;72H%ESC%[91mセーブに失敗しました。(コード: %writer_rc%)%ESC%[0m"
+    if exist "%src_audio_dir%\Play_SE.bat" if defined assets_sounds_fx_dir (
+        call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
+    )
+    "%tools_dir%\cmdwiz.exe" delay 1800 >nul 2>&1
 )
 exit /b 0

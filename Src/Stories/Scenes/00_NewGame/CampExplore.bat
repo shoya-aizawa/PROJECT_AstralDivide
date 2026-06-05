@@ -32,8 +32,11 @@ if "%pick%"=="1" call :MoveUp & goto :explore_loop
 if "%pick%"=="2" call :MoveLeft & goto :explore_loop
 if "%pick%"=="3" call :MoveDown & goto :explore_loop
 if "%pick%"=="4" call :MoveRight & goto :explore_loop
-if "%pick%"=="5" call :InspectCurrent & goto :explore_loop
-if "%pick%"=="6" call :TryLeave & if "!leave_confirmed!"=="1" goto :exit_explore
+if "%pick%"=="5" (
+    call :InspectCurrent
+    if "!leave_confirmed!"=="1" goto :exit_explore
+    goto :explore_loop
+)
 goto :explore_loop
 
 :PollExploreInput
@@ -63,9 +66,6 @@ if "%key_code%"=="102" set "pick=5"
 if "%key_code%"=="33" if "%pick%"=="0" set "pick=5"
 if "%key_code%"=="13" if "%pick%"=="0" set "pick=5"
 if "%key_code%"=="28" if "%pick%"=="0" set "pick=5"
-if "%key_code%"=="81" set "pick=6"
-if "%key_code%"=="113" set "pick=6"
-if "%key_code%"=="17" if "%pick%"=="0" set "pick=6"
 if "%key_code%"=="27" set "pick=PAUSE"
 if "%key_code%"=="112" if "%pick%"=="0" set "pick=PAUSE"
 if "%key_code%"=="25" if "%pick%"=="0" set "pick=PAUSE"
@@ -74,7 +74,13 @@ exit /b 0
 :InitHotspots
 set "current_spot=4"
 set "prev_spot=0"
-set /a viewed_count=0
+
+:: Import progress from loaded save data if exists
+if defined camp_explore_viewed_count (
+    set /a viewed_count=camp_explore_viewed_count
+) else (
+    set /a viewed_count=0
+)
 set /a radio_roll=0
 
 set "spot_name_1=カオレオン人のラジオ"
@@ -82,8 +88,8 @@ set "spot_hint_1=前線の報告が流れている。耳を澄ますたび、違
 set "spot_x_1=183"
 set "spot_y_1=22"
 set "spot_scene_1=Scene00_CampExplore_Radio_01.txt"
-set "spot_seen_1=0"
-set "spot_up_1=1"
+if defined camp_seen_1 (set "spot_seen_1=%camp_seen_1%") else (set "spot_seen_1=0")
+set "spot_up_1=7"
 set "spot_down_1=6"
 set "spot_left_1=4"
 set "spot_right_1=1"
@@ -93,7 +99,7 @@ set "spot_hint_2=疲れた声でぼやいている。列はもう崩れかけて
 set "spot_x_2=36"
 set "spot_y_2=46"
 set "spot_scene_2=Scene00_CampExplore_Ration.txt"
-set "spot_seen_2=0"
+if defined camp_seen_2 (set "spot_seen_2=%camp_seen_2%") else (set "spot_seen_2=0")
 set "spot_up_2=5"
 set "spot_down_2=2"
 set "spot_left_2=2"
@@ -104,7 +110,7 @@ set "spot_hint_3=寝息のそばで、小さな声が揺れている。"
 set "spot_x_3=186"
 set "spot_y_3=50"
 set "spot_scene_3=Scene00_CampExplore_MotherChild.txt"
-set "spot_seen_3=0"
+if defined camp_seen_3 (set "spot_seen_3=%camp_seen_3%") else (set "spot_seen_3=0")
 set "spot_up_3=6"
 set "spot_down_3=3"
 set "spot_left_3=4"
@@ -115,7 +121,7 @@ set "spot_hint_4=子どもや大人の声が混じる。丘の噂もここから
 set "spot_x_4=119"
 set "spot_y_4=44"
 set "spot_scene_4=Scene00_CampExplore_Campfire.txt"
-set "spot_seen_4=0"
+if defined camp_seen_4 (set "spot_seen_4=%camp_seen_4%") else (set "spot_seen_4=0")
 set "spot_up_4=5"
 set "spot_down_4=4"
 set "spot_left_4=2"
@@ -126,7 +132,7 @@ set "spot_hint_5=停戦と国境の話。声は低いが、熱はこもってい
 set "spot_x_5=81"
 set "spot_y_5=30"
 set "spot_scene_5=Scene00_CampExplore_MixedCitizens.txt"
-set "spot_seen_5=0"
+if defined camp_seen_5 (set "spot_seen_5=%camp_seen_5%") else (set "spot_seen_5=0")
 set "spot_up_5=5"
 set "spot_down_5=4"
 set "spot_left_5=5"
@@ -137,11 +143,22 @@ set "spot_hint_6=丘の先を警戒している。静かな夜ほど落ち着か
 set "spot_x_6=154"
 set "spot_y_6=33"
 set "spot_scene_6=Scene00_CampExplore_Sentry.txt"
-set "spot_seen_6=0"
+if defined camp_seen_6 (set "spot_seen_6=%camp_seen_6%") else (set "spot_seen_6=0")
 set "spot_up_6=1"
 set "spot_down_6=3"
 set "spot_left_6=5"
-set "spot_right_6=6"
+set "spot_right_6=7"
+
+set "spot_name_7=丘への道"
+set "spot_hint_7=疎開キャンプの離れ。見回り兵が居ない今のうちに…"
+set "spot_x_7=198"
+set "spot_y_7=12"
+set "spot_scene_7="
+set "spot_seen_7=1"
+set "spot_up_7=7"
+set "spot_down_7=1"
+set "spot_left_7=6"
+set "spot_right_7=7"
 exit /b 0
 
 :MoveUp
@@ -201,6 +218,12 @@ endlocal
 exit /b 0
 
 :InspectCurrent
+if "%current_spot%"=="7" (
+    call :TryLeave
+    if "!leave_confirmed!"=="1" exit /b 0
+    call :RenderDynamic
+    exit /b 0
+)
 call set "scene_file=%%spot_scene_%current_spot%%%"
 if "%current_spot%"=="1" (
     set /a radio_roll=radio_roll+1
@@ -211,6 +234,10 @@ call set "seen_flag=%%spot_seen_%current_spot%%%"
 if "%seen_flag%"=="0" (
     set /a viewed_count=viewed_count+1
     set "spot_seen_%current_spot%=1"
+    
+    :: Write back to global save variables
+    set "camp_explore_viewed_count=!viewed_count!"
+    set "camp_seen_%current_spot%=1"
 )
 call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav"
 call :Display
@@ -225,25 +252,36 @@ exit /b 0
 
 :TryLeave
 set "leave_confirmed=0"
-<nul set /p="%ESC%[62;82H%ESC%[0K%ESC%[90m丘へ向かいますか？ [Y/N]%ESC%[0m"
-choice /c YN /n >nul
-if errorlevel 2 (
-    <nul set /p="%ESC%[62;74H%ESC%[0K"
-    call :RenderDynamic
+call :DrawLeaveConfirm
+choice /c FQ /n >nul
+if "%errorlevel%"=="2" (
+    call :ClearLeaveConfirm
     exit /b 0
 )
+call :ClearLeaveConfirm
 set "leave_confirmed=1"
+exit /b 0
+
+:DrawLeaveConfirm
+<nul set /p="%ESC%[12;154H%ESC%[90m< 丘へ向かいますか？ [F/Q]%ESC%[0m"
+exit /b 0
+
+:ClearLeaveConfirm
+<nul set /p="%ESC%[12;154H                                %ESC%[12;190H"
 exit /b 0
 
 :RenderStatic
 call :Display
-for /l %%i in (1,1,6) do call :DrawSpot %%i
+for /l %%i in (1,1,7) do call :DrawSpot %%i
 exit /b 0
 
 :RenderDynamic
 if not "%prev_spot%"=="0" call :DrawSpot %prev_spot%
 call :DrawSpot %current_spot%
+call :DrawGoalMarker
 call :DrawExploreStatus
+call :DrawObjectivePanel
+call :DrawExploreFooter
 exit /b 0
 
 :DrawSpot
@@ -271,31 +309,84 @@ set /a draw_x=sx-1
 endlocal
 exit /b 0
 
+:DrawGoalMarker
+<nul set /p="%ESC%[12;190H%ESC%[93m[^!]^>%ESC%[0m"
+exit /b 0
+
 :DrawExploreStatus
 call set "cur_name=%%spot_name_%current_spot%%%"
 call set "cur_hint=%%spot_hint_%current_spot%%%"
 <nul set /p="%ESC%[59;28H%ESC%[0K%ESC%[93m注目:%ESC%[0m %cur_name%"
 <nul set /p="%ESC%[60;28H%ESC%[0K%ESC%[90m%cur_hint%%ESC%[0m"
 if %viewed_count% GEQ 6 (
-    <nul set /p="%ESC%[61;28H%ESC%[0K%ESC%[96m……もう十分見た。丘に向かってみよう。%ESC%[0m"
+    <nul set /p="%ESC%[61;28H%ESC%[0K%ESC%[96mもう十分見て回った…丘へ向かおう。%ESC%[0m"
 ) else (
-    <nul set /p="%ESC%[61;28H%ESC%[0K%ESC%[90m任意の寄り道。何も調べなくても、そのまま丘へ向かえる。%ESC%[0m"
+    <nul set /p="%ESC%[61;28H%ESC%[0K%ESC%[90m気になる場所は任意で調べられる。目的地から丘へ向かえる。%ESC%[0m"
 )
-<nul set /p="%ESC%[65;96H%ESC%[90mWASD=移動  F=調べる  Q=丘へ向かう  Seen %viewed_count%/6%ESC%[0m"
+exit /b 0
+
+:DrawExploreFooter
+<nul set /p="%ESC%[65;96H%ESC%[0KWASD=移動  F=調べる/選択  Q=キャンセル%ESC%[0m"
+exit /b 0
+
+:DrawObjectivePanel
+setlocal EnableDelayedExpansion
+set "objective_title=目標"
+set "objective_main=丘へ向かう"
+set "objective_sub=目的地から次へ進む"
+set "optional_title=任意目標"
+set "optional_main=避難民を見て回る"
+set "optional_sub=進捗 !viewed_count!/6"
+set "objective_accent=%ESC%[93m"
+set "objective_main_color=%ESC%[97m"
+set "objective_sub_color=%ESC%[96m"
+set "optional_accent=%ESC%[90m"
+set "optional_main_color=%ESC%[37m"
+set "optional_sub_color=%ESC%[90m"
+set "objective_rule=%ESC%[90m──────────────────%ESC%[0m"
+
+set "objective_right=%CONSOLE_WIDTH%"
+if not defined objective_right set "objective_right=%CONSOLE_COLS%"
+if not defined objective_right set "objective_right=210"
+set /a "objective_left=objective_right-18"
+if !objective_left! LSS 160 set "objective_left=160"
+
+if !viewed_count! GEQ 6 set "optional_sub=全地点を確認済み"
+
+<nul set /p="%ESC%[12;!objective_left!H%ESC%[0K!objective_accent!!objective_title!%ESC%[0m"
+<nul set /p="%ESC%[13;!objective_left!H%ESC%[0K!objective_rule!"
+<nul set /p="%ESC%[14;!objective_left!H%ESC%[0K!objective_main_color!!objective_main!%ESC%[0m"
+<nul set /p="%ESC%[15;!objective_left!H%ESC%[0K!objective_sub_color!!objective_sub!%ESC%[0m"
+<nul set /p="%ESC%[17;!objective_left!H%ESC%[0K!optional_accent!!optional_title!%ESC%[0m"
+<nul set /p="%ESC%[18;!objective_left!H%ESC%[0K!objective_rule!"
+<nul set /p="%ESC%[19;!objective_left!H%ESC%[0K!optional_main_color!!optional_main!%ESC%[0m"
+<nul set /p="%ESC%[20;!objective_left!H%ESC%[0K!optional_sub_color!!optional_sub!%ESC%[0m"
+endlocal
 exit /b 0
 
 :Display
 cls
 call :DrawDialogueGuide
+<nul set /p="%ESC%[64;24H%ESC%[0K"
 exit /b 0
 
 :Scene
-for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
-    set "line=%%L"
-    call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
-    echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
-    if !errorlevel! == 0 call :DrawDialogueGuide
-)
+    call :DrawTextInputGuide
+    for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
+        set "line=%%L"
+        call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
+        echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
+        if !errorlevel! == 0 (
+            call :DrawDialogueGuide
+            call :DrawTextInputGuide
+        )
+    )
+    set "SCENARIO_SKIP_ACTIVE="
+    exit /b 0
+
+:DrawTextInputGuide
+<nul set /p="%ESC%[64;24H%ESC%[0K"
+<nul set /p="%ESC%[64;108H%ESC%[90mF/Space: 早送り  P/Esc: ポーズ%ESC%[0m"
 exit /b 0
 
 :DrawDialogueGuide
@@ -306,7 +397,7 @@ exit /b 0
 <nul set /p="%ESC%[63;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
 <nul set /p="%ESC%[64;24H%ESC%[0K"
 <nul set /p="%ESC%[65;28H%ESC%[90m現在地: 疎開キャンプ%ESC%[0m"
-<nul set /p="%ESC%[65;186H%ESC%[90mexplore%ESC%[0m"
+<nul set /p="%ESC%[65;172H%ESC%[90mPrologue: 星の夢%ESC%[0m"
 exit /b 0
 
 :exit_explore
