@@ -69,6 +69,7 @@ set "saved_at=%DATE% %TIME%"
     echo current_scene=%current_scene%
     echo current_location=%current_location%
     echo prologue_completed=%prologue_completed%
+    for /f "tokens=1* delims==" %%A in ('set completed_chapter_ 2^>nul') do echo %%A=%%B
     echo autosave_enabled=%autosave_enabled%
     echo camp_explore_viewed_count=%camp_explore_viewed_count%
     echo camp_seen_1=%camp_seen_1%
@@ -109,6 +110,7 @@ if /i "%point%"=="prologue_end" (
     set "current_scene=PrologueComplete"
     set "current_location=星が降る丘"
     set "prologue_completed=1"
+    set "completed_chapter_Prologue=1"
 )
 exit /b 0
 
@@ -120,6 +122,7 @@ if not defined current_chapter set "current_chapter=Unknown"
 if not defined current_scene set "current_scene=Unknown"
 if not defined current_location set "current_location=Unknown"
 if not defined prologue_completed set "prologue_completed=0"
+if "%prologue_completed%"=="1" if not defined completed_chapter_Prologue set "completed_chapter_Prologue=1"
 if not defined autosave_enabled set "autosave_enabled=1"
 if not defined camp_explore_viewed_count set "camp_explore_viewed_count=0"
 for /l %%I in (1,1,6) do if not defined camp_seen_%%I set "camp_seen_%%I=0"

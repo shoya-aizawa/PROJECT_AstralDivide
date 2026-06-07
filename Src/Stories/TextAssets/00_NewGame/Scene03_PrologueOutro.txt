@@ -4,16 +4,16 @@
 {delay:950}
 {id:scene02_002}{se:TextSE.wav:late}{pos:51:103}{player_name_tag}{type:normal}……行っちゃった。{/type}
 {delay:500}
-{id:scene02_003}{se:TextSE.wav:now}{pos:55:103}{player_name_tag}{type:normal}名前、聞けなかったな。{/type}
+{id:scene02_003}{se:TextSE.wav:now}{pos:55:103}{player_name_tag}{type:normal}あの子、どこの子だったんだろう{/type}
 {delay:1000}
 {id:scene02_004}{pos:26:82}{type:normal}{hi_black}でも、さっき呼ばれた自分の名だけは、不思議なくらい耳に残っていた。{/hi_black}{/type}
 {delay:1200}
-{id:scene02_005}{se:TextSE.wav:late}{pos:59:103}{player_name_tag}{type:normal}また、会えるかな。{/type}
+{id:scene02_005}{se:TextSE.wav:late}{pos:59:103}{player_name_tag}{type:normal}また会えたらいいな{/type}
 {delay:950}
 {id:scene02_006}{pos:33:90}{type:normal}{hi_black}遠くで誰かの笑い声がして、すぐに静けさへ溶けた。{/hi_black}{/type}
 {delay:1100}
 {clear}
-{id:scene02_007}{pos:29:90}{type:normal}{hi_black}その夜の記憶が、ふたりの運命の最初の印になった。{/hi_black}{/type}
+{id:scene02_007}{pos:29:90}{type:normal}{hi_black}その夜の記憶が、不思議なくらい印象に残った。{/hi_black}{/type}
 {delay:1200}
 {id:scene02_008}{pos:35:100}{type:slow}{cyan}PROLOGUE  -  星の夢  -{/cyan}{/type}
 {delay:1400}

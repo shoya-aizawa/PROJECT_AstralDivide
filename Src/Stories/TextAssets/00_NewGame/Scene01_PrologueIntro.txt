@@ -9,7 +9,7 @@
 {delay:500}
 {bg:StarFallHill_02_HiroineAppears.png}
 {delay:200}
-{id:scene00_005{se:TextSE.wav:now}}{pos:52:33}{unknown}{type:normal}君も抜け出したの？{/type}
+{id:scene00_005}{se:TextSE.wav:now}{pos:52:33}{unknown}{type:normal}君も抜け出したの？{/type}
 {delay:950}
 {id:scene00_006}{pos:54:161}{player}{type:normal}えっ……。{/type}
 {delay:650}

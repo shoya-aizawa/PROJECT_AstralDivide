@@ -8,14 +8,30 @@ chcp 65001 >nul
 :: Arguments:
 ::   %1 - Chapter ID (e.g. Prologue)
 ::   %2 - Chapter Title (e.g. 星の夢)
-::   %3 - Background Image Name (e.g. StarFallHill_06_AloneAgain.png)
+::   %3 - Fallback Background Image Name (e.g. StarFallHill_06_AloneAgain.png)
 ::   %4 - Next Route (e.g. PrologueComplete)
+::   %5 - Level Up Delta (optional, default 0; Prologue currently passes 1)
+::   %6 - Result Rank (optional; selects %chapter_id%_Result_%rank%.png when present)
 :: -----------------------------------------------------------------------------
 
 set "chapter_id=%~1"
 set "chapter_title=%~2"
 set "bg_image=%~3"
 set "next_route=%~4"
+set "level_up_delta=%~5"
+set "result_rank=%~6"
+
+if not defined chapter_id set "chapter_id=Unknown"
+if not defined chapter_title set "chapter_title=Unknown"
+if not defined next_route set "next_route=NewGame"
+if not defined level_up_delta set "level_up_delta=0"
+for /f "delims=0123456789" %%A in ("%level_up_delta%") do set "level_up_delta=0"
+
+set "selected_bg_image=%bg_image%"
+if defined result_rank (
+    set "rank_bg_image=%chapter_id%_Result_%result_rank%.png"
+    if defined assets_images_dir if exist "%assets_images_dir%\!rank_bg_image!" set "selected_bg_image=!rank_bg_image!"
+)
 
 if not defined ESC (
     for /f "delims=" %%a in ('echo prompt $E^| cmd /d') do set "ESC=%%a"
@@ -24,24 +40,27 @@ if not defined ESC (
 if defined RCSU if exist "%RCSU%" call "%RCSU%" -trace INFO ChapterResult "entered chapter=%chapter_id% title=%chapter_title%"
 
 :: -----------------------------------------------------------------------------
-:: [1] Player Status Update Section
+:: [1] Chapter Clear and Reward Section
 :: -----------------------------------------------------------------------------
-:: Note: Future extensions should also place any status variable modifications here.
-set /a "old_level=player_level"
 if not defined player_level (
     set "player_level=0"
-    set "old_level=0"
 )
-set /a "player_level+=1"
-set "prologue_completed=1"
+set /a "old_level=player_level"
+set /a "player_level+=level_up_delta"
+set "completed_var=completed_chapter_%chapter_id%"
+set "!completed_var!=1"
+set "current_chapter=%chapter_id%"
+set "current_scene=%chapter_id%Complete"
+if not defined current_location set "current_location=%chapter_title%"
+if /i "%chapter_id%"=="Prologue" set "prologue_completed=1"
 
 :: -----------------------------------------------------------------------------
 :: [2] Result Screen Presentation
 :: -----------------------------------------------------------------------------
 cls
-if defined assets_images_dir if exist "%assets_images_dir%\%bg_image%" (
+if defined assets_images_dir if defined selected_bg_image if exist "%assets_images_dir%\%selected_bg_image%" (
     if defined tools_dir if exist "%tools_dir%\cmdbkg.exe" (
-        "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\%bg_image%" /b >nul 2>&1
+        "%tools_dir%\cmdbkg.exe" "%assets_images_dir%\%selected_bg_image%" /b >nul 2>&1
     )
 )
 
@@ -50,12 +69,19 @@ if defined assets_images_dir if exist "%assets_images_dir%\%bg_image%" (
 <nul set /p="%ESC%[29;88H%ESC%[96m%chapter_id% COMPLETE%ESC%[0m"
 <nul set /p="%ESC%[33;74H%ESC%[93m%chapter_title% をクリアしました。%ESC%[0m"
 
-:: Draw Level Up Feedback
-<nul set /p="%ESC%[38;84H%ESC%[92m★ LEVEL UP ★%ESC%[0m"
-<nul set /p="%ESC%[40;84H%ESC%[97mLv. %old_level%  ->  Lv. %player_level%%ESC%[0m"
+if defined result_rank (
+    <nul set /p="%ESC%[36;88H%ESC%[96mRESULT RANK: %result_rank%%ESC%[0m"
+)
+
+if %level_up_delta% GTR 0 (
+    <nul set /p="%ESC%[38;84H%ESC%[92m★ LEVEL UP ★%ESC%[0m"
+    <nul set /p="%ESC%[40;84H%ESC%[97mLv. %old_level%  ->  Lv. %player_level%%ESC%[0m"
+) else (
+    <nul set /p="%ESC%[38;79H%ESC%[90m章の清算が完了しました。%ESC%[0m"
+)
 
 <nul set /p="%ESC%[63;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
-<nul set /p="%ESC%[65;28H%ESC%[90m現在地: 星が降る丘%ESC%[0m"
+<nul set /p="%ESC%[65;28H%ESC%[90m現在地: %current_location%%ESC%[0m"
 <nul set /p="%ESC%[65;172H%ESC%[90m%chapter_id%: 完了%ESC%[0m"
 <nul set /p="%ESC%[64;100H%ESC%[90mF/Space: 次へ%ESC%[0m"
 
@@ -68,8 +94,9 @@ call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav" >nul 2>&1
 :: -----------------------------------------------------------------------------
 call :DrawSavePromptBox
 
-<nul set /p="%ESC%[40;92H%ESC%[96mここまでの進捗をセーブしますか？%ESC%[0m"
-<nul set /p="%ESC%[41;101H%ESC%[93m[F:はい / Q:いいえ]%ESC%[0m"
+<nul set /p="%ESC%[39;93H%ESC%[96mチャプタークリアを記録しますか？%ESC%[0m"
+<nul set /p="%ESC%[41;91H%ESC%[90m次回はこの区切りから再開できます。%ESC%[0m"
+<nul set /p="%ESC%[43;101H%ESC%[93m[F:セーブ / Q:あとで]%ESC%[0m"
 
 :InputLoop
 choice /c FQ /n >nul
@@ -78,21 +105,21 @@ set "save_choice=%errorlevel%"
 if "%save_choice%"=="2" (
     :: Player chose NO
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Cancel.wav" >nul 2>&1
-    <nul set /p="%ESC%[40;92H%ESC%[90mここまでの進捗をセーブしますか？ …いいえ  %ESC%[0m"
-    <nul set /p="%ESC%[41;101H%ESC%[0K"
+    <nul set /p="%ESC%[39;93H%ESC%[90mチャプタークリアを記録しますか？ …あとで%ESC%[0m"
+    <nul set /p="%ESC%[43;101H%ESC%[0K"
     set "save_requested=0"
 ) else (
     :: Player chose YES
     call "%src_audio_dir%\Play_SE.bat" "%assets_sounds_fx_dir%\Enter4.wav" >nul 2>&1
-    <nul set /p="%ESC%[40;92H%ESC%[92mここまでの進捗をセーブしますか？ …はい    %ESC%[0m"
-    <nul set /p="%ESC%[41;101H%ESC%[0K"
+    <nul set /p="%ESC%[39;93H%ESC%[92mチャプタークリアを記録しますか？ …セーブ%ESC%[0m"
+    <nul set /p="%ESC%[43;101H%ESC%[0K"
     set "save_requested=1"
 )
 
 "%tools_dir%\cmdwiz.exe" delay 500 >nul 2>&1
 
 :: If this is the initial chapter completion (level 0 -> 1), ask about auto-save
-if "%old_level%"=="0" (
+if %level_up_delta% GTR 0 if "%old_level%"=="0" (
     <nul set /p="%ESC%[42;89H%ESC%[96m今後の冒険のためにオートセーブを有効にしますか？%ESC%[0m"
     <nul set /p="%ESC%[43;101H%ESC%[93m[F:はい / Q:いいえ]%ESC%[0m"
     choice /c FQ /n >nul
@@ -133,7 +160,11 @@ if "%save_requested%"=="1" (
         call :ClearSavePromptBox
         endlocal & (
             set "player_level=%player_level%"
+            set "%completed_var%=1"
             set "prologue_completed=%prologue_completed%"
+            set "current_chapter=%current_chapter%"
+            set "current_scene=%current_scene%"
+            set "current_location=%current_location%"
             set "player_storyroute=%next_route%"
             set "AUTO_SAVE=%AUTO_SAVE%"
             exit /b 603
@@ -153,7 +184,11 @@ call :ClearSavePromptBox
 :: -----------------------------------------------------------------------------
 endlocal & (
     set "player_level=%player_level%"
+    set "%completed_var%=1"
     set "prologue_completed=%prologue_completed%"
+    set "current_chapter=%current_chapter%"
+    set "current_scene=%current_scene%"
+    set "current_location=%current_location%"
     set "player_storyroute=%next_route%"
     set "AUTO_SAVE=%AUTO_SAVE%"
     exit /b 604

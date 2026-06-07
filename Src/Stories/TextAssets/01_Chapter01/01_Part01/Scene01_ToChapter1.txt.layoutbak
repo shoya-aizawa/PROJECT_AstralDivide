@@ -1,0 +1,24 @@
+{clear}
+{bg:Chapter01_Transition_01_StarrySky.png}
+{id:scene01_001}{pos:43:96}{type:slow}{hi_white}それから、七年が過ぎた。{/hi_white}{/type}
+{delay:1200}
+{id:scene01_002}{pos:43:96}{type:normal}{hi_black}戦争は終わらなかった。{/hi_black}{/type}
+{delay:950}
+{id:scene01_003}{pos:31:92}{type:normal}{hi_black}けれど、空を焼くような戦火は遠ざかり、{/hi_black}{/type}
+{delay:950}
+{id:scene01_004}{pos:31:96}{type:normal}{hi_black}世界は長い膠着の時代へと移っていた。{/hi_black}{/type}
+{delay:1300}
+{clear}
+{bg:Chapter01_Transition_02_ColdWarFront.png}
+{id:scene01_005}{pos:43:94}{type:slow}{cyan}星読国セレノス{/cyan}{/type}
+{delay:900}
+{id:scene01_006}{pos:43:101}{type:slow}{cyan}王都エリュシオン{/cyan}{/type}
+{delay:1200}
+{id:scene01_007}{pos:35:91}{type:normal}{hi_black}十六歳最後の日を迎えた少年は、{/hi_black}{/type}
+{delay:950}
+{id:scene01_008}{pos:27:96}{type:normal}{hi_black}明日、正式に星導軍の一員として認められる。{/hi_black}{/type}
+{delay:1300}
+{clear}
+{bg:Chapter01_Transition_03_ElysionMorning.png}
+{id:scene01_009}{pos:28:100}{type:slow}{cyan}CHAPTER 1  -  王都に生きる者  -{/cyan}{/type}
+{delay:1500}

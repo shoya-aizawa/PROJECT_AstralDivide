@@ -22,6 +22,7 @@ if not exist "%TARGET_FILE%" (
 
 set "BG_IMAGE=%~f2"
 if not defined BG_IMAGE set "BG_IMAGE=%assets_images_dir%\AD_StarrySky.png"
+set "DEFAULT_BG_IMAGE=%BG_IMAGE%"
 call :BuildSceneSet
 call :ApplyBackground
 
@@ -38,19 +39,9 @@ if %group_count% LEQ 0 (
     echo No {pos:y:x} lines found in target.
     exit /b 2
 )
+if not defined current_page set /a current_page=1
 
-set "first_pos_line="
-for /l %%i in (1,1,%line_count%) do (
-    if not defined first_pos_line if defined line_y_%%i set "first_pos_line=%%i"
-)
-if not defined first_pos_line (
-    echo No positioned lines found in target.
-    exit /b 3
-)
-set /a cursor_y=!line_y_%first_pos_line%!
-set /a cursor_x=!line_x_%first_pos_line%!
-if %cursor_y% LSS 1 set /a cursor_y=1
-if %cursor_x% LSS 1 set /a cursor_x=1
+call :ResetCursorToFirstPos
 
 set "hover_group="
 set "grabbed_group="
@@ -103,6 +94,11 @@ if /i "%key_code%"=="108" call :ToggleGridAndRender & goto :main_loop
 
 if "%key_code%"=="66" call :PickBackgroundAndRender & goto :main_loop
 if /i "%key_code%"=="98" call :PickBackgroundAndRender & goto :main_loop
+
+if "%key_code%"=="67" call :SwitchPage -1 & goto :main_loop
+if /i "%key_code%"=="99" call :SwitchPage -1 & goto :main_loop
+if "%key_code%"=="86" call :SwitchPage 1 & goto :main_loop
+if /i "%key_code%"=="118" call :SwitchPage 1 & goto :main_loop
 
 if "%key_code%"=="78" call :OpenAdjacentScene 1 & goto :main_loop
 if /i "%key_code%"=="110" call :OpenAdjacentScene 1 & goto :main_loop
@@ -198,12 +194,22 @@ exit /b 0
 
 :ApplyBackground
 if exist "%BG_IMAGE%" %tools_dir%\cmdbkg.exe "%BG_IMAGE%" /b >nul 2>&1
+set "LAST_APPLIED_BG=%BG_IMAGE%"
+exit /b 0
+
+:ApplyBackgroundForCurrentPage
+call set "page_bg=%%page_bg_path_%current_page%%%"
+if not defined page_bg set "page_bg=%DEFAULT_BG_IMAGE%"
+if exist "%page_bg%" set "BG_IMAGE=%page_bg%"
+if /i "%LAST_APPLIED_BG%"=="%BG_IMAGE%" exit /b 0
+call :ApplyBackground
 exit /b 0
 
 :LoadFile
 for /l %%i in (1,1,999) do (
     set "line_raw_%%i="
     set "line_id_%%i="
+    set "line_page_%%i="
     set "line_y_%%i="
     set "line_x_%%i="
     set "line_w_%%i="
@@ -216,17 +222,45 @@ for /l %%i in (1,1,999) do (
     set "group_id_%%i="
     set "group_first_line_%%i="
 )
+for /l %%i in (1,1,99) do set "page_bg_path_%%i="
 set /a line_count=0
 set /a group_count=0
+set /a page_count=1
+set /a scan_page=1
+set "resolved_bg=%DEFAULT_BG_IMAGE%"
+set "page_has_content=0"
 
 for /f "usebackq eol=# delims=" %%L in ("%TARGET_FILE%") do (
     set /a line_count+=1
     set "line_raw_!line_count!=%%L"
+    set "line_page_!line_count!=!scan_page!"
     set "scan=%%L"
     set "line_id="
     set "line_y="
     set "line_x="
     set "line_w="
+
+    if "%%L"=="{clear}" (
+        if "!page_has_content!"=="1" (
+            set /a scan_page+=1
+            if !scan_page! GTR !page_count! set /a page_count=!scan_page!
+            set "page_has_content=0"
+        )
+    ) else (
+        set "page_has_content=1"
+        echo !scan! | findstr /b "{bg:" >nul
+        if !errorlevel! == 0 (
+            for /f "tokens=1 delims=}" %%a in ("!scan:*{bg:=!") do set "bg_spec=%%a"
+            if defined bg_spec (
+                set "candidate_bg=!bg_spec!"
+                if not exist "!candidate_bg!" set "candidate_bg=%assets_images_dir%\!bg_spec!"
+                if exist "!candidate_bg!" (
+                    set "resolved_bg=!candidate_bg!"
+                    set "page_bg_path_!scan_page!=!candidate_bg!"
+                )
+            )
+        )
+    )
 
     echo !scan! | findstr /c:"{id:" >nul
     if !errorlevel! == 0 (
@@ -254,6 +288,16 @@ for /f "usebackq eol=# delims=" %%L in ("%TARGET_FILE%") do (
         call :RegisterGroup "!line_id!" !line_count!
     )
 )
+for /l %%p in (1,1,!page_count!) do (
+    if defined page_bg_path_%%p (
+        set "resolved_bg=!page_bg_path_%%p!"
+    ) else (
+        set "page_bg_path_%%p=!resolved_bg!"
+    )
+)
+if not defined current_page set /a current_page=1
+if !current_page! LSS 1 set /a current_page=1
+if !current_page! GTR !page_count! set /a current_page=!page_count!
 exit /b 0
 
 :MeasureVisibleWidth
@@ -324,11 +368,12 @@ set "group_first_line_%group_count%=%line_index%"
 exit /b 0
 
 :FullRender
+call :ApplyBackgroundForCurrentPage
 cls
 for /l %%i in (1,1,%line_count%) do (
     set "raw=!line_raw_%%i!"
     if defined raw (
-        if not "!raw!"=="{clear}" call :RenderCachedLine %%i
+        if "!line_page_%%i!"=="%current_page%" if not "!raw!"=="{clear}" call :RenderCachedLine %%i
     )
 )
 call :UpdateHover
@@ -357,8 +402,8 @@ if defined grabbed_group set "grab_label=%grabbed_group%"
 <nul set /p="%ESC%[2;3H%ESC%[43;30m Script Layout Editor %ESC%[0m"
 <nul set /p="%ESC%[4;3H%ESC%[0K%ESC%[96mFile:%ESC%[0m %TARGET_FILE%"
 <nul set /p="%ESC%[5;3H%ESC%[0K%ESC%[93mCursor:%ESC%[0m Y=%cursor_y% X=%cursor_x%   %ESC%[93mHover:%ESC%[0m %hover_label%   %ESC%[93mGrab:%ESC%[0m %grab_label%"
-<nul set /p="%ESC%[6;3H%ESC%[0K%ESC%[90mWASD=cursor/move  Shift+W/S=5step  Shift+A/D=10step  G=grab  U/Z=undo/redo  E=text  I=id  R=reload  P=play  J=jump  L=grid  B=bg  M/N=scene  Q=picker  X=exit%ESC%[0m"
-<nul set /p="%ESC%[7;3H%ESC%[0K%ESC%[90m%status_msg%   Undo=%undo_count% Redo=%redo_count% Grid=%grid_on% Scene=%scene_index%/%scene_count%%ESC%[0m"
+<nul set /p="%ESC%[6;3H%ESC%[0K%ESC%[90mWASD=cursor/move  Shift+W/S=5step  Shift+A/D=10step  G=grab  U/Z=undo/redo  E=text  I=id  R=reload  P=play  J=jump  L=grid  B=bg  C/V=page  M/N=scene  Q=picker  X=exit%ESC%[0m"
+<nul set /p="%ESC%[7;3H%ESC%[0K%ESC%[90m%status_msg%   Undo=%undo_count% Redo=%redo_count% Grid=%grid_on% Scene=%scene_index%/%scene_count% Page=%current_page%/%page_count%%ESC%[0m"
 exit /b 0
 
 :DrawGrid
@@ -414,8 +459,10 @@ set "target_group=%~1"
 if not defined target_group exit /b 0
 for /l %%i in (1,1,%line_count%) do (
     if /i "!line_id_%%i!"=="%target_group%" (
-        set "raw=!line_raw_%%i!"
-        if defined raw if not "!raw!"=="{clear}" call :RenderCachedLine %%i
+        if "!line_page_%%i!"=="%current_page%" (
+            set "raw=!line_raw_%%i!"
+            if defined raw if not "!raw!"=="{clear}" call :RenderCachedLine %%i
+        )
     )
 )
 exit /b 0
@@ -551,7 +598,7 @@ set "target_group=%~1"
 if not defined target_group exit /b 0
 for /l %%i in (1,1,%line_count%) do (
     if /i "!line_id_%%i!"=="%target_group%" (
-        call :BlankRow !line_y_%%i!
+        if "!line_page_%%i!"=="%current_page%" call :BlankRow !line_y_%%i!
     )
 )
 exit /b 0
@@ -578,7 +625,7 @@ exit /b 0
 :UpdateHover
 set "hover_group="
 for /l %%i in (1,1,%line_count%) do (
-    if defined line_y_%%i (
+    if "!line_page_%%i!"=="%current_page%" if defined line_y_%%i (
         set /a test_y=!line_y_%%i!
         set /a test_x1=!line_hit_l_%%i!
         set /a test_x2=!line_hit_r_%%i!
@@ -681,6 +728,12 @@ call :PushUndoSnapshot
 set "line_raw_%target_line%=%edited%"
 call :RefreshLineMeta %target_line%
 call :WriteBack
+set "previous_page=%current_page%"
+call :LoadFile
+if defined previous_page set /a current_page=%previous_page%
+if %current_page% LSS 1 set /a current_page=1
+if %current_page% GTR %page_count% set /a current_page=%page_count%
+call :ResetCursorToFirstPos
 set "status_msg=Edited first line of %target_id%."
 call :FullRender
 exit /b 0
@@ -736,6 +789,7 @@ if not defined jump_id (
 for /l %%i in (1,1,%group_count%) do (
     if /i "!group_id_%%i!"=="%jump_id%" (
         set "jump_line=!group_first_line_%%i!"
+        set /a current_page=!line_page_%jump_line%!
         set /a cursor_y=!line_y_%jump_line%!
         set /a cursor_x=!line_x_%jump_line%!
         set "status_msg=Jumped to %jump_id%."
@@ -751,6 +805,8 @@ exit /b 0
 call :PickTargetFile
 if not defined TARGET_FILE goto :done
 call :BuildSceneSet
+set /a current_page=1
+set "LAST_APPLIED_BG="
 set "BACKUP_FILE=%TARGET_FILE%.layoutbak"
 if not exist "%BACKUP_FILE%" copy /y "%TARGET_FILE%" "%BACKUP_FILE%" >nul
 call :ResetUndoHistory
@@ -777,6 +833,8 @@ if %next_scene% LSS 1 set /a next_scene=scene_count
 if %next_scene% GTR %scene_count% set /a next_scene=1
 call set "TARGET_FILE=%%scene_file_%next_scene%%%"
 set /a scene_index=%next_scene%
+set /a current_page=1
+set "LAST_APPLIED_BG="
 call :ResetUndoHistory
 call :LoadFile
 call :ResetCursorToFirstPos
@@ -827,6 +885,8 @@ if !bg_key!==1 if !bg_index! GTR 1 set /a bg_index-=1
 if !bg_key!==2 if !bg_index! LSS !bg_count! set /a bg_index+=1
 if !bg_key!==3 (
     call set "BG_IMAGE=%%bg_file_!bg_index!%%"
+    set "page_bg_path_%current_page%=%BG_IMAGE%"
+    set "LAST_APPLIED_BG="
     call :ApplyBackground
     set "status_msg=Background changed."
     call :FullRender
@@ -839,23 +899,48 @@ if !bg_key!==4 (
 )
 goto :bg_pick_loop
 
+:SwitchPage
+if %page_count% LEQ 1 (
+    set "status_msg=This file has only one page."
+    call :DrawStatus
+    exit /b 0
+)
+set /a next_page=current_page + %~1
+if %next_page% LSS 1 set /a next_page=page_count
+if %next_page% GTR %page_count% set /a next_page=1
+if %next_page%==%current_page% exit /b 0
+set /a current_page=%next_page%
+set "grabbed_group="
+set "hover_group="
+set "prev_hover_group="
+set /a prev_cursor_y=0
+set /a prev_cursor_x=0
+call :ResetCursorToFirstPos
+set "status_msg=Switched to page %current_page%/%page_count%."
+call :FullRender
+exit /b 0
+
 :ResetCursorToFirstPos
 set "first_pos_line="
 for /l %%i in (1,1,%line_count%) do (
-    if not defined first_pos_line if defined line_y_%%i set "first_pos_line=%%i"
+    if not defined first_pos_line if "!line_page_%%i!"=="%current_page%" if defined line_y_%%i set "first_pos_line=%%i"
 )
-if defined first_pos_line (
-    call set "tmp_cursor_y=%%line_y_%first_pos_line%%%"
-    call set "tmp_cursor_x=%%line_x_%first_pos_line%%%"
-    set /a cursor_y=%tmp_cursor_y%
-    set /a cursor_x=%tmp_cursor_x%
-)
+if not defined first_pos_line set /a cursor_y=1 & set /a cursor_x=1 & exit /b 0
+call set "tmp_cursor_y=%%line_y_%first_pos_line%%%"
+call set "tmp_cursor_x=%%line_x_%first_pos_line%%%"
+set /a cursor_y=%tmp_cursor_y%
+set /a cursor_x=%tmp_cursor_x%
 if %cursor_y% LSS 1 set /a cursor_y=1
 if %cursor_x% LSS 1 set /a cursor_x=1
 exit /b 0
 
 :ReloadFileAndRender
+set "previous_page=%current_page%"
 call :LoadFile
+if defined previous_page set /a current_page=%previous_page%
+if %current_page% LSS 1 set /a current_page=1
+if %current_page% GTR %page_count% set /a current_page=%page_count%
+call :ResetCursorToFirstPos
 set "grabbed_group="
 set "status_msg=Reloaded file from disk."
 call :FullRender
@@ -955,7 +1040,12 @@ copy /y "%TARGET_FILE%" "%UNDO_DIR%\redo_!redo_count!.txt" >nul
 copy /y "%UNDO_DIR%\undo_%undo_count%.txt" "%TARGET_FILE%" >nul
 del "%UNDO_DIR%\undo_%undo_count%.txt" >nul 2>&1
 set /a undo_count-=1
+set "previous_page=%current_page%"
 call :LoadFile
+if defined previous_page set /a current_page=%previous_page%
+if %current_page% LSS 1 set /a current_page=1
+if %current_page% GTR %page_count% set /a current_page=%page_count%
+call :ResetCursorToFirstPos
 set "grabbed_group="
 set "status_msg=Undo applied."
 call :FullRender
@@ -972,7 +1062,12 @@ copy /y "%TARGET_FILE%" "%UNDO_DIR%\undo_!undo_count!.txt" >nul
 copy /y "%UNDO_DIR%\redo_%redo_count%.txt" "%TARGET_FILE%" >nul
 del "%UNDO_DIR%\redo_%redo_count%.txt" >nul 2>&1
 set /a redo_count-=1
+set "previous_page=%current_page%"
 call :LoadFile
+if defined previous_page set /a current_page=%previous_page%
+if %current_page% LSS 1 set /a current_page=1
+if %current_page% GTR %page_count% set /a current_page=%page_count%
+call :ResetCursorToFirstPos
 set "grabbed_group="
 set "status_msg=Redo applied."
 call :FullRender

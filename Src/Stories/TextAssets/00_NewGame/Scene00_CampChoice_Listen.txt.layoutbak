@@ -1,0 +1,11 @@
+{bg:RefugeeCamp_01_Wide.png}
+{id:campchoice_listen_001}{pos:18:84}{type:normal}{hi_black}足を止めると、焚き火の向こうからいくつもの声が重なって聞こえてきた。{/hi_black}{/type}
+{delay:700}
+{id:campchoice_listen_002}{pos:51:34}{type:normal}「明日の移送が遅れたらしい」{/type}
+{delay:650}
+{id:campchoice_listen_003}{pos:54:34}{type:normal}「子どもだけでも、静かな場所へやれればいいんだけどね」{/type}
+{delay:900}
+{id:campchoice_listen_004}{pos:59:157}{player}{type:normal}……。{/type}
+{delay:600}
+{id:campchoice_listen_005}{pos:62:82}{type:normal}{hi_black}胸の奥が少しだけ重くなって、それでも君は丘のほうへ視線を向けた。{/hi_black}{/type}
+{delay:950}

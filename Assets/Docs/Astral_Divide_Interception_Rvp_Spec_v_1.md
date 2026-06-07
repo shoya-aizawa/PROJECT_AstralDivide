@@ -90,7 +90,7 @@ AstralDivide(root)
 - 最低フィールド:
   ```
   EVT=BEFORE_BATTLE
-  SCENE=02_Episode01
+  SCENE=01_Chapter01
   NODE=Battle#SlimeHill
   PLAYER=Shoya
   CTX=hp=34/mp=10;retry=0;input_fail=0
@@ -158,7 +158,7 @@ AstralDivide(root)
 ```bat
 :: Systems\Debug\RVP.bat を想定
 :: 使い方:
-::   set "SCENE_ID=02_Episode01" & set "NODE_ID=Battle#SlimeHill"
+::   set "SCENE_ID=01_Chapter01" & set "NODE_ID=Battle#SlimeHill"
 ::   call RVP.bat EVT BEFORE_BATTLE CTX "hp=!hp!;retry=!retry!"
 ::   if /i "%RVP_ACTION%"=="SHOW_HINT" call :ShowHint "%RVP_MSG%"
 ::   if /i "%RVP_ACTION%"=="PATCH"     call :ApplyPatch "%RVP_PATCH%"

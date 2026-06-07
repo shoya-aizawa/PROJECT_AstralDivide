@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_08_ToHill.png}
+{id:campth00_001}{pos:20:82}{type:slow}{hi_white}焚き火の明かりが、少しずつ背中のほうへ遠ざかっていく。{/hi_white}{/type}
+{delay:800}
+{id:campth00_002}{pos:24:88}{type:normal}{hi_black}人の声も、咳払いも、ここまで来るともう風に溶けていた。{/hi_black}{/type}
+{delay:900}
+{id:campth00_003}{se:TextSE.wav:late}{pos:57:156}{player}{type:normal}……星、ほんとに見えるのかな。{/type}
+{delay:850}
+{id:campth00_004}{pos:61:84}{type:normal}{hi_black}君は夜気を吸い込みながら、丘のほうへ足を向けた。{/hi_black}{/type}
+{delay:1000}

@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_06_CampfireRumor.png}
+{id:camp_fire_001}{pos:18:82}{type:normal}{hi_black}焚き火の輪では、子どもたちが眠気と不安をごまかすように噂話をしていた。{/hi_black}{/type}
+{delay:800}
+{id:camp_fire_002}{pos:50:36}{type:normal}「丘の上、すごい星が見えるんだって」{/type}
+{delay:750}
+{id:camp_fire_003}{pos:53:36}{type:normal}「ほんと？ じゃあ、願いごとしたら戦争も終わるかな」{/type}
+{delay:850}
+{id:camp_fire_004}{se:TextSE.wav:late}{pos:58:157}{player}{type:normal}丘……やっぱり、行ってみよう。{/type}
+{delay:900}

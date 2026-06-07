@@ -118,7 +118,10 @@ if defined CONSOLE_FONT (
             set "MAINMENU_NEEDS_REFRESH=1"
             goto :STATE_MAINMENU
         )
-        if errorlevel 604 goto :STATE_MAINMENU
+        if errorlevel 604 (
+            set "MAINMENU_NEEDS_REFRESH=1"
+            goto :STATE_MAINMENU
+        )
         goto :STATE_SCENARIO
     )
     if "%UI_ACTION%"=="NEWGAME_OVERWRITE" (
@@ -128,7 +131,10 @@ if defined CONSOLE_FONT (
             set "MAINMENU_NEEDS_REFRESH=1"
             goto :STATE_MAINMENU
         )
-        if errorlevel 604 goto :STATE_MAINMENU
+        if errorlevel 604 (
+            set "MAINMENU_NEEDS_REFRESH=1"
+            goto :STATE_MAINMENU
+        )
         goto :STATE_SCENARIO
     )
     goto :STATE_MAINMENU
@@ -258,10 +264,11 @@ if defined CONSOLE_FONT (
     set "resume_storyroute="
     set "resume_scene="
     set "resume_location="
-    if "%~1"=="NewGame"  call "%src_scene_newgame_dir%\NewGame.bat"
-    if "%~1"=="Prologue" call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
+    if "%~1"=="NewGame" call "%src_scene_newgame_dir%\NewGame.bat"
+    if "%~1"=="Prologue" call "%src_scene_newgame_dir%\NewGame.bat"
     if "%~1"=="PrologueComplete" call "%src_scene_newgame_dir%\PrologueComplete.bat"
-    if "%~1"=="Episode_1" call "%src_stories_dir%\Episode_01\EntryPoint.bat"
+    if "%~1"=="Chapter01" call "%src_scene_chapter01_dir%\01_Part01\Chapter01_Part01.bat"
+    if "%~1"=="Chapter01_Part01" call "%src_scene_chapter01_dir%\01_Part01\Chapter01_Part01.bat"
     exit /b %errorlevel%
 
 

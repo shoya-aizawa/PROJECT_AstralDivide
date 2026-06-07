@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_05_MixedCitizens.png}
+{id:camp_mixed_001}{pos:18:82}{type:normal}{hi_black}異なる訛りの言葉が、焚き火の煙みたいにぶつかってはほどけていた。{/hi_black}{/type}
+{delay:800}
+{id:camp_mixed_002}{pos:50:36}{type:normal}「停戦の使者が来るって話、あれ本当なのか？」{/type}
+{delay:800}
+{id:camp_mixed_003}{pos:53:36}{type:normal}「本当なら、こんなところにまで兵なんて増えないさ」{/type}
+{delay:900}
+{id:camp_mixed_004}{se:TextSE.wav:now}{pos:58:157}{player}{type:normal}同じ場所にいても、信じてることは違う。{/type}
+{delay:850}

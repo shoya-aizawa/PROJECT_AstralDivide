@@ -184,9 +184,9 @@ goto :Scenario_Return
 :: ストーリー進行処理
 :JumpToEpisode
     if "%~1"=="NewGame"        call "%src_scene_newgame_dir%\NewGame.bat"
-    if "%~1"=="Prologue"       call "%src_scene_prologue_dir%\Prologue_ver.0.bat"
-    if "%~1"=="Episode_1"      call "%cd_stories%\Episode_01\EntryPoint.bat"
-    if "%~1"=="Episode_2"      call "%cd_stories%\Episode_02\EntryPoint.bat"
+    if "%~1"=="Prologue"       call "%src_scene_newgame_dir%\NewGame.bat"
+    if "%~1"=="Chapter01"      call "%src_scene_chapter01_dir%\01_Part01\Chapter01_Part01.bat"
+    if "%~1"=="Chapter01_Part01" call "%src_scene_chapter01_dir%\01_Part01\Chapter01_Part01.bat"
 
     rem if %retcode%==55 goto :JumpToEpisode
 

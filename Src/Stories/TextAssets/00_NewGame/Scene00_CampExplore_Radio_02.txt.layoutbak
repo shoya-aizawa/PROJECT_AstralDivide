@@ -1,0 +1,9 @@
+{bg:RefugeeCamp_02_Radio.png}
+{id:camp_radio02_001}{pos:18:82}{type:normal}{hi_black}ラジオの向こうでは、何人もの声が短く割り込んでは消えていた。{/hi_black}{/type}
+{delay:700}
+{id:camp_radio02_002}{pos:50:36}{type:normal}「……南部避難経路は混雑。第三中継所は受け入れを一時停止……」{/type}
+{delay:850}
+{id:camp_radio02_003}{pos:53:36}{type:normal}「体調不良者と子どもを優先し、北側の天幕群へ振り分けてください」{/type}
+{delay:850}
+{id:camp_radio02_004}{se:TextSE.wav:now}{pos:58:150}{player}{type:normal}まだ、ここに来る人がいるんだ。{/type}
+{delay:900}

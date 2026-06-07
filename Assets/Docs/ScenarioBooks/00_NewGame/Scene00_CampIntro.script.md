@@ -30,6 +30,13 @@ emotion: grim
 memo: 星空の美しさと対になる戦火の現実。
 render_note: `normal / hi_black`
 
+## camp00_004a
+speaker: narration
+text: 星読国セレノスと星砕国カオレオン。その争いは、今も続いている。
+emotion: context
+memo: 両国名を早い段階で一度だけ明示し、Chapter1での再確認に繋げる。
+render_note: `normal / hi_black`
+
 ## camp00_005
 speaker: voice
 text: 「眠れないなら、あの丘まで行ってみな」

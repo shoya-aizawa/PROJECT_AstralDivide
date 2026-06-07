@@ -331,7 +331,7 @@ if %viewed_count% GEQ 6 (
 exit /b 0
 
 :DrawExploreFooter
-<nul set /p="%ESC%[65;96H%ESC%[0KWASD=移動  F=調べる/選択  Q=キャンセル%ESC%[0m"
+<nul set /p="%ESC%[64;96H%ESC%[0KWASD=移動  F=調べる/選択  Q=キャンセル%ESC%[0m"
 exit /b 0
 
 :DrawObjectivePanel
@@ -409,7 +409,7 @@ exit /b 0
 <nul set /p="%ESC%[63;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m"
 <nul set /p="%ESC%[64;24H%ESC%[0K"
 <nul set /p="%ESC%[65;28H%ESC%[90m現在地: 疎開キャンプ%ESC%[0m"
-<nul set /p="%ESC%[65;172H%ESC%[90mPrologue: 星の夢%ESC%[0m"
+<nul set /p="%ESC%[65;187H%ESC%[90mPrologue: 星の夢%ESC%[0m"
 exit /b 0
 
 :exit_explore
