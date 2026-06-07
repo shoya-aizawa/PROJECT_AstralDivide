@@ -377,6 +377,8 @@ exit /b 0
 
 :Scene
     set "scene_skipped=0"
+    set "RENDER_BG_T=33"
+    set "RENDER_BG_PATH="
     call :DrawTextInputGuide
     for /f "eol=# usebackq delims=" %%L in ("%src_text_newgame_dir%\%~1") do (
         if "!SCENARIO_SKIP_ACTIVE!"=="1" (
@@ -385,7 +387,7 @@ exit /b 0
         )
         set "line=%%L"
         call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
-        echo !line! | findstr /c:"{clear}" /c:"{bg:" >nul
+        echo !line! | findstr /c:"{clear}" /c:"{bg:" /c:"{bg_t:" >nul
         if !errorlevel! == 0 (
             call :DrawDialogueGuide
             call :DrawTextInputGuide

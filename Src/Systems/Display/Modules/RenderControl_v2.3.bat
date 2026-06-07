@@ -10,12 +10,15 @@ call :MainWrapper "!line!"
 set "RC=%errorlevel%"
 endlocal & (
     set "SCENARIO_SKIP_ACTIVE=%SCENARIO_SKIP_ACTIVE%"
+    set "RENDER_BG_PATH=%RENDER_BG_PATH%"
+    set "RENDER_BG_T=%RENDER_BG_T%"
     exit /b %RC%
 )
 
 :MainWrapper
 set "line=%~1"
 set "PAUSE_MANAGER=%src_display_dir%\PauseManager.bat"
+if not defined RENDER_BG_T set "RENDER_BG_T=33"
 
 echo !line! | findstr /c:"{id:" >nul
 if !errorlevel! == 0 (
@@ -23,6 +26,19 @@ if !errorlevel! == 0 (
         set "line=%%b"
     )
     call "%~dp0RenderControl_v2.3.bat" "!line!"
+    exit /b 0
+)
+
+echo !line! | findstr /b "{bg_t:" >nul
+if !errorlevel! == 0 (
+    for /f "tokens=1* delims=}" %%a in ("!line:*{bg_t:=!") do (
+        set "bg_t_spec=%%a"
+        set "line=%%b"
+    )
+    set "RENDER_BG_T=!bg_t_spec!"
+    if not defined RENDER_BG_T set "RENDER_BG_T=33"
+    if defined RENDER_BG_PATH if exist "!RENDER_BG_PATH!" %tools_dir%\cmdbkg.exe "!RENDER_BG_PATH!" /b /t !RENDER_BG_T! >nul 2>&1
+    if defined line call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
 
@@ -34,7 +50,11 @@ if !errorlevel! == 0 (
     )
     set "bg_path=!bg_spec!"
     if not exist "!bg_path!" set "bg_path=%assets_images_dir%\!bg_spec!"
-    if exist "!bg_path!" %tools_dir%\cmdbkg.exe "!bg_path!" /b >nul 2>&1
+    if exist "!bg_path!" (
+        set "RENDER_BG_PATH=!bg_path!"
+        if not defined RENDER_BG_T set "RENDER_BG_T=33"
+        %tools_dir%\cmdbkg.exe "!bg_path!" /b /t !RENDER_BG_T! >nul 2>&1
+    )
     if defined line call "%~dp0RenderControl_v2.3.bat" "!line!"
     exit /b 0
 )
