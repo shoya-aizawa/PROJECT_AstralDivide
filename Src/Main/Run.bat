@@ -49,6 +49,14 @@ if exist "%LAUNCH_GUARD%" if not "%errorlevel%"=="0" (
 
 
 
+:: --- Developer Option: Prewarm SE variants only --- 
+set "DEV_PREWARM_SE_ONLY=0"
+for %%A in (%*) do (
+    if /i "%%~A"=="-devprewarmse" set "DEV_PREWARM_SE_ONLY=1"
+    if /i "%%~A"=="--dev-prewarm-se-only" set "DEV_PREWARM_SE_ONLY=1"
+)
+if "%DEV_PREWARM_SE_ONLY%"=="1" goto :Dev_PrewarmSEOnly
+
 :: --- Developer Option: Force First Launch Setup ---
 set "FORCE_FIRST_LAUNCH=0"
 for %%A in (%*) do (
@@ -104,6 +112,31 @@ goto :Dev_ForceFirstLaunch_End
     goto :Dev_ForceFirstLaunch_End
 
 :Dev_ForceFirstLaunch_End
+goto :AfterDevDeveloperOptions
+
+:Dev_PrewarmSEOnly
+    echo %esc%[93m[DEV] SE prewarm only option detected.%esc%[0m
+    if not defined PROJECT_ROOT (
+        for %%I in ("%~dp0..\..") do set "PROJECT_ROOT=%%~fI"
+    )
+    for %%I in ("%PROJECT_ROOT%") do set "PROJECT_ROOT=%%~fI"
+    if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
+
+    set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
+    if exist "%PROJECT_ROOT%\Config\user_config.env" (
+        call "%PROJECT_ROOT%\Src\Systems\Environment\LoadEnv.bat" "%PROJECT_ROOT%\Config\user_config.env" SILENT >nul 2>&1
+    )
+
+    echo %esc%[90mScanning SE variants and rebuilding only missing or stale files ...%esc%[0m
+    call "%PROJECT_ROOT%\Src\Systems\Audio\Prewarm_SE_Variants.bat" FULL
+    if not "%errorlevel%"=="0" (
+        echo %esc%[91m[ERROR] SE prewarm failed with exit code %errorlevel%.%esc%[0m
+        exit /b %errorlevel%
+    )
+    echo %esc%[92m[ OK ] SE prewarm completed.%esc%[0m
+    exit /b 0
+
+:AfterDevDeveloperOptions
 
 :: [0] Mode Interpretation (Default=RUN) (*RUN*/DEBUG/INTERCEPT/REMOTE/REMOTEADMIN)
 :: Parse startup options robustly regardless of argument order

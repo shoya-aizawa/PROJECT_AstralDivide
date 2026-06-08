@@ -3,9 +3,10 @@ setlocal EnableDelayedExpansion
 for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 
 set "CURRENT_SKIP_POLICY=1"
-set "current_location=王都エリュシオン"
+set "current_location=---"
 call :Display
 call :Scene "Scene01_ToChapter1.txt"
+set "current_location=王都エリュシオン - 自室"
 call :Scene "Scene02_Chapter1Opening.txt"
 
 endlocal

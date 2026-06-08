@@ -17,6 +17,7 @@ set "PROGRESS_END=%~4"
 set "SE_SOURCE_DIR=%PROJECT_ROOT%\Assets\Sounds\_SoundEffect"
 set "SE_CACHE_ROOT=%PROJECT_ROOT%\Config\Cache\SEVariants\v4"
 set "SE_BUILDER=%~dp0Build_SE_Variant.ps1"
+set "SE_CACHE_FORMAT=v4"
 if not defined RCSU set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 
 if not exist "%SE_SOURCE_DIR%" exit /b 0
@@ -44,7 +45,7 @@ for %%V in (%SE_BUCKET_LIST%) do (
 )
 
 set /a "file_count=0"
-for %%F in ("%SE_SOURCE_DIR%\*.wav") do set /a "file_count+=1"
+for /f "delims=" %%F in ('dir /b /a-d "%SE_SOURCE_DIR%\*.wav" 2^>nul') do set /a "file_count+=1"
 
 set /a "total_items=file_count*bucket_count"
 if %total_items% LEQ 0 exit /b 0
@@ -53,6 +54,7 @@ set /a "done_items=0"
 set /a "generated_count=0"
 set /a "cache_hit_count=0"
 set /a "failed_count=0"
+set /a "stale_rebuild_count=0"
 if defined PROGRESS_FILE if not defined PROGRESS_START set "PROGRESS_START=0"
 if defined PROGRESS_FILE if not defined PROGRESS_END set "PROGRESS_END=100"
 if defined PROGRESS_FILE echo %PROGRESS_START% > "%PROGRESS_FILE%"
@@ -60,12 +62,32 @@ if exist "%RCSU%" call "%RCSU%" -trace INFO PrewarmSE "start mode=%PREWARM_MODE%
 
 for %%V in (%SE_BUCKET_LIST%) do (
     if not "%%V"=="" (
-        for %%F in ("%SE_SOURCE_DIR%\*.wav") do (
-            set "TARGET_FILE=%SE_CACHE_ROOT%\%%~nF_v%%V%%~xF"
+        for /f "delims=" %%F in ('dir /b /a-d "%SE_SOURCE_DIR%\*.wav" 2^>nul') do (
+            set "SOURCE_FILE=%SE_SOURCE_DIR%\%%F"
+            for %%I in ("!SOURCE_FILE!") do (
+            set "TARGET_FILE=%SE_CACHE_ROOT%\%%~nI_v%%V%%~xI"
+            set "META_FILE=!TARGET_FILE!.meta"
+            set "SOURCE_STAMP=%%~zI|%%~tI|%%V|%SE_CACHE_FORMAT%"
             set "PREWARM_STATUS=cache-hit"
+            set "PREWARM_REASON=cache-hit"
             if not exist "!TARGET_FILE!" (
-                powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SE_BUILDER%" -SourcePath "%%~fF" -OutputPath "!TARGET_FILE!" -Volume %%V >nul 2>&1
+                set "PREWARM_STATUS=missing"
+                set "PREWARM_REASON=missing"
+            ) else if not exist "!META_FILE!" (
+                set "PREWARM_STATUS=stale"
+                set "PREWARM_REASON=stale"
+            ) else (
+                set "CACHED_STAMP="
+                set /p "CACHED_STAMP=" < "!META_FILE!"
+                if /i not "!CACHED_STAMP!"=="!SOURCE_STAMP!" (
+                    set "PREWARM_STATUS=stale"
+                    set "PREWARM_REASON=stale"
+                )
+            )
+            if /i not "!PREWARM_STATUS!"=="cache-hit" (
+                powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%SE_BUILDER%" -SourcePath "%%~fI" -OutputPath "!TARGET_FILE!" -Volume %%V >nul 2>&1
                 if exist "!TARGET_FILE!" (
+                    > "!META_FILE!" <nul set /p "=!SOURCE_STAMP!"
                     set "PREWARM_STATUS=generated"
                 ) else (
                     set "PREWARM_STATUS=generate-failed"
@@ -79,14 +101,16 @@ for %%V in (%SE_BUCKET_LIST%) do (
             )
             if /i "!PREWARM_STATUS!"=="generated" set /a "generated_count+=1"
             if /i "!PREWARM_STATUS!"=="cache-hit" set /a "cache_hit_count+=1"
+            if /i "!PREWARM_REASON!"=="stale" set /a "stale_rebuild_count+=1"
             if /i "!PREWARM_STATUS!"=="generate-failed" (
                 set /a "failed_count+=1"
-                if exist "%RCSU%" call "%RCSU%" -trace WARN PrewarmSE "volume=%%V file=%%~nxF status=!PREWARM_STATUS! item=!done_items!/!total_items!"
+                if exist "%RCSU%" call "%RCSU%" -trace WARN PrewarmSE "volume=%%V file=%%~nxI status=!PREWARM_STATUS! reason=!PREWARM_REASON! item=!done_items!/!total_items!"
+            )
             )
         )
     )
 )
 
 if defined PROGRESS_FILE echo %PROGRESS_END% > "%PROGRESS_FILE%"
-if exist "%RCSU%" call "%RCSU%" -trace INFO PrewarmSE "complete total=%done_items% generated=%generated_count% cache_hit=%cache_hit_count% failed=%failed_count% cache=%SE_CACHE_ROOT%"
+if exist "%RCSU%" call "%RCSU%" -trace INFO PrewarmSE "complete total=%done_items% generated=%generated_count% stale_rebuild=%stale_rebuild_count% cache_hit=%cache_hit_count% failed=%failed_count% cache=%SE_CACHE_ROOT%"
 exit /b 0

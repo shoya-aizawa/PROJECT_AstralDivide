@@ -9,7 +9,7 @@
 {bg:StarFallHill_04_FriendArrives.png}
 {id:scene01_004}{pos:26:101}{type:normal}{hi_white}その時、丘の下から別の少女の声が跳ねた。{/hi_white}{/type}
 {delay:700}
-{id:scene01_005}{se:TextSE.wav:now}{pos:52:64}{type:normal}「ねーえ！ こんなとこにいたの？ 探したんだから」{/type}
+{id:scene01_005}{se:TextSE.wav:now}{pos:52:64}{type:normal}「ねぇ！ こんなとこにいたの？ 探したんだから」{/type}
 {delay:700}
 {id:scene01_006}{se:TextSE.wav:now}{pos:55:76}{type:normal}「早く戻ろ！」{/type}
 {delay:900}

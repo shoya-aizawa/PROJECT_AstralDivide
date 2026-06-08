@@ -21,7 +21,8 @@
 {clear}
 {bg:Chapter01_Room_02_Morning.png}
 {bg_t:33}
-{id:scene02_007}{pos:18:115}{type:slow}{hi_white}目を開ける。{/hi_white}{/type}
+{id:scene02_007}{se:wake_up_in_bed.wav:now}{pos:16:115}{type}{hi_white}「！！」{/hi_white}{/type}
+{id:scene02_007a}{pos:18:115}{type:slow}{hi_white}思わず飛び起きる。{/hi_white}{/type}
 {delay:850}
 {id:scene02_008}{pos:21:102}{type:normal}{hi_black}部屋の外から聞こえる、聞き慣れた声だった。{/hi_black}{/type}
 {delay:900}
