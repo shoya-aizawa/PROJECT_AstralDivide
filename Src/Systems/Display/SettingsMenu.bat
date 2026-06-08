@@ -624,11 +624,17 @@ if "%POLLING_ENABLED%"=="1" call "%cmdwiz_path%" flushkeys >nul 2>&1
     call set "target_key=%%OPT_KEY_%target_idx%%%"
     if /i "%target_key%"=="SE_VOLUME" (
         call set "se_value=%%OPT_VAL_%target_idx%%%"
-        if "%se_value%"=="0" (
+        set "SE_VOLUME=!se_value!"
+        if "!se_value!"=="0" (
             set "OPT_VAL_2=OFF"
+            set "SOUND_FX_ENABLED=OFF"
         ) else (
             set "OPT_VAL_2=ON"
+            set "SOUND_FX_ENABLED=ON"
         )
+    ) else if /i "%target_key%"=="SOUND_FX_ENABLED" (
+        call set "sound_fx=%%OPT_VAL_%target_idx%%%"
+        set "SOUND_FX_ENABLED=!sound_fx!"
     )
     exit /b 0
 

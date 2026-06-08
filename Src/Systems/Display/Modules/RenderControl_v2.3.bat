@@ -360,8 +360,6 @@ if "%incoming_key%"=="28" set "is_advance_key=1"
 if "%incoming_key%"=="32" set "is_advance_key=1"
 if "%incoming_key%"=="33" set "is_advance_key=1"
 if "%incoming_key%"=="57" set "is_advance_key=1"
-if "%incoming_key%"=="70" set "is_advance_key=1"
-if "%incoming_key%"=="102" set "is_advance_key=1"
 
 if "%is_advance_key%"=="0" exit /b 0
 

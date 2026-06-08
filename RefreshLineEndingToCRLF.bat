@@ -18,4 +18,3 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0RefreshLineEndingToCRL
 echo.
 echo Refresh completed successfully.
 echo ===================================================
-pause

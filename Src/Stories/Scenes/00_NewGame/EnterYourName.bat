@@ -128,7 +128,7 @@ exit /b 0
 
 :DrawTextInputGuide
 <nul set /p="%ESC%[64;24H%ESC%[0K"
-<nul set /p="%ESC%[64;108H%ESC%[90mF/Space: 早送り  P/Esc: ポーズ%ESC%[0m"
+<nul set /p="%ESC%[64;108H%ESC%[90mSpace: 早送り  P/Esc: ポーズ%ESC%[0m"
 exit /b 0
 
 

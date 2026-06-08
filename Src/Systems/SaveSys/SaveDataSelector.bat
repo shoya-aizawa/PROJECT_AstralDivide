@@ -18,9 +18,6 @@ set retcode=0
 :: Inherit debug state
 if not defined DEBUG_STATE set DEBUG_STATE=0
 
-:: Hidden sequence is managed independently in each module
-set hidden_sequence=
-
 :: Initialize key logs
 set key_log_count=0
 set key_log_line_1=
@@ -28,11 +25,6 @@ set key_log_line_2=
 set key_log_line_3=
 set key_log_line_4=
 set key_log_line_5=
-
-:: Debug expansion: breakpoint
-set debug_breakpoint_enabled=0
-set debug_breakpoint_hit=0
-set debug_current_key=
 
 :: Initialize the color system
 :: Currently selected slots (1-12 compatible, 3 actual operation)
@@ -446,54 +438,6 @@ exit /b 2099
 :Update_All_Debug_Info
     call :Render_Debug_Overlay
     exit /b 0
-    :: Maintain debug title (unified format)
-    echo %esc%[1;1H%esc%[K
-    echo %esc%[1;1H%esc%[43;30m SaveDataSelector: Debug Mode %esc%[0m
-
-    :: Update dynamic information
-    set current_time=%time:~0,8%
-    echo %esc%[2;1H%esc%[K%esc%[93m [%current_time%] Slot: %current_selected_slot%/%max_total_slots% Mode: %selector_mode% %esc%[0m
-    echo %esc%[3;1H%esc%[K%esc%[96m Available: %max_available_slots% KeyCount: %key_log_count% %esc%[0m
-    echo %esc%[4;1H%esc%[K%esc%[97m Sequence: [%hidden_sequence%] DebugState: %DEBUG_STATE% %esc%[0m
-
-    :: Update status line
-    set status_line=
-    if "%current_selected_slot%"=="1" set status_line=[*1][ 2][ 3]...
-    if "%current_selected_slot%"=="2" set status_line=[ 1][*2][ 3]...
-    if "%current_selected_slot%"=="3" set status_line=[ 1][ 2][*3]...
-    if %current_selected_slot% gtr 3 (
-        set status_line=[ 1][ 2][ 3][*%current_selected_slot%]...
-    )
-
-    echo %esc%[5;1H%esc%[K%esc%[95m SaveSlots: %status_line% %esc%[0m
-    echo %esc%[6;1H%esc%[K%esc%[94m Commands: WASD=Move F=Select Q=Back XYZ=Debug %esc%[0m
-
-    :: Debug extension: breakpoint
-    echo %esc%[8;1H%esc%[K%esc%[93m Breakpoint: %debug_breakpoint_enabled% %esc%[0m
-
-    :: Update key press history
-    echo %esc%[20;1H%esc%[K%esc%[90m Key History (SaveDataSelector): %esc%[0m
-    echo %esc%[21;1H%esc%[K
-    echo %esc%[22;1H%esc%[K
-    echo %esc%[23;1H%esc%[K
-    echo %esc%[24;1H%esc%[K
-    echo %esc%[25;1H%esc%[K
-    if defined key_log_line_1 echo %esc%[21;1H%esc%[97m %key_log_line_1% %esc%[0m
-    if defined key_log_line_2 echo %esc%[22;1H%esc%[37m %key_log_line_2% %esc%[0m
-    if defined key_log_line_3 echo %esc%[23;1H%esc%[37m %key_log_line_3% %esc%[0m
-    if defined key_log_line_4 echo %esc%[24;1H%esc%[37m %key_log_line_4% %esc%[0m
-    if defined key_log_line_5 echo %esc%[25;1H%esc%[37m %key_log_line_5% %esc%[0m
-
-    exit /b 0
-
-:: Add new function
-:Restore_Debug_Display
-    if "%DEBUG_STATE%"=="1" (
-        echo %esc%[1;1H%esc%[43;30m SaveDataSelector: Debug Mode %esc%[0m
-        call :Display_Debug_Info
-    )
-    exit /b 0
-
 
 :GetChoice
     choice /n /c ABCDEFGHIJKLMNOPQRSTUVWXYZ >nul
@@ -506,36 +450,18 @@ exit /b 2099
 :HandleKey
     set key=%1
 
-    :: Initialize breakpoint flag for each key
-    set debug_current_key=%key%
-    set debug_breakpoint_hit=0
-
     :: Unified debug and log processing
     call :Process_Common_Key_Tasks %key%
 
     :: Execute key-specific action
     call :Execute_Key_Action %key%
     if defined UI_ACTION exit /b 0
-
-    :: Post-processing (hidden sequence, limit check)
-    call :Process_Hidden_Sequences
-    call :Check_Sequence_Length
     exit /b 0
 
 :Process_Common_Key_Tasks
     set key=%1
     if "%DEBUG_STATE%"=="1" (
         call :Add_Key_Log %key%
-
-        :: Execute only if breakpoint is enabled and current key has not hit yet
-        if %debug_breakpoint_enabled%==1 (
-            if %debug_breakpoint_hit%==0 (
-                if defined debug_current_key (
-                    set debug_breakpoint_hit=1
-                    call :Debug_Breakpoint_Pause
-                )
-            )
-        )
     )
     exit /b 0
 
@@ -554,9 +480,6 @@ exit /b 2099
     if %key%==4 call :Handle_Move_Right
     if %key%==19 call :Handle_Move_Down
     if %key%==23 call :Handle_Move_Up
-
-    :: Hidden sequence keys (unified processing)
-    call :Handle_Hidden_Sequence_Key %key%
 
     :: WIP keys (for future extension, do nothing for now)
     call :Handle_WIP_Key %key%
@@ -604,213 +527,8 @@ exit /b 2099
     call :Move_Up_3
     exit /b 0
 
-:Handle_Hidden_Sequence_Key
-    set key=%1
-
-    :: Process sequence engine keys
-    if %key%==2 call :Process_Sequence_Engine B & exit /b 0
-    if %key%==3 call :Process_Sequence_Engine C & exit /b 0
-    if %key%==5 call :Process_Sequence_Engine E & exit /b 0
-    if %key%==7 call :Process_Sequence_Engine G & exit /b 0
-    if %key%==9 call :Process_Sequence_Engine I & exit /b 0
-    if %key%==11 call :Process_Sequence_Engine K & exit /b 0
-    if %key%==15 call :Process_Sequence_Engine O & exit /b 0
-    if %key%==16 call :Process_Sequence_Engine P & exit /b 0
-    if %key%==18 call :Process_Sequence_Engine R & exit /b 0
-    if %key%==21 call :Process_Sequence_Engine U & exit /b 0
-    if %key%==24 call :Process_Sequence_Engine X & exit /b 0
-    if %key%==25 call :Process_Sequence_Engine Y & exit /b 0
-    if %key%==26 call :Process_Sequence_Engine Z & exit /b 0
-
-    exit /b 0
-
 :Handle_WIP_Key
-    set key=%1
-    :: WIP keys: for future easter egg
-    :: Currently does nothing (key logs are recorded)
-    exit /b 0
-
-
-:: ========== Unified sequence engine ==========
-
-:Process_Sequence_Engine
-    set char=%1
-
-    :: Unified handling of sequence rules for each character
-    if "%char%"=="B" call :Sequence_Rule_B
-    if "%char%"=="C" call :Sequence_Rule_C
-    if "%char%"=="E" call :Sequence_Rule_E
-    if "%char%"=="G" call :Sequence_Rule_G
-    if "%char%"=="I" call :Sequence_Rule_I
-    if "%char%"=="K" call :Sequence_Rule_K
-    if "%char%"=="O" call :Sequence_Rule_O
-    if "%char%"=="P" call :Sequence_Rule_P
-    if "%char%"=="R" call :Sequence_Rule_R
-    if "%char%"=="U" call :Sequence_Rule_U
-    if "%char%"=="X" call :Sequence_Rule_X
-    if "%char%"=="Y" call :Sequence_Rule_Y
-    if "%char%"=="Z" call :Sequence_Rule_Z
-
-    exit /b 0
-
-:: ========== Sequence rule definition ==========
-
-:Sequence_Rule_B
-    if "%hidden_sequence%"=="BR" (
-        set hidden_sequence=BRK
-    ) else (
-        set hidden_sequence=B
-    )
-    exit /b 0
-
-:Sequence_Rule_C
-    if "%hidden_sequence%"=="PI" (
-        set hidden_sequence=PIC
-    ) else if "%hidden_sequence%"=="" (
-        set hidden_sequence=C
-    ) else (
-        set hidden_sequence=
-    )
-    exit /b 0
-
-:Sequence_Rule_E
-    set hidden_sequence=E
-    exit /b 0
-
-:Sequence_Rule_G
-    set hidden_sequence=
-    exit /b 0
-
-:Sequence_Rule_I
-    if "%hidden_sequence%"=="P" (
-        set hidden_sequence=PI
-    ) else (
-        set hidden_sequence=
-    )
-    exit /b 0
-
-:Sequence_Rule_K
-    if "%hidden_sequence%"=="PIC" (
-        set hidden_sequence=PICK
-    ) else if "%hidden_sequence%"=="BR" (
-        set hidden_sequence=BRK
-    ) else (
-        set hidden_sequence=
-    )
-    exit /b 0
-
-:Sequence_Rule_O
-    if "%hidden_sequence%"=="C" (
-        set hidden_sequence=CO
-    ) else if "%hidden_sequence%"=="CO" (
-        set hidden_sequence=COO
-    ) else (
-        set hidden_sequence=
-    )
-    exit /b 0
-
-:Sequence_Rule_P
-    set hidden_sequence=P
-    exit /b 0
-
-:Sequence_Rule_R
-    if "%hidden_sequence%"=="B" (
-        set hidden_sequence=BR
-    ) else if "%hidden_sequence%"=="COO" (
-        set hidden_sequence=COOR
-    ) else (
-        set hidden_sequence=
-    )
-    exit /b 0
-
-:Sequence_Rule_U
-    set hidden_sequence=
-    exit /b 0
-
-:Sequence_Rule_X
-    set hidden_sequence=X
-    exit /b 0
-
-:Sequence_Rule_Y
-    if "%hidden_sequence%"=="X" (
-        set hidden_sequence=XY
-    ) else (
-        set hidden_sequence=Y
-    )
-    exit /b 0
-
-:Sequence_Rule_Z
-    if "%hidden_sequence%"=="XY" (
-        set hidden_sequence=XYZ
-    ) else (
-        set hidden_sequence=Z
-    )
-    exit /b 0
-
-:Process_Hidden_Sequences
-    :: Debug code: XYZ
-    if "%hidden_sequence%"=="XYZ" (
-        set hidden_sequence=
-        call :Activate_Debug_Mode
-        exit /b 0
-    )
-
-    :: Breakpoint toggle: BRK
-    if "%hidden_sequence%"=="BRK" (
-        set hidden_sequence=
-        call :Debug_Toggle_Breakpoint
-        exit /b 0
-    )
-
-    :: Trigger PICK command
-    if /i "%hidden_sequence%"=="PICK" (
-        set hidden_sequence=
-        call :Launch_Debug_Tool "PICKER" "%current_selected_slot%"
-        exit /b 0
-    )
-
-    :: Trigger COORD command
-    if /i "%hidden_sequence%"=="COORD" (
-        set hidden_sequence=
-        call :Launch_Debug_Tool "COORD" ""
-        exit /b 0
-    )
-
-    :: Sequence length limit (reset if 10 or more characters)
-    call :Check_Sequence_Length
-
-    exit /b 0
-
-    :: Immediately reflect sequence[] changes in debug mode
-    if "%DEBUG_STATE%"=="1" (
-        call :Update_All_Debug_Info
-    )
-
-    exit /b 0
-
-:Launch_Debug_Tool
-    set tool_type=%1
-    set tool_param=%2
-
-    if %tool_type%=="PICKER" (
-        echo %esc%[27;2H%esc%[90m[DEBUG]%esc%[0m
-        echo %esc%[28;2H%esc%[93m[%current_time%] Launch InteractivePicker %esc%[0m
-        call "%cd_systems%\Debug\InteractivePicker.bat" "SaveData" "%tool_param%"
-        echo %esc%[29;2H%esc%[93m[%current_time%] Terminate InteractivePicker %esc%[0m
-    ) else if %tool_type%=="COORD" (
-        call "%cd_systems%\Debug\CoordinateDebugTool.bat" "SaveData"
-    )
-    timeout /t 1 >nul
-    call :Refresh_Display
-    exit /b 0
-
-:Check_Sequence_Length
-    :: Sequence length limit (reset if 10 or more characters)
-    if defined hidden_sequence (
-        if "%hidden_sequence:~10,1%" neq "" (
-            set hidden_sequence=
-        )
-    )
+    :: WIP keys are intentionally ignored.
     exit /b 0
 
 :: ========== Move processing function ==========
@@ -1058,92 +776,6 @@ exit /b 2099
 
     exit /b 0
 
-:: ========== Debug expansion ==========
-
-:Debug_Breakpoint_Pause
-    :: Pseudo breakpoint behavior
-    echo %esc%[12;1H%esc%[41;97m === BREAKPOINT HIT (Key:%debug_current_key%) === %esc%[0m
-    echo %esc%[13;1H%esc%[97m Press any key to continue... %esc%[0m
-    pause >nul
-    echo %esc%[12;1H%esc%[K
-    echo %esc%[13;1H%esc%[K
-    :: Reset breakpoint hit flag when key ends
-    exit /b 0
-
-:Debug_Toggle_Breakpoint
-    :: Toggle breakpoint on/off
-    if %debug_breakpoint_enabled%==0 (
-        set debug_breakpoint_enabled=1
-        echo %esc%[12;1H%esc%[42;30m Breakpoint ENABLED %esc%[0m
-    ) else (
-        set debug_breakpoint_enabled=0
-        echo %esc%[12;1H%esc%[43;30m Breakpoint DISABLED %esc%[0m
-    )
-    timeout /t 1 >nul
-    echo %esc%[12;1H%esc%[K
-    exit /b 0
-
-:Debug_Add_Variable_Watch
-    :: Add to variable watch list
-    set debug_variable_watch_list=%debug_variable_watch_list%,%1
-    exit /b 0
-
-:Debug_Clear_Variable_Watch
-    :: Clear variable watch list
-    set debug_variable_watch_list=
-    exit /b 0
-
-:Activate_Debug_Mode
-    echo %esc%[55;90H%esc%[91m ===== DEBUG CODE ACTIVATED ===== %esc%[0m
-    :: Initialize key logs
-    set key_log_count=0
-    set key_log_line_1=
-    set key_log_line_2=
-    set key_log_line_3=
-    set key_log_line_4=
-    set key_log_line_5=
-    timeout /t 1 >nul
-    call :Toggle_Debug_Mode
-    exit /b 0
-
-:Toggle_Debug_Mode
-    if not defined debug_selector set debug_selector=0
-
-    if %debug_selector%==0 (
-        set debug_selector=1
-        echo %esc%[1;1H%esc%[43;30m [DEBUG] FALSE -^> TRUE %esc%[0m
-        timeout /t 1 >nul
-        echo %esc%[1;1H%esc%[K
-
-        :: Save state to environment variables
-        set DEBUG_STATE=1
-        set RPG_DEBUG_KEYLOG_COUNT=%key_log_count%
-        set RPG_DEBUG_LOG1=%key_log_line_1%
-        set RPG_DEBUG_LOG2=%key_log_line_2%
-        set RPG_DEBUG_LOG3=%key_log_line_3%
-        set RPG_DEBUG_LOG4=%key_log_line_4%
-        set RPG_DEBUG_LOG5=%key_log_line_5%
-
-        call :Display_Debug_Info
-    ) else (
-        set debug_selector=0
-        echo %esc%[1;1H%esc%[42;30m [DEBUG] TRUE -^> FALSE %esc%[0m
-        timeout /t 1 >nul
-        echo %esc%[1;1H%esc%[K
-
-        :: Clear environment variables
-        set DEBUG_STATE=0
-        set RPG_DEBUG_KEYLOG_COUNT=0
-        set RPG_DEBUG_LOG1=
-        set RPG_DEBUG_LOG2=
-        set RPG_DEBUG_LOG3=
-        set RPG_DEBUG_LOG4=
-        set RPG_DEBUG_LOG5=
-
-        call :Refresh_Display
-    )
-    exit /b 0
-
 :Display_Debug_Info
     :: Initial display of debug info
     call :Update_All_Debug_Info
@@ -1159,7 +791,7 @@ exit /b 2099
     set /a "dbg_row_5=dbg_row+4"
     echo !esc![!dbg_row!;!dbg_col!H!esc![48;5;235m!esc![38;5;220m SDS DEBUG                     !esc![0m
     echo !esc![!dbg_row_2!;!dbg_col!H!esc![48;5;235m mode=!selector_mode! slot=!current_selected_slot!        !esc![0m
-    echo !esc![!dbg_row_3!;!dbg_col!H!esc![48;5;235m key=!key! seq=!hidden_sequence!              !esc![0m
+    echo !esc![!dbg_row_3!;!dbg_col!H!esc![48;5;235m key=!key! debug overlay active       !esc![0m
     echo !esc![!dbg_row_4!;!dbg_col!H!esc![48;5;235m anc=!SDS_ANCHOR_COL!,!SDS_ANCHOR_ROW! dlg=!SDS_DIALOG_COL!,!SDS_DIALOG_ROW! !esc![0m
     echo !esc![!dbg_row_5!;!dbg_col!H!esc![48;5;235m act=!UI_ACTION! param=!UI_PARAM!            !esc![0m
     endlocal
@@ -1177,63 +809,34 @@ exit /b 2099
     set input_key=%1
     set current_time=%time:~0,8%
 
-    :: Key mapping (1=A, 2=B, ..., 26=Z)
-    set key_name=Unknown
-    if %input_key%==1 set key_name=A
+    :: Convert the key code to the debug log label.
+    set key_name=UNKNOWN
+    if %input_key%==1 set key_name=A(LEFT)
     if %input_key%==2 set key_name=B
     if %input_key%==3 set key_name=C
-    if %input_key%==4 set key_name=D
+    if %input_key%==4 set key_name=D(RIGHT)
     if %input_key%==5 set key_name=E
-    if %input_key%==6 set key_name=F
+    if %input_key%==6 set key_name=F(SELECT)
     if %input_key%==7 set key_name=G
     if %input_key%==8 set key_name=H
     if %input_key%==9 set key_name=I
-    if %input_key%==10 set key_name=J
-    if %input_key%==11 set key_name=K
-    if %input_key%==12 set key_name=L
-    if %input_key%==13 set key_name=M
-    if %input_key%==14 set key_name=N
-    if %input_key%==15 set key_name=O
-    if %input_key%==16 set key_name=P
-    if %input_key%==17 set key_name=Q
-    if %input_key%==18 set key_name=R
-    if %input_key%==19 set key_name=S
-    if %input_key%==20 set key_name=T
-    if %input_key%==21 set key_name=U
-    if %input_key%==22 set key_name=V
-    if %input_key%==23 set key_name=W
-    if %input_key%==24 set key_name=X
-    if %input_key%==25 set key_name=Y
-    if %input_key%==26 set key_name=Z
-
-    :: Convert key name to human-readable format (unified with MainMenuModule.bat)
-    set key_name=UNKNOWN
-    if %input_key%==1 set key_name=A(LEFT)
-    if %input_key%==2 set key_name=B(Hidden)
-    if %input_key%==3 set key_name=C(Hidden)
-    if %input_key%==4 set key_name=D(RIGHT)
-    if %input_key%==5 set key_name=E(Hidden)
-    if %input_key%==6 set key_name=F(SELECT)
-    if %input_key%==7 set key_name=G(Hidden)
-    if %input_key%==8 set key_name=H(Hidden)
-    if %input_key%==9 set key_name=I(Hidden)
     if %input_key%==10 set key_name=J(WIP)
-    if %input_key%==11 set key_name=K(Hidden)
+    if %input_key%==11 set key_name=K
     if %input_key%==12 set key_name=L(WIP)
     if %input_key%==13 set key_name=M(WIP)
     if %input_key%==14 set key_name=N(WIP)
-    if %input_key%==15 set key_name=O(Hidden)
-    if %input_key%==16 set key_name=P(Hidden)
+    if %input_key%==15 set key_name=O
+    if %input_key%==16 set key_name=P
     if %input_key%==17 set key_name=Q(BACK)
-    if %input_key%==18 set key_name=R(Hidden)
+    if %input_key%==18 set key_name=R
     if %input_key%==19 set key_name=S(DOWN)
     if %input_key%==20 set key_name=T(WIP)
     if %input_key%==21 set key_name=U(WIP)
     if %input_key%==22 set key_name=V(WIP)
     if %input_key%==23 set key_name=W(UP)
-    if %input_key%==24 set key_name=X(Hidden)
-    if %input_key%==25 set key_name=Y(Hidden)
-    if %input_key%==26 set key_name=Z(Hidden)
+    if %input_key%==24 set key_name=X
+    if %input_key%==25 set key_name=Y
+    if %input_key%==26 set key_name=Z
 
     :: Create log entry (unified format with MainMenuModule.bat)
     set log_entry=[%current_time%] #%key_log_count% %key_name% - Slot:%current_selected_slot%
@@ -1262,40 +865,40 @@ exit /b 2099
     set dialog_action=%~2
     set current_time=%time:~0,8%
 
-    :: Convert key name to human-readable format (unified with MainMenuModule.bat)
+    :: Convert the dialog input to the debug log label.
     set key_name=UNKNOWN
     if "%input_key%"=="F" set key_name=F(CONFIRM)
     if "%input_key%"=="Q" set key_name=Q(CANCEL)
     if "%input_key%"=="Y" set key_name=Y(YES)
     if "%input_key%"=="N" set key_name=N(NO)
 
-    :: Processing for numeric value (after string check)
+    :: Process numeric key codes after the named dialog shortcuts.
     if "%input_key%"=="1" set key_name=A(LEFT)
-    if "%input_key%"=="2" set key_name=B(Hidden)
-    if "%input_key%"=="3" set key_name=C(Hidden)
+    if "%input_key%"=="2" set key_name=B
+    if "%input_key%"=="3" set key_name=C
     if "%input_key%"=="4" set key_name=D(RIGHT)
-    if "%input_key%"=="5" set key_name=E(Hidden)
+    if "%input_key%"=="5" set key_name=E
     if "%input_key%"=="6" set key_name=F(CONFIRM)
-    if "%input_key%"=="7" set key_name=G(Hidden)
-    if "%input_key%"=="8" set key_name=H(Hidden)
-    if "%input_key%"=="9" set key_name=I(Hidden)
+    if "%input_key%"=="7" set key_name=G
+    if "%input_key%"=="8" set key_name=H
+    if "%input_key%"=="9" set key_name=I
     if "%input_key%"=="10" set key_name=J(WIP)
-    if "%input_key%"=="11" set key_name=K(Hidden)
+    if "%input_key%"=="11" set key_name=K
     if "%input_key%"=="12" set key_name=L(WIP)
     if "%input_key%"=="13" set key_name=M(WIP)
     if "%input_key%"=="14" set key_name=N(WIP)
-    if "%input_key%"=="15" set key_name=O(Hidden)
-    if "%input_key%"=="16" set key_name=P(Hidden)
+    if "%input_key%"=="15" set key_name=O
+    if "%input_key%"=="16" set key_name=P
     if "%input_key%"=="17" set key_name=Q(CANCEL)
-    if "%input_key%"=="18" set key_name=R(Hidden)
+    if "%input_key%"=="18" set key_name=R
     if "%input_key%"=="19" set key_name=S(DOWN)
     if "%input_key%"=="20" set key_name=T(WIP)
     if "%input_key%"=="21" set key_name=U(WIP)
     if "%input_key%"=="22" set key_name=V(WIP)
     if "%input_key%"=="23" set key_name=W(UP)
-    if "%input_key%"=="24" set key_name=X(Hidden)
-    if "%input_key%"=="25" set key_name=Y(Hidden)
-    if "%input_key%"=="26" set key_name=Z(Hidden)
+    if "%input_key%"=="24" set key_name=X
+    if "%input_key%"=="25" set key_name=Y
+    if "%input_key%"=="26" set key_name=Z
 
     :: Create log entry (unified format with MainMenuModule.bat)
     set log_entry=[%current_time%] #%key_log_count% %key_name% - Dialog:%dialog_action%

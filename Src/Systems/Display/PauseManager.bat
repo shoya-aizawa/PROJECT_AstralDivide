@@ -1,6 +1,5 @@
 @echo off
 chcp 65001 >nul
-setlocal EnableExtensions EnableDelayedExpansion
 
 if not defined PROJECT_ROOT (
     for %%A in ("%~dp0..\..\..") do set "PROJECT_ROOT=%%~fA"
@@ -23,8 +22,8 @@ if /i "%ACTION%"=="POLL" goto :Poll
 if /i "%ACTION%"=="CONSUME" goto :Consume
 if /i "%ACTION%"=="ENTER" goto :Enter
 if /i "%ACTION%"=="RESUME" goto :Resume
-if /i "%ACTION%"=="RESET" exit /b 0
-exit /b 0
+if /i "%ACTION%"=="RESET" set "pause_manager_rc=0" & goto :PauseManagerExit
+set "pause_manager_rc=0" & goto :PauseManagerExit
 
 :Poll
 call :PollPauseKey
@@ -38,6 +37,10 @@ exit /b 0
 :Consume
 exit /b 0
 
+:Resume
+call :ResumeBgm
+exit /b 0
+
 :Enter
 if /i "%MODE%"=="FULL" goto :EnterFull
 if /i "%MODE%"=="LITE" goto :EnterLite
@@ -45,6 +48,7 @@ exit /b 0
 
 :EnterFull
 if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "enter full pause"
+if exist "%RCSU%" call "%RCSU%" -trace DEBUG PauseManager "enter full pause vars: BGM_VOLUME=!BGM_VOLUME! SE_VOLUME=!SE_VOLUME! SOUND_FX_ENABLED=!SOUND_FX_ENABLED! CURRENT_BGM_PATH=!CURRENT_BGM_PATH!"
 set "PAUSE_BGM_VOLUME=%BGM_VOLUME%"
 if not defined PAUSE_BGM_VOLUME set "PAUSE_BGM_VOLUME=30"
 set "PAUSE_BGM_PATH=%CURRENT_BGM_PATH%"
@@ -71,7 +75,9 @@ if "!pause_menu_action!"=="DOWN" (
 if "!pause_menu_action!"=="RESUME" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause resume selected"
     call :ResumeBgm
-    exit /b 0
+    set "pause_manager_rc=0"
+    if exist "%RCSU%" call "%RCSU%" -trace DEBUG PauseManager "resume -> rc=!pause_manager_rc! SE=!SE_VOLUME! SOUND=!SOUND_FX_ENABLED!"
+    goto :PauseManagerExit
 )
 if "!pause_menu_action!"=="SETTINGS" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause settings selected"
@@ -79,6 +85,7 @@ if "!pause_menu_action!"=="SETTINGS" (
     set "PAUSE_SETTINGS_TOUCHED=1"
     call "%src_display_dir%\SettingsMenu.bat"
     set "PAUSE_SUPPRESS_BGM_PREVIEW="
+    if exist "%RCSU%" call "%RCSU%" -trace DEBUG PauseManager "after settings return vars: SE_VOLUME=!SE_VOLUME! SOUND_FX_ENABLED=!SOUND_FX_ENABLED! PAUSE_SETTINGS_TOUCHED=!PAUSE_SETTINGS_TOUCHED!"
     goto :PauseMenuLoop
 )
 if "!pause_menu_action!"=="TITLE" (
@@ -86,14 +93,18 @@ if "!pause_menu_action!"=="TITLE" (
     call :ConfirmDanger "タイトルへ戻りますか？" "未保存の進行は失われます。"
     if not "!pause_confirm_ok!"=="1" goto :PauseMenuLoop
     call :StopBgm
-    exit /b 641
+    set "pause_manager_rc=641"
+    if exist "%RCSU%" call "%RCSU%" -trace DEBUG PauseManager "title -> rc=!pause_manager_rc! SE=!SE_VOLUME! SOUND=!SOUND_FX_ENABLED!"
+    goto :PauseManagerExit
 )
 if "!pause_menu_action!"=="EXIT" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause exit selected"
     call :ConfirmDanger "ゲームを終了しますか？" "未保存の進行は失われます。"
     if not "!pause_confirm_ok!"=="1" goto :PauseMenuLoop
     call :StopBgm
-    exit /b 642
+    set "pause_manager_rc=642"
+    if exist "%RCSU%" call "%RCSU%" -trace DEBUG PauseManager "exit -> rc=!pause_manager_rc! SE=!SE_VOLUME! SOUND=!SOUND_FX_ENABLED!"
+    goto :PauseManagerExit
 )
 if "!pause_menu_action!"=="SAVE_AND_EXIT" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "pause save_and_exit selected"
@@ -102,7 +113,9 @@ if "!pause_menu_action!"=="SAVE_AND_EXIT" (
     call :ExecuteSaveAndExit
     if "!save_success!"=="1" (
         call :StopBgm
-        exit /b 642
+        set "pause_manager_rc=642"
+        if exist "%RCSU%" call "%RCSU%" -trace DEBUG PauseManager "save_and_exit -> rc=!pause_manager_rc! save_success=!save_success! SE=!SE_VOLUME! SOUND=!SOUND_FX_ENABLED!"
+        goto :PauseManagerExit
     ) else (
         goto :PauseMenuLoop
     )
@@ -134,14 +147,16 @@ if "!pause_menu_action!"=="RESUME" (
     call :ClearLitePauseOverlay
     call :FlushPauseKeys
     call :ResumeBgm
-    exit /b 0
+    set "pause_manager_rc=0"
+    goto :PauseManagerExit
 )
 if "!pause_menu_action!"=="SKIP" (
     if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "lite pause skip selected source=%SOURCE%"
     call :ClearLitePauseOverlay
     call :FlushPauseKeys
     call :ResumeBgm
-    exit /b 8
+    set "pause_manager_rc=8"
+    goto :PauseManagerExit
 )
 goto :LitePauseLoop
 
@@ -237,6 +252,12 @@ exit /b 0
 :FlushPauseKeys
 if exist "%tools_dir%\cmdwiz.exe" call "%tools_dir%\cmdwiz.exe" flushkeys >nul 2>&1
 exit /b 0
+
+:PauseManagerExit
+if not defined pause_manager_rc set "pause_manager_rc=0"
+set "__pm_saved_rc=%pause_manager_rc%"
+if exist "%RCSU%" call "%RCSU%" -trace INFO PauseManager "exiting pause rc=%__pm_saved_rc% LANGUAGE=!LANGUAGE! SOUND_FX_ENABLED=!SOUND_FX_ENABLED! SE_VOLUME=!SE_VOLUME! BGM_VOLUME=!BGM_VOLUME! PAUSE_SETTINGS_TOUCHED=!PAUSE_SETTINGS_TOUCHED!"
+exit /b %pause_manager_rc%
 
 :RenderFullPauseMenu
 cls
