@@ -1,0 +1,9 @@
+{clear}
+{id:scene06_001}{pos:16:109}{type:slow}{hi_white}中央広場は、朝から色と音で満ちていた。{/hi_white}{/type}
+{delay:900}
+{id:scene06_002}{pos:21:99}{type:normal}{hi_black}噴水のまわりでは、明日の宴に向けた飾り布が風に揺れている。{/hi_black}{/type}
+{delay:1100}
+{id:scene06_003}{pos:26:89}{type:normal}「こっちの紐を持って！」「その花飾りはもう少し上！」{/type}
+{delay:1150}
+{id:scene06_004}{pos:31:102}{type:normal}{hi_black}王都じゅうが、誰かの節目を自分のことのように祝おうとしていた。{/hi_black}{/type}
+{delay:1200}

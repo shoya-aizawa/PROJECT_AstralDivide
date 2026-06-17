@@ -1,0 +1,9 @@
+{clear}
+{bg:Chapter01_Room_03_Window.png}
+{bg_t:33}
+{id:room_window_001}{pos:52:96}{type:slow}{hi_white}窓の外には、王都エリュシオンの朝が広がっていた。{/hi_white}{/type}
+{delay:900}
+{id:room_window_002}{pos:56:96}{type:normal}{hi_black}白い屋根の向こう、遠くの塔まで朝の光を受けている。{/hi_black}{/type}
+{delay:1000}
+{id:room_window_003}{pos:60:96}{type:normal}{hi_black}明日には、自分ももう子供ではいられない。{/hi_black}{/type}
+{delay:900}

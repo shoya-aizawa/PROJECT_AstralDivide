@@ -4,8 +4,8 @@
 ::------------------------------------------------------------------------------
 if not "%REMOTE_MODE%"=="1" exit /b 0
 
-:: Trigger the Connection Portal at 40% progress
-if "!pct!"=="40" (
+:: Trigger the Connection Portal once progress reaches the remote gate.
+if !pct! GEQ 40 (
     if not defined REMOTE_LOGGED_IN (
         :: Import temporary environment validation cache to the parent shell
         if exist "%TEMP%\ad_boot_diag_result.env" (

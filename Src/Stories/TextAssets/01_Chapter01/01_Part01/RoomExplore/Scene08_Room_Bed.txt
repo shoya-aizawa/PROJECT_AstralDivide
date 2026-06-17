@@ -1,0 +1,7 @@
+{clear}
+{bg:Chapter01_Room_08_Bed.png}
+{bg_t:33}
+{id:room_bed_001}{pos:50:96}{type:slow}{hi_white}乱れたままの寝台が、さっきまでの寝坊を物語っている。{/hi_white}{/type}
+{delay:900}
+{id:room_bed_002}{pos:54:96}{type:normal}{hi_black}……もう一度潜り込んだら、今度こそ母さんに怒鳴られる。{/hi_black}{/type}
+{delay:1000}

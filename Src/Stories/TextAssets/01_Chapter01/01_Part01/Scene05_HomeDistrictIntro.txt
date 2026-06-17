@@ -1,0 +1,9 @@
+{clear}
+{id:scene05_001}{pos:16:105}{type:slow}{hi_white}住宅区へ踏み出すと、朝の空気が肌に軽かった。{/hi_white}{/type}
+{delay:900}
+{id:scene05_002}{pos:21:99}{type:normal}{hi_black}白壁の家々のあいだを、祝い前日のざわめきがゆっくり流れていく。{/hi_black}{/type}
+{delay:1100}
+{id:scene05_003}{pos:26:94}{type:normal}{hi_black}市場へ向かう人影も、広場へ布飾りを運ぶ人影も、みな少しだけ足取りが早い。{/hi_black}{/type}
+{delay:1200}
+{id:scene05_004}{pos:31:103}{type:slow}{cyan}士官学校へ向かう前に、王都の朝を少し歩いてみよう。{/cyan}{/type}
+{delay:1300}

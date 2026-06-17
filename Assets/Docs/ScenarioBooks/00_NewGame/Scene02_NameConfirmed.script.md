@@ -46,9 +46,9 @@ render_note: `normal`
 
 ## scene01_007
 speaker: narration
-text: 隣にいた少女は、はっとしたように立ち上がった。
+text: 隣にいた少女は、はっとしたように振り返った。
 emotion: sudden
-memo: ヒロイン退場前の動き。
+memo: 迎えの声に反応する動き。現行テキストに合わせる。
 render_note: `normal / hi_white`
 
 ## scene01_008

@@ -1,0 +1,20 @@
+{clear}
+{bg_t:33}
+{id:scene03_001}{pos:17:106}{type:slow}{hi_white}階下へ降りると、焼けたパンの匂いがした。{/hi_white}{/type}
+{delay:900}
+{id:scene03_002}{pos:21:82}{type:normal}「やっと起きたわね。今日は広場も市場も朝から慌ただしいんだから」{/type}
+{delay:1100}
+{id:scene03_003}{pos:25:108}{type:normal}{hi_black}母は手を止めず、支度の合間にこちらを振り返った。{/hi_black}{/type}
+{delay:950}
+{id:scene03_004}{pos:29:90}{type:normal}「明日で十七なんでしょう。今日くらいは、しゃんとして行ってきなさい」{/type}
+{delay:1200}
+{id:scene03_005}{pos:33:104}{type:normal}{hi_white}そう言って、小さな革袋をこちらへ差し出してくる。{/hi_white}{/type}
+{delay:950}
+{id:scene03_006}{pos:37:97}{type:normal}{yellow}{var:chapter01_allowance_amount}G を受け取った。 所持金: {var:player_money}G{/yellow}{/type}
+{delay:1200}
+{id:scene03_007}{pos:41:83}{type:normal}「祝い前日なんだし、寄り道してもいいけど……士官学校にはちゃんと顔を出すのよ」{/type}
+{delay:1350}
+{id:scene03_008}{pos:45:103}{type:normal}{hi_black}市場を見るのも、広場を覗くのも、その前にできる。{/hi_black}{/type}
+{delay:1050}
+{id:scene03_009}{pos:49:109}{type:slow}{cyan}今日の目的は、士官学校へ向かうことだ。{/cyan}{/type}
+{delay:1300}

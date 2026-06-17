@@ -1,0 +1,15 @@
+{clear}
+{bg:Chapter01_Transition_03_ElysionMorning.png}
+{bg_t:33}
+{id:scene04_001}{pos:17:105}{type:slow}{hi_white}家の扉を開けると、王都の朝がまっすぐ流れ込んできた。{/hi_white}{/type}
+{delay:1000}
+{id:scene04_002}{pos:22:101}{type:normal}{hi_black}白壁の家並みの向こうで、祝い前日のざわめきが広がっている。{/hi_black}{/type}
+{delay:1100}
+{id:scene04_003}{pos:27:102}{type:normal}{hi_black}市場へ向かう荷車、広場の飾り付け、開き始めた店の看板。{/hi_black}{/type}
+{delay:1150}
+{id:scene04_004}{pos:32:86}{type:normal}「まずは士官学校に行く。それまでなら、少しくらい寄り道しても構わない」{/type}
+{delay:1350}
+{id:scene04_005}{pos:37:101}{type:normal}{hi_white}酒場、書店、市場、路地裏。王都はもう目を覚ましている。{/hi_white}{/type}
+{delay:1200}
+{id:scene04_006}{pos:42:99}{type:slow}{cyan}十六歳最後の一日が、ここから始まる。{/cyan}{/type}
+{delay:1400}

@@ -1,0 +1,7 @@
+{clear}
+{bg:Chapter01_Room_05_Banner.png}
+{bg_t:33}
+{id:room_banner_001}{pos:52:96}{type:slow}{hi_white}壁に掛けた紋章布が、わずかに揺れている。{/hi_white}{/type}
+{delay:900}
+{id:room_banner_002}{pos:56:96}{type:normal}{hi_black}士官学校に入る前、父さんが「せめて気持ちだけは胸を張れ」とくれたものだ。{/hi_black}{/type}
+{delay:1050}

@@ -88,14 +88,14 @@ call :Update_Title
 :ProgressLoop
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.UpdateState.bat"
 
+call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.Progress.bat" read
+if not "!splash_exit_code!"=="0" goto LoopExit
+
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.RemoteState.bat"
 if "!errorlevel!"=="1" exit /b 1
 if "!errorlevel!"=="2" exit /b 2
 
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.WizardRouter.bat"
-
-call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.Progress.bat" read
-if not "!splash_exit_code!"=="0" goto LoopExit
 call :Update_Title
 
 call "%PROJECT_ROOT%\Src\Systems\Launcher\Splash.RenderFrame.bat"

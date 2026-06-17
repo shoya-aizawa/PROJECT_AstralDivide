@@ -1,0 +1,9 @@
+{clear}
+{bg:Chapter01_Room_09_WoodSword.png}
+{bg_t:33}
+{id:room_woodsword_001}{pos:50:94}{type:slow}{hi_white}壁際に立てかけてあるのは、訓練用の木剣だ。{/hi_white}{/type}
+{delay:900}
+{id:room_woodsword_002}{pos:54:94}{type:normal}{hi_black}父さんにもらってから、何度も振った。手に馴染んだ重さだ。{/hi_black}{/type}
+{delay:1000}
+{id:room_woodsword_003}{pos:58:94}{type:normal}{hi_black}明日から本格訓練になるとしても、最初に思い出すのはきっとこの感触だろう。{/hi_black}{/type}
+{delay:1100}

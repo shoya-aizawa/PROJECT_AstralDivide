@@ -37,6 +37,13 @@ emotion: vague
 memo: プレイヤーにはPrologueを想起させるが、主人公の認識は曖昧。
 render_note: `normal / hi_black`
 
+## scene02_005a
+speaker: narration
+text: ……！
+emotion: jolt
+memo: 呼び声に反応して意識が跳ねる短い挿入。
+render_note: `normal / hi_white`
+
 ## scene02_006
 speaker: voice
 text: 「{player_name}！」
@@ -46,9 +53,16 @@ render_note: `normal`
 
 ## scene02_007
 speaker: narration
-text: 目を開ける。
+text: 「！！」
 emotion: wake
-memo: 夢から覚める瞬間。
+memo: 飛び起きる直前の反射的な反応。
+render_note: `type / hi_white`
+
+## scene02_007a
+speaker: narration
+text: 思わず飛び起きる。
+emotion: wake
+memo: 夢から覚める瞬間を現行テキストに合わせて具体化。
 render_note: `slow / hi_white`
 
 ## scene02_008

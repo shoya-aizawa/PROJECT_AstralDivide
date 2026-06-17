@@ -20,6 +20,7 @@ $ToolsDir = [System.IO.Path]::GetFullPath($ToolsDir)
 $tools = @{
     "cmdwiz.exe"     = "version"
     "cmdgfx.exe"     = ""
+    "cmdgfx_input.exe" = ""
     "cmdbkg.exe"     = ""
     "Insertbmp.exe"  = ""
 }

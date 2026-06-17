@@ -18,9 +18,9 @@ render_note: `normal`
 
 ## scene02_003
 speaker: player_name_tag
-text: 名前、聞けなかったな。
+text: あの子、どこの子だったんだろう
 emotion: regret
-memo: 心残りを明示。
+memo: 現行テキストでは、未練よりも相手への素朴な疑問を出している。
 render_note: `normal`
 
 ## scene02_004
@@ -32,7 +32,7 @@ render_note: `normal / hi_black`
 
 ## scene02_005
 speaker: player_name_tag
-text: また、会えるかな。
+text: また会えたらいいな
 emotion: hopeful
 memo: 再会への最初の願い。
 render_note: `normal`
@@ -46,21 +46,14 @@ render_note: `normal / hi_black`
 
 ## scene02_007
 speaker: narration
-text: その夜の記憶が、ふたりの運命の最初の印になった。
+text: その夜の記憶が、不思議なくらい印象に残った。
 emotion: fateful
-memo: プロローグの締め。
+memo: 現行実装では運命の断定を避け、記憶の強さで締めている。
 render_note: `normal / hi_black`
 
 ## scene02_008
 speaker: system
-text: PROLOGUE  -  星が降る丘  -
+text: PROLOGUE  -  星の夢  -
 emotion: title
 memo: 章題表示。
 render_note: `slow / cyan`
-
-## scene02_009
-speaker: system
-text: プロローグ仮実装はここまで。続きは次の開発段階で接続される。
-emotion: temporary
-memo: 現段階の開発用終端メッセージ。
-render_note: `normal / hi_black`

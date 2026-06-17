@@ -1,0 +1,9 @@
+{clear}
+{id:scene07_001}{pos:16:106}{type:slow}{hi_white}酒場の前には、朝だというのに樽と箱が積み上がっていた。{/hi_white}{/type}
+{delay:950}
+{id:scene07_002}{pos:21:88}{type:normal}「悪いな、明日の宴の仕込みで手が足りねえ。帰りでもいい、顔を貸してくれ」{/type}
+{delay:1250}
+{id:scene07_003}{pos:26:103}{type:normal}{hi_black}酒場主人は忙しそうに笑い、また店の奥へ引っ込んでいった。{/hi_black}{/type}
+{delay:1100}
+{id:scene07_004}{pos:31:101}{type:slow}{cyan}宴の準備は、町のあちこちで少しずつ始まっている。{/cyan}{/type}
+{delay:1300}

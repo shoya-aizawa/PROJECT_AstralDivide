@@ -41,15 +41,9 @@ if not "%errorlevel%"=="0" (
 )
 echo 30 > "%IPC_FILE%"
 
-:: [2.5] Remote Debugging Approval Block (Halt background progress until remote session is established)
-if "%REMOTE_MODE%"=="1" (
-    call :WriteStage "Remote Approval" 30 35
-    :WaitForRemoteApproval
-    if not exist "%TEMP%\remote_session.env" (
-        for /l %%d in (1,1,5) do sc query >nul
-        goto :WaitForRemoteApproval
-    )
-)
+:: [2.5] Remote approval is handled by the splash frontend at 40%.
+:: Do not block the initializer here, otherwise the frontend never reaches
+:: the point where the remote login wizard can create remote_session.env.
 
 :: [2.6] Terminal Environment Check (DetectTerminal) - Front-loaded for safety
 call :WriteStage "Terminal Check" 30 35

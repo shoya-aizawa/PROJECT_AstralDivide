@@ -129,6 +129,13 @@ if "!ST!"=="OK" (
     if defined RCSU call "%RCSU%" -trace WARN BootEnvGuard "External tool cmdgfx.exe - BLOCKED/UNUSABLE - Status !ST!."
 )
 
+set "ST=!STATUS_cmdgfx_input.exe!" & set "TI=!TIME_cmdgfx_input.exe!"
+if "!ST!"=="OK" (
+    if defined RCSU call "%RCSU%" -trace INFO BootEnvGuard "External tool cmdgfx_input.exe - functional - !TI! ms."
+) else (
+    if defined RCSU call "%RCSU%" -trace WARN BootEnvGuard "External tool cmdgfx_input.exe - BLOCKED/UNUSABLE - Status !ST!."
+)
+
 set "ST=!STATUS_cmdwiz.exe!" & set "TI=!TIME_cmdwiz.exe!"
 if "!ST!"=="OK" (
     if defined RCSU call "%RCSU%" -trace INFO BootEnvGuard "External tool cmdwiz.exe - functional - !TI! ms."

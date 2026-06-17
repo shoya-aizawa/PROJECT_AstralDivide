@@ -1,0 +1,9 @@
+{clear}
+{bg:Chapter01_Room_04_Desk.png}
+{bg_t:33}
+{id:room_desk_001}{pos:50:94}{type:slow}{hi_white}机の上には、昨夜のまま教本と書き付けが散らばっている。{/hi_white}{/type}
+{delay:900}
+{id:room_desk_002}{pos:54:94}{type:normal}{hi_black}星術式の基礎、王国史、戦術初歩。{/hi_black}{/type}
+{delay:850}
+{id:room_desk_003}{pos:58:94}{type:normal}{hi_black}士官学校に通い始めてから、机の上だけは少しずつ大人びてきた。{/hi_black}{/type}
+{delay:1000}

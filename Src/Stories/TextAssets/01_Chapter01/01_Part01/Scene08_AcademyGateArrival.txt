@@ -1,0 +1,9 @@
+{clear}
+{id:scene08_001}{pos:16:107}{type:slow}{hi_white}士官学校の門前に立つと、空気が少しだけ張り詰めた。{/hi_white}{/type}
+{delay:950}
+{id:scene08_002}{pos:21:101}{type:normal}{hi_black}王都の賑わいはすぐ背後にあるのに、ここだけは別の朝を迎えている。{/hi_black}{/type}
+{delay:1150}
+{id:scene08_003}{pos:26:96}{type:normal}{hi_black}明日から本格訓練。そう思うだけで、胸の奥が静かに熱くなる。{/hi_black}{/type}
+{delay:1150}
+{id:scene08_004}{pos:31:110}{type:slow}{cyan}十六歳最後の一日は、まだここから続いていく。{/cyan}{/type}
+{delay:1300}

@@ -1,0 +1,9 @@
+{clear}
+{bg:Chapter01_Room_06_Shelf.png}
+{bg_t:33}
+{id:room_shelf_001}{pos:50:94}{type:slow}{hi_white}棚には教本と、星術の参考書がまとめて差してある。{/hi_white}{/type}
+{delay:900}
+{id:room_shelf_002}{pos:54:94}{type:normal}{hi_black}実技より座学の方が得意だと言えば、たぶん同期には笑われる。{/hi_black}{/type}
+{delay:1000}
+{id:room_shelf_003}{pos:58:94}{type:normal}{hi_black}それでも、知っていることはきっと無駄にならない。{/hi_black}{/type}
+{delay:900}

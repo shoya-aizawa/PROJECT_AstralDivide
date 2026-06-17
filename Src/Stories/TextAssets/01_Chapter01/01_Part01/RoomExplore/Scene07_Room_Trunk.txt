@@ -1,0 +1,9 @@
+{clear}
+{bg:Chapter01_Room_07_Trunk.png}
+{bg_t:33}
+{id:room_trunk_001}{pos:50:94}{type:slow}{hi_white}開けかけの箱の中に、訓練用の木剣がしまってある。{/hi_white}{/type}
+{delay:900}
+{id:room_trunk_002}{pos:54:94}{type:normal}{hi_black}父さんにもらった、もう手に馴染みきった剣だ。{/hi_black}{/type}
+{delay:900}
+{id:room_trunk_003}{pos:58:94}{type:normal}{hi_black}明日から本格訓練になるとしても、最初に握るのはたぶん、これと同じ重みだろう。{/hi_black}{/type}
+{delay:1100}
