@@ -1,5 +1,8 @@
 @echo off
 title %~2
+set "REMOTE_STREAMER_STOP_FILE=%PROJECT_ROOT%\Config\Logs\ad_streamer.stop"
+set "IS_DEBUG_MODE=0"
+if /i "%~3"=="DEBUG" set "IS_DEBUG_MODE=1"
 
 :: Load dynamic console size from user config or default to 90x35
 if not defined CONSOLE_COLS set "CONSOLE_COLS=90"
@@ -78,8 +81,7 @@ if defined CONSOLE_FONT (
     if not "%errorlevel%"=="%RC_OK%" goto :UI_ERROR
     call :Trace_UI_Return "MMM returned"
 
-    call :Route_MainMenu_Action
-    goto :STATE_MAINMENU
+    goto :Route_MainMenu_Action
 
 
 
@@ -167,6 +169,7 @@ if defined CONSOLE_FONT (
     call "%src_audio_dir%\Play_BGM.bat" "" stop
     start "" /d "%PROJECT_ROOT%" cmd.exe /c call "%PROJECT_ROOT%\AstralDivide.bat" -first
     if defined runtime_ipc_dir if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+    if defined REMOTE_STREAMER_STOP_FILE > "%REMOTE_STREAMER_STOP_FILE%" echo STOP
     if defined runtime_ipc_dir > "%runtime_ipc_dir%\.stop" echo STOP
     if defined runtime_ipc_dir > "%runtime_ipc_dir%\.restart_first" echo RESTART_ALREADY_STARTED
     if exist "%RCSU%" call "%RCSU%" -trace INFO Main "started new launcher and requested watchdog stop"
@@ -213,6 +216,7 @@ if defined CONSOLE_FONT (
     call "%src_audio_dir%\Play_BGM.bat" "" stop
     echo %esc%[6m%esc%[92mThank you for playing.%esc%[0m
     if defined runtime_ipc_dir if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+    if defined REMOTE_STREAMER_STOP_FILE > "%REMOTE_STREAMER_STOP_FILE%" echo STOP
     if defined runtime_ipc_dir > "%runtime_ipc_dir%\.stop" echo STOP
     if defined runtime_ipc_dir > "%runtime_ipc_dir%\.shutdown" echo SHUTDOWN
     if exist "%RCSU%" call "%RCSU%" -trace INFO Main "requested clean shutdown"

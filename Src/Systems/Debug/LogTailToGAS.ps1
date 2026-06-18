@@ -5,8 +5,10 @@ param(
   [string]$ClientName = "",
   [string]$SessionToken = "",
   [int]$BatchLines = 30,
-  [int]$FlushMs = 600,
-  [int]$PollSeconds = 2
+  [int]$FlushMs = 250,
+  [int]$PollSeconds = 2,
+  [int]$IdleSleepMs = 120,
+  [string]$StopFile = ""
 )
 
 Set-StrictMode -Version Latest
@@ -24,6 +26,10 @@ function Invoke-FormRequest([hashtable]$body) {
 }
 function Get-Json([string]$url) {
   Invoke-RestMethod -Uri $url -Method GET
+}
+function Test-StopRequested {
+  if (-not $StopFile) { return $false }
+  return (Test-Path -LiteralPath $StopFile)
 }
 
 if (-not (Test-Path -LiteralPath $LogPath)) {
@@ -95,16 +101,30 @@ function Clear-LogBuffer {
   $buffer.Clear()
 
   try {
-    foreach ($line in $toSend) {
-      $r = Invoke-FormRequest @{
-        action        = "post_log"
-        session_token = $token
-        log           = $line
-      }
+    $batchJson = ConvertTo-Json -InputObject @($toSend) -Compress
+    $r = Invoke-FormRequest @{
+      action        = "post_log_batch"
+      session_token = $token
+      logs_json     = $batchJson
+    }
 
-      if ($r -and $r.ok -eq $false -and $r.reason -eq "BAD_SESSION") {
-        Write-Host "[DENY] session revoked/expired (kicked). exiting..." -ForegroundColor Red
-        exit 2
+    if ($r -and $r.ok -eq $false -and $r.reason -eq "BAD_SESSION") {
+      Write-Host "[DENY] session revoked/expired (kicked). exiting..." -ForegroundColor Red
+      exit 2
+    }
+
+    if ($r -and $r.ok -eq $false -and $r.reason -eq "UNKNOWN_ACTION") {
+      foreach ($line in $toSend) {
+        $legacy = Invoke-FormRequest @{
+          action        = "post_log"
+          session_token = $token
+          log           = $line
+        }
+
+        if ($legacy -and $legacy.ok -eq $false -and $legacy.reason -eq "BAD_SESSION") {
+          Write-Host "[DENY] session revoked/expired (kicked). exiting..." -ForegroundColor Red
+          exit 2
+        }
       }
     }
 
@@ -130,6 +150,11 @@ try {
   $fs.Seek(0, [System.IO.SeekOrigin]::End) | Out-Null
 
   while ($true) {
+    if (Test-StopRequested) {
+      Write-Host "[OK] stop signal detected. exiting streamer." -ForegroundColor DarkGray
+      break
+    }
+
     $line = $sr.ReadLine()
 
     if ($null -ne $line) {
@@ -155,7 +180,7 @@ try {
       Clear-LogBuffer
     }
 
-    Start-Sleep -Milliseconds 200
+    Start-Sleep -Milliseconds $IdleSleepMs
   }
 }
 finally {

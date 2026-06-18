@@ -156,6 +156,9 @@ if /i "%~1"=="-mode" (
             set "date_tag=%%d"
             set "logfile=%PROJECT_ROOT%\Config\Logs\AstralDivide_Session_%%d.log"
         )
+        set "REMOTE_STREAMER_STOP_FILE=%PROJECT_ROOT%\Config\Logs\ad_streamer.stop"
+        set "REMOTE_STREAMER_OUT=%PROJECT_ROOT%\Config\Logs\ad_streamer.log"
+        set "REMOTE_STREAMER_ERR=%PROJECT_ROOT%\Config\Logs\ad_streamer.err.log"
         set "REMOTE_MODE=1"
     )
     if /i "%~2"=="remoteadmin" set "REMOTE_ADMIN_MODE=1"
@@ -256,10 +259,10 @@ rem start "%app_window_title%" /max cmd /c %src_main_dir%\Main.bat 65001 "%app_w
 if "%IS_DEBUG_MODE%"=="1" (
     :: Run Main.bat directly using CALL in debug mode to keep execution in the same terminal
     pushd "%src_main_dir%"
-    call Main.bat 65001 "%app_window_title%"
+    call Main.bat 65001 "%app_window_title%" DEBUG
     popd
 ) else (
-    start /d "%src_main_dir%" Main.bat 65001 "%app_window_title%"
+    start "%app_window_title%" /d "%src_main_dir%" cmd.exe /c call Main.bat 65001 "%app_window_title%" NORMAL
 )
 set launch_time=%time%
 call "%RCSU%" -trace INFO "%self_name%" "main launched time=%launch_time%"
@@ -274,8 +277,9 @@ if "%REMOTE_MODE%"=="1" (
                 if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
             )
             if not exist "%logfile%" type nul > "%logfile%" 2>nul
-            
-            start "AstralDivide - Log Streamer" /b powershell -NoProfile -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%" -ClientName "%USERNAME%@%COMPUTERNAME%" -SessionToken "%REMOTE_TOKEN%" > "%PROJECT_ROOT%\Config\Logs\ad_streamer.log" 2>&1
+            if defined REMOTE_STREAMER_STOP_FILE if exist "%REMOTE_STREAMER_STOP_FILE%" del "%REMOTE_STREAMER_STOP_FILE%" >nul 2>&1
+
+            powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\Start_LogTailToGAS.ps1" -ScriptPath "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "%logfile%" -GasUrl "%REMOTE_GAS_URL%" -ClientName "%USERNAME%@%COMPUTERNAME%" -SessionToken "%REMOTE_TOKEN%" -StopFile "%REMOTE_STREAMER_STOP_FILE%" -OutputPath "%REMOTE_STREAMER_OUT%" -ErrorPath "%REMOTE_STREAMER_ERR%" >nul 2>&1
             call "%RCSU%" -trace INFO "%self_name%" "started background remote log streamer with token"
         ) else (
             if defined RCSU call "%RCSU%" -trace INFO "%self_name%" "Remote log streamer was already started during splash screen."
@@ -289,6 +293,9 @@ if "%REMOTE_MODE%"=="1" (
 
 :: [9] Watchdog Host Launch
 if not exist "%runtime_ipc_dir%" md "%runtime_ipc_dir%" >nul 2>&1
+del /q "%runtime_ipc_dir%\.stop" >nul 2>&1
+del /q "%runtime_ipc_dir%\.shutdown" >nul 2>&1
+del /q "%runtime_ipc_dir%\.restart_first" >nul 2>&1
 ( if "%INTERCEPT_MODE%"=="1" (echo INTERCEPT) else (echo NORMAL) ) > "%runtime_ipc_dir%\.mode"
 
 rem Pass IPC_DIR to WD as an argument (bypassed in debug mode to avoid nested wait/blocking)
@@ -311,6 +318,7 @@ goto :ExitRun
 
 :RestartFirstLaunch
 if exist "%RCSU%" call "%RCSU%" -trace INFO Run "restart-first requested from active session"
+if defined REMOTE_STREAMER_STOP_FILE > "%REMOTE_STREAMER_STOP_FILE%" echo STOP
 del /q "%runtime_ipc_dir%\.restart_first" >nul 2>&1
 del /q "%runtime_ipc_dir%\.stop" >nul 2>&1
 if "%IS_DEBUG_MODE%"=="1" exit /b 0
@@ -318,6 +326,7 @@ exit
 
 :ShutdownRequested
 if exist "%RCSU%" call "%RCSU%" -trace INFO Run "clean shutdown requested from active session"
+if defined REMOTE_STREAMER_STOP_FILE > "%REMOTE_STREAMER_STOP_FILE%" echo STOP
 del /q "%runtime_ipc_dir%\.shutdown" >nul 2>&1
 del /q "%runtime_ipc_dir%\.stop" >nul 2>&1
 if "%IS_DEBUG_MODE%"=="1" exit /b 0
@@ -380,6 +389,7 @@ if /i "%~1"=="-mode" if /i "%~2"=="debug" (
 :: Common exit(Utility)
 :ExitRun
 call "%RCSU%" -trace INFO Run "exit"
+if defined REMOTE_STREAMER_STOP_FILE > "%REMOTE_STREAMER_STOP_FILE%" echo STOP
 if "%IS_DEBUG_MODE%"=="1" (
     :: In debug mode, use exit /b to avoid closing the VSCode terminal session
     exit /b 0

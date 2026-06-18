@@ -46,9 +46,10 @@ if "!state!"=="0" (
                             if not exist "%%~dpD" md "%%~dpD" >nul 2>&1
                         )
                         if not exist "!logfile!" type nul > "!logfile!" 2>nul
+                        if defined REMOTE_STREAMER_STOP_FILE if exist "!REMOTE_STREAMER_STOP_FILE!" del "!REMOTE_STREAMER_STOP_FILE!" >nul 2>&1
                         
-                        :: Start background remote log streamer immediately upon approval
-                        start "AstralDivide - Log Streamer" /b powershell -NoProfile -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "!logfile!" -GasUrl "%REMOTE_GAS_URL%" -ClientName "%USERNAME%@%COMPUTERNAME%" -SessionToken "!POLL_token!" > "%PROJECT_ROOT%\Config\Logs\ad_streamer.log" 2>&1
+                        :: Start detached remote log streamer immediately upon approval
+                        powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "%PROJECT_ROOT%\Src\Systems\Debug\Start_LogTailToGAS.ps1" -ScriptPath "%PROJECT_ROOT%\Src\Systems\Debug\LogTailToGAS.ps1" -LogPath "!logfile!" -GasUrl "%REMOTE_GAS_URL%" -ClientName "%USERNAME%@%COMPUTERNAME%" -SessionToken "!POLL_token!" -StopFile "!REMOTE_STREAMER_STOP_FILE!" -OutputPath "!REMOTE_STREAMER_OUT!" -ErrorPath "!REMOTE_STREAMER_ERR!" >nul 2>&1
                         if exist "%PLAY_SE%" call "%PLAY_SE%" "%SE_ENTER3%"
                         
                         :: Render connection established UI frame

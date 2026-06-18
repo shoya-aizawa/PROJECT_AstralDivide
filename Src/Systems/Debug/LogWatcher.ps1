@@ -1,7 +1,10 @@
 # LogWatcher.ps1 (Admin Console) - session_id (Plan B) integrated
 param(
   [Parameter(Mandatory=$true)][string]$GasUrl,
-  [Parameter(Mandatory=$true)][string]$AdminKey
+  [Parameter(Mandatory=$true)][string]$AdminKey,
+  [int]$LogPollMs = 120,
+  [int]$PendingPollMs = 750,
+  [int]$HeartbeatSec = 8
 )
 
 # アドミン識別子
@@ -45,8 +48,86 @@ try {
 }
 
 # --- helper to build URLs with session_id ---
-function New-LogsUrl([int]$sinceValue) {
-  return ($GasUrl + "?since=$sinceValue&session_id=" + [uri]::EscapeDataString($sessionId))
+function New-LogsUrl([int]$sinceValue, [string]$actionName = "") {
+  $base = $GasUrl + "?since=$sinceValue&session_id=" + [uri]::EscapeDataString($sessionId)
+  if ($actionName) {
+    return ($base + "&action=" + [uri]::EscapeDataString($actionName))
+  }
+  return $base
+}
+
+function ConvertTo-LogEnvelope($raw, [int]$requestedSince) {
+  $result = @{
+    logs = @()
+    lastRow = $requestedSince
+  }
+
+  if ($null -eq $raw) { return $result }
+
+  if ($raw -is [System.Array]) {
+    $row = $requestedSince
+    foreach ($item in $raw) {
+      $row += 1
+      if ($item -is [string]) {
+        $result.logs += @{ row = $row; message = $item }
+      } elseif ($item.PSObject.Properties.Name -contains "message") {
+        $result.logs += @{
+          row = if ($item.PSObject.Properties.Name -contains "row") { [int]$item.row } else { $row }
+          message = [string]$item.message
+        }
+      }
+    }
+    if ($result.logs.Count -gt 0) {
+      $result.lastRow = [int]($result.logs[-1].row)
+    }
+    return $result
+  }
+
+  if ($raw.PSObject.Properties.Name -contains "logs") {
+    $result.logs = @($raw.logs)
+    if ($raw.PSObject.Properties.Name -contains "lastRow") {
+      $result.lastRow = [int]$raw.lastRow
+    } elseif ($result.logs.Count -gt 0) {
+      $last = $result.logs[-1]
+      if ($last.PSObject.Properties.Name -contains "row") {
+        $result.lastRow = [int]$last.row
+      }
+    }
+    return $result
+  }
+
+  if ($raw.PSObject.Properties.Name -contains "message") {
+    $row = if ($raw.PSObject.Properties.Name -contains "row") { [int]$raw.row } else { $requestedSince + 1 }
+    $result.logs = @(@{ row = $row; message = [string]$raw.message })
+    $result.lastRow = $row
+    return $result
+  }
+
+  return $result
+}
+
+function Get-LogsEnvelope([int]$sinceValue) {
+  $candidates = @(
+    (New-LogsUrl $sinceValue "get_logs"),
+    (New-LogsUrl $sinceValue "logs"),
+    (New-LogsUrl $sinceValue)
+  )
+
+  $lastError = $null
+  foreach ($url in $candidates) {
+    try {
+      $raw = Get-Json $url
+      $env = ConvertTo-LogEnvelope $raw $sinceValue
+      if ($env.logs.Count -gt 0 -or $env.lastRow -ne $sinceValue) {
+        return $env
+      }
+    } catch {
+      $lastError = $_
+    }
+  }
+
+  if ($lastError) { throw $lastError }
+  return (ConvertTo-LogEnvelope $null $sinceValue)
 }
 
 # --- 起動時UI（ALL / NEW） ---
@@ -62,7 +143,7 @@ if ($modeAll) {
   Write-Host "[MODE] ALL logs"
 } else {
   # NEW only: jump to lastRow (we still pass session_id for consistent behavior)
-  $bootstrap = Get-Json (New-LogsUrl 999999999)
+  $bootstrap = Get-LogsEnvelope 999999999
   $since = [int]$bootstrap.lastRow
   Write-Host "[MODE] NEW only (start since=$since)"
 }
@@ -72,7 +153,7 @@ Write-Host ""
 
 # --- admin heartbeat ---
 $lastHb = Get-Date 0
-$hbSec = 8
+$lastPendingCheck = Get-Date 0
 
 function Show-Help {
   Write-Host ""
@@ -94,7 +175,7 @@ function Set-ViewMode([string]$m) {
     return
   }
   if ($m -eq "new") {
-    $bootstrap = Get-Json (New-LogsUrl 999999999)
+    $bootstrap = Get-LogsEnvelope 999999999
     $script:since = [int]$bootstrap.lastRow
     Write-Host "[MODE] NEW only (start since=$since)"
     return
@@ -149,27 +230,30 @@ while (-not $quit) {
   try {
     # heartbeat
     $now = Get-Date
-    if (($now - $lastHb).TotalSeconds -ge $hbSec) {
+    if (($now - $lastHb).TotalSeconds -ge $HeartbeatSec) {
       Invoke-FormRequest @{ action="admin_heartbeat"; admin_key=$AdminKey } | Out-Null
       $lastHb = $now
     }
 
     # pending auto-approve prompt
-    $pending = Get-Json ($GasUrl + "?action=get_pending")
-    if ($pending.ok -and $pending.pending.Count -gt 0) {
-      foreach ($p in $pending.pending) {
-        $rid = [string]$p.req_id
-        $uid = [string]$p.user_id
-        $hst = [string]$p.host
-        $sid = ""
-        if ($p.PSObject.Properties.Name -contains "session_id") { $sid = [string]$p.session_id }
+    if (($now - $lastPendingCheck).TotalMilliseconds -ge $PendingPollMs) {
+      $pending = Get-Json ($GasUrl + "?action=get_pending")
+      $lastPendingCheck = $now
+      if ($pending.ok -and $pending.pending.Count -gt 0) {
+        foreach ($p in $pending.pending) {
+          $rid = [string]$p.req_id
+          $uid = [string]$p.user_id
+          $hst = [string]$p.host
+          $sid = ""
+          if ($p.PSObject.Properties.Name -contains "session_id") { $sid = [string]$p.session_id }
 
-        Write-Host ""
-        Write-Host ("ID:{0} is requesting permission to connect host={1} session={2}" -f $uid, $hst, $sid) -ForegroundColor Yellow
-        $ans = Read-Host "Approve? (Y/N)"
+          Write-Host ""
+          Write-Host ("ID:{0} is requesting permission to connect host={1} session={2}" -f $uid, $hst, $sid) -ForegroundColor Yellow
+          $ans = Read-Host "Approve? (Y/N)"
 
-        if ($ans -match '^[Yy]') { Approve-Request $rid }
-        else { Deny-Request $rid }
+          if ($ans -match '^[Yy]') { Approve-Request $rid }
+          else { Deny-Request $rid }
+        }
       }
     }
 
@@ -207,8 +291,8 @@ while (-not $quit) {
     }
 
     # logs (session filtered)
-    $obj = Get-Json (New-LogsUrl $since)
-    foreach ($log in $obj.logs) {
+    $obj = Get-LogsEnvelope $since
+    foreach ($log in @($obj.logs)) {
       $msg = Sanitize ([string]$log.message)
       Write-Host -ForegroundColor Green $msg
       if ([int]$log.row -gt $since) { $since = [int]$log.row }
@@ -218,5 +302,5 @@ while (-not $quit) {
     Write-Host ("[ERR] {0}" -f $_.Exception.Message) -ForegroundColor Red
   }
 
-  Start-Sleep -Milliseconds 200
+  Start-Sleep -Milliseconds $LogPollMs
 }
