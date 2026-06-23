@@ -13,9 +13,44 @@
 
 :: Check if debug mode is requested in arguments to avoid opening a new window
 @set "IS_DEBUG_MODE=0"
-@echo "%*" | findstr /i "\-mode debug" >nul && set "IS_DEBUG_MODE=1"
+@echo "%*" | findstr /i /c:"-mode debug" >nul && set "IS_DEBUG_MODE=1"
 
-@if not "%IS_DEBUG_MODE%"=="1" if not "%~2"=="remoteadmin" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
+:: Explicit control for auto-relaunch behavior
+set "RELAUNCH_AUTO=1"
+set "RELAUNCH_OVERRIDE=0"
+for %%A in (%*) do (
+    if /i "%%~A"=="-norelaunch" (
+        set "RELAUNCH_AUTO=0"
+        set "RELAUNCH_OVERRIDE=1"
+    )
+    if /i "%%~A"=="--norelaunch" (
+        set "RELAUNCH_AUTO=0"
+        set "RELAUNCH_OVERRIDE=1"
+    )
+    if /i "%%~A"=="-relaunch" (
+        set "RELAUNCH_AUTO=1"
+        set "RELAUNCH_OVERRIDE=1"
+    )
+    if /i "%%~A"=="--relaunch" (
+        set "RELAUNCH_AUTO=1"
+        set "RELAUNCH_OVERRIDE=1"
+    )
+)
+
+:: Debug mode defaults to no relaunch unless explicitly overridden
+if "%IS_DEBUG_MODE%"=="1" if "%RELAUNCH_OVERRIDE%"=="0" set "RELAUNCH_AUTO=0"
+
+if "%IS_DEBUG_MODE%"=="1" (
+    echo [DEBUG-RUN] args=%*
+    echo [DEBUG-RUN] IS_DEBUG_MODE=%IS_DEBUG_MODE% RELAUNCH_AUTO=%RELAUNCH_AUTO% RELAUNCH_OVERRIDE=%RELAUNCH_OVERRIDE%
+)
+
+:: Remote admin mode should also prevent the auto-relaunch wrapper
+@set "REMOTE_ADMIN_REQUESTED=0"
+@echo "%*" | findstr /i /c:"-mode remoteadmin" >nul && set "REMOTE_ADMIN_REQUESTED=1"
+
+@if not "%REMOTE_ADMIN_REQUESTED%"=="1" if "%RELAUNCH_AUTO%"=="1" (@if not "%~0"=="%~dp0.\%~nx0" start cmd /c,"%~dp0.\%~nx0" %* & goto :eof)
+
 @title Astral Divide - Booting
 set "self_name=%~n0"
 rem================================================= Main Flow =================================================

@@ -1,0 +1,15 @@
+item_id=use_bandage_basic
+name=簡易包帯
+category=USE
+icon=!
+stackable=1
+max_stack=99
+buy_price=12
+sell_price=6
+usable=1
+equipable=0
+equip_slot=
+description=応急手当に使う清潔な包帯。訓練生でも扱いやすい。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

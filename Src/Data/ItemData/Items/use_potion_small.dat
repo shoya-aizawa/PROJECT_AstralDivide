@@ -1,0 +1,15 @@
+item_id=use_potion_small
+name=小回復薬
+category=USE
+icon=⚗
+stackable=1
+max_stack=99
+buy_price=30
+sell_price=15
+usable=1
+equipable=0
+equip_slot=
+description=軽い傷や疲労を癒やす、一般的な携行薬。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

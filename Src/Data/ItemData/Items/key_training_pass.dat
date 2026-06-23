@@ -1,0 +1,15 @@
+item_id=key_training_pass
+name=訓練許可証
+category=KEY
+icon=▤
+stackable=0
+max_stack=1
+buy_price=0
+sell_price=0
+usable=0
+equipable=0
+equip_slot=
+description=訓練施設や関連手続きで提示を求められる身分証。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

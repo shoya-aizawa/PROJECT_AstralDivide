@@ -1,0 +1,15 @@
+item_id=use_travel_ration
+name=携行食
+category=USE
+icon=o
+stackable=1
+max_stack=99
+buy_price=18
+sell_price=9
+usable=1
+equipable=0
+equip_slot=
+description=保存性を重視した簡素な食事。探索時の携帯向け。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

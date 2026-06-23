@@ -1,0 +1,15 @@
+item_id=mat_soft_wood
+name=柔木材
+category=MAT
+icon=*
+stackable=1
+max_stack=99
+buy_price=14
+sell_price=7
+usable=0
+equipable=0
+equip_slot=
+description=加工しやすい軽量木材。訓練具や簡易補修に向く。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

@@ -1,0 +1,15 @@
+item_id=mat_iron_ore
+name=鉄鉱石
+category=MAT
+icon=#
+stackable=1
+max_stack=99
+buy_price=20
+sell_price=10
+usable=0
+equipable=0
+equip_slot=
+description=一般的な製鉄素材。武器や道具の加工に用いられる。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

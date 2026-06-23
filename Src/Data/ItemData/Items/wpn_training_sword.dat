@@ -1,0 +1,15 @@
+item_id=wpn_training_sword
+name=訓練用木剣
+category=WPN
+icon=/
+stackable=0
+max_stack=1
+buy_price=50
+sell_price=25
+usable=0
+equipable=1
+equip_slot=weapon
+description=基礎訓練用に作られた木剣。実戦には向かないが扱いやすい。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

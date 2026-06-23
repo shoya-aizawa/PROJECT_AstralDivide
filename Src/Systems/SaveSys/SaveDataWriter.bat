@@ -65,9 +65,13 @@ set "saved_at=%DATE% %TIME%"
     echo player_name=%player_name%
     echo player_level=%player_level%
     echo player_storyroute=%player_storyroute%
+    echo resume_storyroute=%resume_storyroute%
+    echo resume_scene=%resume_scene%
+    echo resume_location=%resume_location%
     echo current_chapter=%current_chapter%
     echo current_scene=%current_scene%
     echo current_location=%current_location%
+    echo player_money=%player_money%
     echo prologue_completed=%prologue_completed%
     for /f "tokens=1* delims==" %%A in ('set completed_chapter_ 2^>nul') do echo %%A=%%B
     echo autosave_enabled=%autosave_enabled%
@@ -78,6 +82,20 @@ set "saved_at=%DATE% %TIME%"
     echo camp_seen_4=%camp_seen_4%
     echo camp_seen_5=%camp_seen_5%
     echo camp_seen_6=%camp_seen_6%
+    echo chapter01_allowance_received=%chapter01_allowance_received%
+    echo chapter01_allowance_amount=%chapter01_allowance_amount%
+    echo chapter01_starter_items_received=%chapter01_starter_items_received%
+    echo chapter01_town_started=%chapter01_town_started%
+    echo chapter01_town_node=%chapter01_town_node%
+    echo chapter01_seen_home_intro=%chapter01_seen_home_intro%
+    echo chapter01_seen_plaza=%chapter01_seen_plaza%
+    echo chapter01_seen_tavern=%chapter01_seen_tavern%
+    echo chapter01_seen_academy_gate=%chapter01_seen_academy_gate%
+    echo chapter01_quest_tavern_intro=%chapter01_quest_tavern_intro%
+    echo inventory_stack_count=%inventory_stack_count%
+    for /l %%I in (1,1,%inventory_stack_count%) do call echo inventory_stack_%%I=%%inventory_stack_%%I%%
+    echo inventory_unique_count=%inventory_unique_count%
+    for /l %%I in (1,1,%inventory_unique_count%) do call echo inventory_unique_%%I=%%inventory_unique_%%I%%
 )
 
 if not exist "%tmp_path%" (
@@ -118,12 +136,27 @@ exit /b 0
 if not defined player_name set "player_name=シオン"
 if not defined player_level set "player_level=0"
 if not defined player_storyroute set "player_storyroute=NewGame"
+if not defined resume_storyroute set "resume_storyroute=%player_storyroute%"
+if not defined resume_scene set "resume_scene=%current_scene%"
+if not defined resume_location set "resume_location=%current_location%"
 if not defined current_chapter set "current_chapter=Unknown"
 if not defined current_scene set "current_scene=Unknown"
 if not defined current_location set "current_location=Unknown"
+if not defined player_money set "player_money=0"
 if not defined prologue_completed set "prologue_completed=0"
 if "%prologue_completed%"=="1" if not defined completed_chapter_Prologue set "completed_chapter_Prologue=1"
 if not defined autosave_enabled set "autosave_enabled=1"
 if not defined camp_explore_viewed_count set "camp_explore_viewed_count=0"
 for /l %%I in (1,1,6) do if not defined camp_seen_%%I set "camp_seen_%%I=0"
+if not defined chapter01_allowance_received set "chapter01_allowance_received=0"
+if not defined chapter01_allowance_amount set "chapter01_allowance_amount=0"
+if not defined chapter01_starter_items_received set "chapter01_starter_items_received=0"
+if not defined chapter01_town_started set "chapter01_town_started=0"
+if not defined chapter01_seen_home_intro set "chapter01_seen_home_intro=0"
+if not defined chapter01_seen_plaza set "chapter01_seen_plaza=0"
+if not defined chapter01_seen_tavern set "chapter01_seen_tavern=0"
+if not defined chapter01_seen_academy_gate set "chapter01_seen_academy_gate=0"
+if not defined chapter01_quest_tavern_intro set "chapter01_quest_tavern_intro=0"
+if not defined inventory_stack_count set "inventory_stack_count=0"
+if not defined inventory_unique_count set "inventory_unique_count=0"
 exit /b 0

@@ -1,0 +1,15 @@
+item_id=acc_plain_ring
+name=素朴な指輪
+category=ACC
+icon==
+stackable=0
+max_stack=1
+buy_price=35
+sell_price=17
+usable=0
+equipable=1
+equip_slot=accessory
+description=装飾の少ない簡素な指輪。高価ではないが作りは丁寧。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

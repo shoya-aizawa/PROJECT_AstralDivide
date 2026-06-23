@@ -1,0 +1,15 @@
+item_id=mat_scrap_cloth
+name=布切れ
+category=MAT
+icon=*
+stackable=1
+max_stack=99
+buy_price=8
+sell_price=4
+usable=0
+equipable=0
+equip_slot=
+description=補修や細工に使える端切れ。質は高くないが用途は広い。
+feature_socket=WIP
+feature_astral_core=WIP
+feature_prefix_suffix=WIP

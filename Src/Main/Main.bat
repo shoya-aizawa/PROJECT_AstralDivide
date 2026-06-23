@@ -37,7 +37,9 @@ chcp %~1 >nul
 if not defined RCSU set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 
 :: DEV MODE (optional)
-if "%~2"=="DEV" (
+if "%IS_DEBUG_MODE%"=="1" (
+    set DEBUG_STATE=1
+) else if "%~2"=="DEV" (
     set DEBUG_STATE=1
 ) else (
     if not defined DEBUG_STATE set DEBUG_STATE=0
@@ -182,30 +184,32 @@ if defined CONSOLE_FONT (
 
 :STATE_SCENARIO
     call :JumpToEpisode %player_storyroute%
-    if "%errorlevel%"=="602" (
+    set "scenario_rc=%errorlevel%"
+    if exist "%RCSU%" call "%RCSU%" -trace INFO Main "STATE_SCENARIO returned rc=%scenario_rc% route=%player_storyroute% scene=%current_scene%"
+    if "%scenario_rc%"=="602" (
         echo セーブ完了、ゲームを終了します。
         goto :STATE_EXIT
     )
-    if "%errorlevel%"=="603" (
+    if "%scenario_rc%"=="603" (
         echo セーブ失敗。緊急停止します。
         pause
         goto :STATE_EXIT
     )
-    if "%errorlevel%"=="604" (
+    if "%scenario_rc%"=="604" (
         echo プレイヤーによって中断されました。
         set "MAINMENU_NEEDS_REFRESH=1"
         goto :STATE_MAINMENU
     )
-    if "%errorlevel%"=="641" (
+    if "%scenario_rc%"=="641" (
         echo Pause menu requested return to title.
         set "MAINMENU_NEEDS_REFRESH=1"
         goto :STATE_MAINMENU
     )
-    if "%errorlevel%"=="642" (
+    if "%scenario_rc%"=="642" (
         echo Pause menu requested exit.
         goto :STATE_EXIT
     )
-    if "%errorlevel%"=="606" (
+    if "%scenario_rc%"=="606" (
         echo Pause menu requested exit.
         goto :STATE_EXIT
     )
@@ -280,6 +284,7 @@ if defined CONSOLE_FONT (
     for /f "usebackq tokens=1,2 delims==" %%a in ("%saves_active_dir%\SaveData_%1.txt") do (
         set "%%a=%%b"
     )
+    call "%PROJECT_ROOT%\Src\Systems\Inventory\InventoryCore.bat" INIT_DEFAULTS
     exit /b 0
 
 
@@ -296,6 +301,7 @@ if defined CONSOLE_FONT (
     timeout /t 3
     call :Label_IsSelectedSaveData %1
     call :Label_PlayerStatus_Initialize
+    call "%PROJECT_ROOT%\Src\Systems\Inventory\InventoryCore.bat" INIT_DEFAULTS
     set "current_save_slot=%1"
 
     :: Reset camp explore variables for new session
