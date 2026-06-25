@@ -59,6 +59,7 @@ call :ResolvePrologueResult
 call "%src_display_dir%\ChapterResult.bat" "Prologue" "星の夢" "%prologue_result_bg%" "Chapter01_Part01" "1" "%prologue_result_rank%"
 set "result_rc=%errorlevel%"
 if not "%result_rc%"=="603" (
+    call "%src_audio_dir%\Play_BGM.bat" "" stop
     call "%src_scene_chapter01_dir%\01_Part01\Chapter01_Part01.bat"
     set "result_rc=%errorlevel%"
 )

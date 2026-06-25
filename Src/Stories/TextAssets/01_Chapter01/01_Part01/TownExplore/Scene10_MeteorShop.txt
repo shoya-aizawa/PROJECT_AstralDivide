@@ -1,0 +1,11 @@
+{clear}
+{bg:Chapter01_Town_13_MeteorShop.png}
+{bg_t:33}
+{id:town_shop_10_001}{pos:14:102}{type:slow}{hi_white}「いらっしゃい、今日は何を探してるの？」　ノーラが棚越しに柔らかく声をかけてきた。{/hi_white}{/type}
+{delay:900}
+{id:town_shop_10_002}{pos:19:98}{type:normal}{hi_black}見慣れた小瓶と薬草束が並び、回復薬や基礎薬品の札が読み取れる。{/hi_black}{/type}
+{delay:1000}
+{id:town_shop_10_003}{pos:24:100}{type:normal}{hi_black}品揃えの確認まではできるが、売買のやり取りはまだこれから整える必要がありそうだ。{/hi_black}{/type}
+{delay:1050}
+{id:town_shop_10_004}{pos:29:108}{type:slow}{cyan}流星の雫薬舗の売買画面は接続準備中。{/cyan}{/type}
+{delay:1200}

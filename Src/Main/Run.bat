@@ -143,7 +143,7 @@ goto :Dev_ForceFirstLaunch_End
         echo %esc%[90mClearing save data files ...%esc%[0m %esc%[92m        [ OK ]%esc%[0m
         del /f /s /q "%_dev_saves%\*" >nul 2>&1
     )
-    timeout /t 1 >nul
+    timeout /t 2 >nul
     goto :Dev_ForceFirstLaunch_End
 
 :Dev_ForceFirstLaunch_End
@@ -169,6 +169,7 @@ goto :AfterDevDeveloperOptions
         exit /b %errorlevel%
     )
     echo %esc%[92m[ OK ] SE prewarm completed.%esc%[0m
+    timeout /t 2 >nul
     exit /b 0
 
 :AfterDevDeveloperOptions

@@ -12,8 +12,11 @@ if not defined PROJECT_ROOT (
 if not defined RCSU if defined PROJECT_ROOT set "RCSU=%PROJECT_ROOT%\Src\Systems\Debug\RCS_Util.bat"
 if not defined tools_dir set "tools_dir=%PROJECT_ROOT%\Tools"
 if not defined src_display_dir set "src_display_dir=%PROJECT_ROOT%\Src\Systems\Display"
+if not defined src_display_mod_dir set "src_display_mod_dir=%src_display_dir%\Modules"
 if not defined src_inventory_dir set "src_inventory_dir=%PROJECT_ROOT%\Src\Systems\Inventory"
+if not defined src_text_chapter01_dir set "src_text_chapter01_dir=%PROJECT_ROOT%\Src\Stories\TextAssets\01_Chapter01"
 if not defined assets_images_dir set "assets_images_dir=%PROJECT_ROOT%\Assets\Images"
+if not defined src_field_menu set "src_field_menu=%src_display_dir%\FieldMenu.bat"
 
 for /f %%a in ('cmd /k prompt $e^<nul') do set "ESC=%%a"
 
@@ -33,6 +36,7 @@ set "town_dirty=1"
 set "last_bg="
 
 call :DefineNodes
+if exist "%~dp0Chapter01_TownExplore_Shops.bat" call "%~dp0Chapter01_TownExplore_Shops.bat"
 if not defined chapter01_town_node set "chapter01_town_node=Town01_HomeFront"
 call :EnterNode "%chapter01_town_node%"
 call "%tools_dir%\cmdwiz.exe" setquickedit 0 <nul >nul 2>&1
@@ -79,6 +83,12 @@ if "%pick%"=="D" (
 if "%pick%"=="ACTION" (
     call :HandleAction E
     if "%town_should_exit%"=="1" goto :ExitNormal
+    goto :TownLoop
+)
+if "%pick%"=="FIELD_MENU" (
+    call "%src_field_menu%"
+    set "town_message=フィールドメニューを閉じた。"
+    set "town_dirty=1"
     goto :TownLoop
 )
 if "%pick%"=="INVENTORY" (
@@ -162,11 +172,14 @@ if "%scan_code%"=="77" set "pick=D"
 if "%scan_code%"=="70" set "pick=ACTION"
 if "%scan_code%"=="102" set "pick=ACTION"
 if "%scan_code%"=="13" if "%pick%"=="0" set "pick=ACTION"
-if "%scan_code%"=="69" if "%pick%"=="0" set "pick=INVENTORY"
-if "%scan_code%"=="101" if "%pick%"=="0" set "pick=INVENTORY"
+if "%scan_code%"=="69" if "%pick%"=="0" set "pick=FIELD_MENU"
+if "%scan_code%"=="101" if "%pick%"=="0" set "pick=FIELD_MENU"
+if "%scan_code%"=="9" if "%pick%"=="0" set "pick=FIELD_MENU"
+if "%scan_code%"=="73" if "%pick%"=="0" set "pick=INVENTORY"
+if "%scan_code%"=="105" if "%pick%"=="0" set "pick=INVENTORY"
 if /i "%DEBUG_STATE%"=="1" (
-    if "%scan_code%"=="73" if "%pick%"=="0" set "pick=DEBUG_GRANT"
-    if "%scan_code%"=="105" if "%pick%"=="0" set "pick=DEBUG_GRANT"
+    if "%scan_code%"=="71" if "%pick%"=="0" set "pick=DEBUG_GRANT"
+    if "%scan_code%"=="103" if "%pick%"=="0" set "pick=DEBUG_GRANT"
 )
 if "%scan_code%"=="27" set "pick=PAUSE"
 if "%scan_code%"=="112" if "%pick%"=="0" set "pick=PAUSE"
@@ -195,6 +208,10 @@ if /i "%action_type%"=="move" (
 if /i "%action_type%"=="text" (
     set "town_message=%action_value%"
     set "town_dirty=1"
+    exit /b 0
+)
+if /i "%action_type%"=="shop" (
+    call :EnterShop "%action_value%"
     exit /b 0
 )
 if /i "%action_type%"=="finish" (
@@ -226,6 +243,64 @@ if /i "%chapter01_town_node%"=="Town08_TavernInterior" if not "%chapter01_quest_
 set "town_dirty=1"
 exit /b 0
 
+:EnterShop
+set "shop_id=%~1"
+set "scene_file="
+set "shop_message="
+if /i "%shop_id%"=="MeteorShop" (
+    set "scene_file=TownExplore\Scene10_MeteorShop.txt"
+    set "shop_message=流星の雫薬舗の品揃えを確かめた。"
+)
+if /i "%shop_id%"=="ArdenSmith" (
+    set "scene_file=TownExplore\Scene11_ArdenSmith.txt"
+    set "shop_message=アルデン武具店の棚を見て回った。"
+)
+if /i "%shop_id%"=="HolyRingWorkshop" (
+    set "scene_file=TownExplore\Scene12_HolyRingWorkshop.txt"
+    set "shop_message=聖環工房は店主不在で、今日は購入できなかった。"
+)
+if not defined scene_file (
+    set "town_message=この店はまだ準備中だ。"
+    set "town_dirty=1"
+    exit /b 0
+)
+set "current_save_supported=0"
+call :PlayTownScene "%scene_file%"
+set "current_save_supported=1"
+set "current_scene=Chapter01_TownExplore_%chapter01_town_node%"
+set "resume_scene=%current_scene%"
+set "resume_location=%current_location%"
+set "town_message=%shop_message%"
+set "last_bg="
+set "town_dirty=1"
+exit /b 0
+
+:PlayTownScene
+set "scene_file_path=%src_text_chapter01_dir%\01_Part01\%~1"
+if not exist "%scene_file_path%" exit /b 0
+set "scene_skipped=0"
+set "RENDER_BG_T=33"
+set "RENDER_BG_PATH="
+call :DrawTownSceneGuide
+for /f "eol=# usebackq delims=" %%L in ("%scene_file_path%") do (
+    if "!SCENARIO_SKIP_ACTIVE!"=="1" (
+        set "scene_skipped=1"
+        goto :play_town_scene_break
+    )
+    set "line=%%L"
+    call "%src_display_mod_dir%\RenderControl_v2.3.bat" "!line!"
+    echo !line! | findstr /c:"{clear}" /c:"{bg:" /c:"{bg_t:" >nul
+    if !errorlevel! == 0 call :DrawTownSceneGuide
+)
+:play_town_scene_break
+set "SCENARIO_SKIP_ACTIVE="
+exit /b 0
+
+:DrawTownSceneGuide
+<nul set /p="%ESC%[64;24H%ESC%[0K"
+<nul set /p="%ESC%[64;96H%ESC%[90mSpace: 進行  P/Esc: ポーズ%ESC%[0m"
+exit /b 0
+
 :RenderScene
 call set "bg_name=%%NODE_%chapter01_town_node%_BG%%"
 set "bg_path=%assets_images_dir%\%bg_name%"
@@ -238,6 +313,7 @@ call :DrawFrame
 call :DrawBody
 call :DrawInputMap
 call :DrawActionList
+call :DrawObjectivePanel
 exit /b 0
 
 :DrawFrame
@@ -246,13 +322,14 @@ echo %ESC%[4;24H%ESC%[90m第一節 : 王都の朝 -祝祭前日-%ESC%[0m
 echo %ESC%[5;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m
 echo %ESC%[55;24H%ESC%[90m────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────%ESC%[0m
 echo %ESC%[56;24H%ESC%[90m──────────────────────────────────────────────────────%ESC%[0m
-echo %ESC%[56;104H%ESC%[90m───────── %ESC%[96mINPUT%ESC%[90m ─────────%ESC%[0m
+echo %ESC%[56;104H%ESC%[90m─────────────────────────%ESC%[0m
 echo %ESC%[56;150H%ESC%[90m──────────────────────────────────────────────────────────%ESC%[0m
 echo %ESC%[65;24H%ESC%[90m──────────────────────────────────────────────────────%ESC%[0m
 echo %ESC%[65;104H%ESC%[90m─────────────────────────%ESC%[0m
 echo %ESC%[65;150H%ESC%[90m──────────────────────────────────────────────────────────%ESC%[0m
-echo %ESC%[57;28H%ESC%[96m状況%ESC%[0m
-echo %ESC%[57;154H%ESC%[96m操作%ESC%[0m
+echo %ESC%[56;47H%ESC%[96m状況%ESC%[0m
+echo %ESC%[56;114H%ESC%[96mINPUT%ESC%[0m
+echo %ESC%[56;177H%ESC%[96m操作%ESC%[0m
 echo %ESC%[59;28H%ESC%[90m現在地:%ESC%[0m %current_location%
 exit /b 0
 
@@ -268,7 +345,8 @@ set "key_d_style=%key_style%"
 echo %ESC%[60;115H%ESC%[%key_w_style%m W %ESC%[0m
 echo %ESC%[61;111H%ESC%[%key_a_style%m A %ESC%[0m %ESC%[1;30;103m F %ESC%[0m %ESC%[%key_d_style%m D %ESC%[0m
 echo %ESC%[62;115H%ESC%[%key_s_style%m S %ESC%[0m
-echo %ESC%[61;121H%ESC%[30;46m E %ESC%[0m
+echo %ESC%[60;121H%ESC%[30;46m E %ESC%[0m
+echo %ESC%[60;126H%ESC%[30;47m I %ESC%[0m
 exit /b 0
 
 :SetInputKeyStyle
@@ -303,13 +381,31 @@ call set "label_a=%%NODE_%chapter01_town_node%_A_LABEL%%"
 call set "label_s=%%NODE_%chapter01_town_node%_S_LABEL%%"
 call set "label_d=%%NODE_%chapter01_town_node%_D_LABEL%%"
 call set "label_e=%%NODE_%chapter01_town_node%_E_LABEL%%"
-echo %ESC%[59;154H%ESC%[96mW%ESC%[0m %label_w%
-if /i "%DEBUG_STATE%"=="1" echo %ESC%[58;154H%ESC%[95mI%ESC%[0m デバッグ付与
-echo %ESC%[60;154H%ESC%[96mA%ESC%[0m %label_a%
-echo %ESC%[61;154H%ESC%[96mS%ESC%[0m %label_s%
-echo %ESC%[62;154H%ESC%[96mD%ESC%[0m %label_d%
-echo %ESC%[63;154H%ESC%[96mF%ESC%[0m %label_e%
-echo %ESC%[64;154H%ESC%[96mE%ESC%[0m インベントリを開く
+echo %ESC%[58;154H%ESC%[96mW%ESC%[0m %label_w%
+if /i "%DEBUG_STATE%"=="1" echo %ESC%[58;154H%ESC%[95mG%ESC%[0m デバッグ付与
+echo %ESC%[59;154H%ESC%[96mA%ESC%[0m %label_a%
+echo %ESC%[60;154H%ESC%[96mS%ESC%[0m %label_s%
+echo %ESC%[61;154H%ESC%[96mD%ESC%[0m %label_d%
+echo %ESC%[62;154H%ESC%[96mF%ESC%[0m %label_e%
+echo %ESC%[63;154H%ESC%[96mE%ESC%[0m フィールドメニュー
+echo %ESC%[58;180H%ESC%[96mI%ESC%[0m インベントリを開く
+exit /b 0
+
+:DrawObjectivePanel
+setlocal
+set "objective_right=%CONSOLE_WIDTH%"
+if not defined objective_right set "objective_right=%CONSOLE_COLS%"
+if not defined objective_right set "objective_right=210"
+set /a "objective_left=objective_right-20"
+if %objective_left% LSS 158 set "objective_left=158"
+<nul set /p="%ESC%[12;%objective_left%H%ESC%[0K%ESC%[93mクエスト%ESC%[0m"
+<nul set /p="%ESC%[13;%objective_left%H%ESC%[0K%ESC%[90m──────────────────%ESC%[0m"
+<nul set /p="%ESC%[14;%objective_left%H%ESC%[0K%ESC%[97m士官学校へ向かう%ESC%[0m"
+<nul set /p="%ESC%[16;%objective_left%H%ESC%[0K%ESC%[90m進行メモ%ESC%[0m"
+<nul set /p="%ESC%[17;%objective_left%H%ESC%[0K%ESC%[90m──────────────────%ESC%[0m"
+<nul set /p="%ESC%[18;%objective_left%H%ESC%[0K%ESC%[96m城への道を左へ進むと%ESC%[0m"
+<nul set /p="%ESC%[19;%objective_left%H%ESC%[0K%ESC%[96m士官学校門前へ着く%ESC%[0m"
+endlocal
 exit /b 0
 
 :DefineNodes

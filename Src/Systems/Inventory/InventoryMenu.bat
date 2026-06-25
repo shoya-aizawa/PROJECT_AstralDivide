@@ -31,19 +31,24 @@ set "inventory_selected=1"
 set "inventory_view_mode=LIST"
 set "inventory_message=カテゴリを選択してください。"
 
-set "overlay_left=16"
-set "overlay_top=7"
-set "overlay_right=142"
-set "overlay_bottom=38"
-set "overlay_mid=67"
+if defined INVENTORY_MENU_LEFT (set "overlay_left=%INVENTORY_MENU_LEFT%") else set "overlay_left=16"
+if defined INVENTORY_MENU_TOP (set "overlay_top=%INVENTORY_MENU_TOP%") else set "overlay_top=7"
+if defined INVENTORY_MENU_RIGHT (set "overlay_right=%INVENTORY_MENU_RIGHT%") else set "overlay_right=142"
+if defined INVENTORY_MENU_BOTTOM (set "overlay_bottom=%INVENTORY_MENU_BOTTOM%") else set "overlay_bottom=38"
+if defined INVENTORY_MENU_MID (set "overlay_mid=%INVENTORY_MENU_MID%") else set "overlay_mid=67"
+set /a "inventory_dx=overlay_left-16"
+set /a "inventory_dy=overlay_top-7"
 set "overlay_fill=                                                                                                                                                                                                                                                                "
 set "pane_fill_left=                                              "
 set "pane_fill_right=                                                          "
 set "footer_fill=                                        "
 
+call :BuildVisibleEntries
+call :RenderInventoryOverlayStatic
+
 :MenuLoop
 call :BuildVisibleEntries
-call :RenderInventoryOverlay
+call :RenderInventoryOverlayDynamic
 call :PollInventoryKey
 
 if "%inventory_pick%"=="CLOSE" goto :MenuExit
@@ -94,6 +99,7 @@ if "%inventory_pick%"=="ACTION" (
 goto :MenuLoop
 
 :MenuExit
+call :ClearInventoryOverlay
 endlocal
 exit /b 0
 
@@ -185,6 +191,15 @@ exit /b 0
 :RenderInventoryOverlay
 call :DrawOverlayFill
 call :DrawOverlayFrame
+call :RenderInventoryOverlayDynamic
+exit /b 0
+
+:RenderInventoryOverlayStatic
+call :DrawOverlayFill
+call :DrawOverlayFrame
+exit /b 0
+
+:RenderInventoryOverlayDynamic
 call :DrawTabs
 if /i "%inventory_view_mode%"=="GRID" (
     call :DrawGridPane
@@ -209,29 +224,45 @@ exit /b 0
 setlocal EnableDelayedExpansion
 set /a "left_inner=overlay_mid-overlay_left-1"
 set /a "right_inner=overlay_right-overlay_mid-1"
+set /a "frame_inner_top=overlay_top+1"
+set /a "frame_inner_bottom=overlay_bottom-1"
 set "left_rule="
 set "right_rule="
 for /l %%I in (1,1,!left_inner!) do set "left_rule=!left_rule!─"
 for /l %%I in (1,1,!right_inner!) do set "right_rule=!right_rule!─"
 echo !ESC![%overlay_top%;%overlay_left%H!ESC![97m┌!left_rule!┬!right_rule!┐!ESC![0m
-for /l %%R in (8,1,37) do (
+for /l %%R in (!frame_inner_top!,1,!frame_inner_bottom!) do (
     echo %ESC%[%%R;%overlay_left%H%ESC%[97m│%ESC%[0m%ESC%[%%R;%overlay_mid%H%ESC%[97m│%ESC%[0m%ESC%[%%R;%overlay_right%H%ESC%[97m│%ESC%[0m
 )
-echo !ESC![38;%overlay_left%H!ESC![97m└!left_rule!┴!right_rule!┘!ESC![0m
-echo !ESC![7;28H!ESC![96m所持品!ESC![0m
-echo !ESC![7;88H!ESC![96m説明!ESC![0m
+echo !ESC![%overlay_bottom%;%overlay_left%H!ESC![97m└!left_rule!┴!right_rule!┘!ESC![0m
+set /a "title_row=7+inventory_dy"
+set /a "title_col_left=28+inventory_dx"
+set /a "title_col_right=88+inventory_dx"
+echo !ESC![!title_row!;!title_col_left!H!ESC![96m所持品!ESC![0m
+echo !ESC![!title_row!;!title_col_right!H!ESC![96m説明!ESC![0m
+endlocal
+exit /b 0
+
+:ClearInventoryOverlay
+setlocal EnableDelayedExpansion
+set /a "overlay_width=overlay_right-overlay_left+1"
+set "clear_line=!overlay_fill:~0,%overlay_width%!"
+for /l %%R in (%overlay_top%,1,%overlay_bottom%) do (
+    echo !ESC![%%R;%overlay_left%H!ESC![0m!clear_line!
+)
 endlocal
 exit /b 0
 
 :DrawTabs
 setlocal EnableDelayedExpansion
-set "tab_col=20"
+set /a "tab_row=9+inventory_dy"
+set /a "tab_col=20+inventory_dx"
 for /l %%I in (1,1,%tab_count%) do (
     call set "tab_name=%%tab_%%I%%"
     if "%%I"=="%inventory_tab_index%" (
-        <nul set /p="!ESC![9;!tab_col!H!ESC![30;103m !tab_name! !ESC![0m"
+        <nul set /p="!ESC![!tab_row!;!tab_col!H!ESC![30;103m !tab_name! !ESC![0m"
     ) else (
-        <nul set /p="!ESC![9;!tab_col!H!ESC![37m !tab_name! !ESC![0m"
+        <nul set /p="!ESC![!tab_row!;!tab_col!H!ESC![37m !tab_name! !ESC![0m"
     )
     set /a "tab_col+=5"
 )
@@ -240,27 +271,33 @@ endlocal
 exit /b 0
 
 :DrawListPane
-echo %ESC%[11;20H%ESC%[90m表示: 一覧%ESC%[0m
+set /a "header_row=11+inventory_dy"
+set /a "left_col=20+inventory_dx"
+set /a "list_start_row=12+inventory_dy"
+set /a "list_max_row=30+inventory_dy"
+echo %ESC%[!header_row!;!left_col!H%ESC%[90m%pane_fill_left%%ESC%[0m
+echo %ESC%[!header_row!;!left_col!H%ESC%[90m表示: 一覧%ESC%[0m
+for /l %%I in (1,1,20) do (
+    set /a "row=list_start_row+%%I"
+    echo !ESC![!row!;!left_col!H!ESC![90m%pane_fill_left%!ESC![0m
+)
 if "%visible_count%"=="0" (
-    echo %ESC%[13;20H%ESC%[90mアイテムはありません。%ESC%[0m
+    set /a "empty_row=13+inventory_dy"
+    echo %ESC%[!empty_row!;!left_col!H%ESC%[90mアイテムはありません。%ESC%[0m
     exit /b 0
 )
-for /l %%I in (1,1,20) do (
-    set /a "row=12+%%I"
-    echo !ESC![!row!;20H!ESC![90m%pane_fill_left%!ESC![0m
-)
 for /l %%I in (1,1,%visible_count%) do (
-    set /a "row=12+%%I"
-    if !row! GTR 30 goto :ListPaneDone
+    set /a "row=list_start_row+%%I"
+    if !row! GTR !list_max_row! goto :ListPaneDone
     call set "entry_name=%%visible_%%I_name%%"
     call set "entry_icon=%%visible_%%I_icon%%"
     call set "entry_count=%%visible_%%I_count%%"
     set "entry_suffix="
     if not "!entry_count!"=="1" set "entry_suffix=x!entry_count!"
     if "%%I"=="%inventory_selected%" (
-        echo %ESC%[!row!;20H%ESC%[30;103m ^> !entry_icon! !entry_name! !entry_suffix! %ESC%[0m
+        echo %ESC%[!row!;!left_col!H%ESC%[30;103m ^> !entry_icon! !entry_name! !entry_suffix! %ESC%[0m
     ) else (
-        echo %ESC%[!row!;20H%ESC%[97m   !entry_icon! !entry_name! !entry_suffix!%ESC%[0m
+        echo %ESC%[!row!;!left_col!H%ESC%[97m   !entry_icon! !entry_name! !entry_suffix!%ESC%[0m
     )
 )
 :ListPaneDone
@@ -269,18 +306,28 @@ exit /b 0
 :DrawGridPane
 setlocal EnableDelayedExpansion
 set "grid_cols=12"
-echo !ESC![11;20H!ESC![90m表示: グリッド!ESC![0m
+set /a "header_row=11+inventory_dy"
+set /a "left_col=20+inventory_dx"
+set /a "grid_start_row=13+inventory_dy"
+set /a "grid_start_col=22+inventory_dx"
+set /a "grid_max_row=29+inventory_dy"
+echo !ESC![!header_row!;!left_col!H!ESC![90m%pane_fill_left%!ESC![0m
+echo !ESC![!header_row!;!left_col!H!ESC![90m表示: グリッド!ESC![0m
+for /l %%R in (12,1,30) do (
+    set /a "draw_row=%%R+inventory_dy"
+    echo !ESC![!draw_row!;!left_col!H!ESC![90m%pane_fill_left%!ESC![0m
+)
 if "%visible_count%"=="0" (
-    echo !ESC![13;20H!ESC![90mアイテムはありません。!ESC![0m
+    set /a "empty_row=13+inventory_dy"
+    echo !ESC![!empty_row!;!left_col!H!ESC![90mアイテムはありません。!ESC![0m
     endlocal
     exit /b 0
 )
-for /l %%R in (12,1,30) do echo !ESC![%%R;20H!ESC![90m%pane_fill_left%!ESC![0m
 for /l %%I in (1,1,%visible_count%) do (
     set /a "grid_index=%%I-1"
-    set /a "grid_row=13 + (grid_index / grid_cols) * 2"
-    set /a "grid_col=22 + (grid_index %% grid_cols) * 3"
-    if !grid_row! GTR 29 goto :GridDone
+    set /a "grid_row=grid_start_row + (grid_index / grid_cols) * 2"
+    set /a "grid_col=grid_start_col + (grid_index %% grid_cols) * 3"
+    if !grid_row! GTR !grid_max_row! goto :GridDone
     call set "entry_icon=%%visible_%%I_icon%%"
     if "%%I"=="%inventory_selected%" (
         <nul set /p="!ESC![!grid_row!;!grid_col!H!ESC![30;103m !entry_icon! !ESC![0m"
@@ -295,34 +342,57 @@ exit /b 0
 
 :DrawDetailPane
 setlocal EnableDelayedExpansion
-for /l %%R in (11,1,36) do echo !ESC![%%R;70H!ESC![90m%pane_fill_right%!ESC![0m
-echo !ESC![11;70H!ESC![93m!selected_entry_name!!ESC![0m
-echo !ESC![13;70H!ESC![97m記号  : !selected_entry_icon!!ESC![0m
-echo !ESC![14;70H!ESC![97m分類  : !selected_entry_category!!ESC![0m
-if "!selected_entry_equipable!"=="1" (
-    echo !ESC![15;70H!ESC![97m装備枠: !selected_entry_equip_slot!!ESC![0m
-) else (
-    echo !ESC![15;70H!ESC![97m所持数: !selected_entry_count!!ESC![0m
+set /a "detail_col=70+inventory_dx"
+set /a "detail_row_1=11+inventory_dy"
+set /a "detail_row_3=13+inventory_dy"
+set /a "detail_row_4=14+inventory_dy"
+set /a "detail_row_5=15+inventory_dy"
+set /a "detail_row_7=17+inventory_dy"
+set /a "detail_row_8=18+inventory_dy"
+set /a "detail_row_10=20+inventory_dy"
+set /a "detail_row_11=21+inventory_dy"
+set /a "detail_row_12=22+inventory_dy"
+set /a "detail_row_14=24+inventory_dy"
+set /a "detail_row_15=25+inventory_dy"
+set /a "detail_row_18=28+inventory_dy"
+set /a "detail_row_19=29+inventory_dy"
+set /a "detail_row_20=30+inventory_dy"
+for /l %%R in (11,1,36) do (
+    set /a "draw_row=%%R+inventory_dy"
+    echo !ESC![!draw_row!;!detail_col!H!ESC![90m%pane_fill_right%!ESC![0m
 )
-echo !ESC![17;70H!ESC![97m購入額: !selected_entry_buy_price!G!ESC![0m
-echo !ESC![18;70H!ESC![97m売却額: !selected_entry_sell_price!G!ESC![0m
-echo !ESC![20;70H!ESC![97mSocket: !selected_entry_feature_socket!!ESC![0m
-echo !ESC![21;70H!ESC![97m星核  : !selected_entry_feature_astral_core!!ESC![0m
-echo !ESC![22;70H!ESC![97m補正  : !selected_entry_feature_prefix_suffix!!ESC![0m
-echo !ESC![24;70H!ESC![90m説明!ESC![0m
-echo !ESC![25;70H!ESC![97m!selected_entry_description!!ESC![0m
-echo !ESC![28;70H!ESC![90m所持状況!ESC![0m
-echo !ESC![29;70H!ESC![97m件数  : %visible_count%!ESC![0m
-echo !ESC![30;70H!ESC![97m所持金: %player_money%G!ESC![0m
+echo !ESC![!detail_row_1!;!detail_col!H!ESC![93m!selected_entry_name!!ESC![0m
+echo !ESC![!detail_row_3!;!detail_col!H!ESC![97m記号  : !selected_entry_icon!!ESC![0m
+echo !ESC![!detail_row_4!;!detail_col!H!ESC![97m分類  : !selected_entry_category!!ESC![0m
+if "!selected_entry_equipable!"=="1" (
+    echo !ESC![!detail_row_5!;!detail_col!H!ESC![97m装備枠: !selected_entry_equip_slot!!ESC![0m
+) else (
+    echo !ESC![!detail_row_5!;!detail_col!H!ESC![97m所持数: !selected_entry_count!!ESC![0m
+)
+echo !ESC![!detail_row_7!;!detail_col!H!ESC![97m購入額: !selected_entry_buy_price!G!ESC![0m
+echo !ESC![!detail_row_8!;!detail_col!H!ESC![97m売却額: !selected_entry_sell_price!G!ESC![0m
+echo !ESC![!detail_row_10!;!detail_col!H!ESC![97mSocket: !selected_entry_feature_socket!!ESC![0m
+echo !ESC![!detail_row_11!;!detail_col!H!ESC![97m星核  : !selected_entry_feature_astral_core!!ESC![0m
+echo !ESC![!detail_row_12!;!detail_col!H!ESC![97m補正  : !selected_entry_feature_prefix_suffix!!ESC![0m
+echo !ESC![!detail_row_14!;!detail_col!H!ESC![90m説明!ESC![0m
+echo !ESC![!detail_row_15!;!detail_col!H!ESC![97m!selected_entry_description!!ESC![0m
+echo !ESC![!detail_row_18!;!detail_col!H!ESC![90m所持状況!ESC![0m
+echo !ESC![!detail_row_19!;!detail_col!H!ESC![97m件数  : %visible_count%!ESC![0m
+echo !ESC![!detail_row_20!;!detail_col!H!ESC![97m所持金: %player_money%G!ESC![0m
 endlocal
 exit /b 0
 
 :DrawFooter
-echo %ESC%[33;20H%ESC%[90m%footer_fill%%ESC%[0m
-echo %ESC%[34;20H%ESC%[96mW/S%ESC%[0m 選択  %ESC%[96mA/D%ESC%[0m カテゴリ  %ESC%[96mG%ESC%[0m 表示切替
-echo %ESC%[35;20H%ESC%[96mF%ESC%[0m 装備/WIP  %ESC%[96mQ/E%ESC%[0m 閉じる
-echo %ESC%[36;20H%ESC%[90m%footer_fill%%ESC%[0m
-echo %ESC%[36;20H%ESC%[90m%inventory_message%%ESC%[0m
+set /a "footer_col=20+inventory_dx"
+set /a "footer_row_1=33+inventory_dy"
+set /a "footer_row_2=34+inventory_dy"
+set /a "footer_row_3=35+inventory_dy"
+set /a "footer_row_4=36+inventory_dy"
+echo %ESC%[!footer_row_1!;!footer_col!H%ESC%[90m%footer_fill%%ESC%[0m
+echo %ESC%[!footer_row_2!;!footer_col!H%ESC%[96mW/S%ESC%[0m 選択  %ESC%[96mA/D%ESC%[0m カテゴリ  %ESC%[96mG%ESC%[0m 表示切替
+echo %ESC%[!footer_row_3!;!footer_col!H%ESC%[96mF%ESC%[0m 装備/WIP  %ESC%[96mQ/E%ESC%[0m 閉じる
+echo %ESC%[!footer_row_4!;!footer_col!H%ESC%[90m%footer_fill%%ESC%[0m
+echo %ESC%[!footer_row_4!;!footer_col!H%ESC%[90m%inventory_message%%ESC%[0m
 exit /b 0
 
 :PollInventoryKey

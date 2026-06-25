@@ -1,0 +1,11 @@
+{clear}
+{bg:Chapter01_Town_14_ArdenSmith.png}
+{bg_t:33}
+{id:town_shop_11_001}{pos:14:101}{type:slow}{hi_white}「おう、来たか。今日は見るだけでも歓迎だぞ」　アルデンが気さくに手を上げた。{/hi_white}{/type}
+{delay:900}
+{id:town_shop_11_002}{pos:19:96}{type:normal}{hi_black}棚には通い慣れた剣、槍、胸当てが並び、値札も手入れの跡も見覚えのあるものばかりだ。{/hi_black}{/type}
+{delay:1000}
+{id:town_shop_11_003}{pos:24:98}{type:normal}{hi_black}装備の売買そのものはまだ仮接続だが、武具店へ入る導線としては十分に機能している。{/hi_black}{/type}
+{delay:1050}
+{id:town_shop_11_004}{pos:29:107}{type:slow}{cyan}アルデン武具店の売買画面は接続準備中。{/cyan}{/type}
+{delay:1200}

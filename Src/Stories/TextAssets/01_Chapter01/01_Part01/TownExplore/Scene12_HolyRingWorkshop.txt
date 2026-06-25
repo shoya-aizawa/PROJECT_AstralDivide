@@ -1,0 +1,11 @@
+{clear}
+{bg:Chapter01_Town_15_HolyRingWorkshop.png}
+{bg_t:33}
+{id:town_shop_12_001}{pos:14:100}{type:slow}{hi_white}店先に人影はない。祝祭準備で席を外しているのか、工房の奥は静まり返っていた。{/hi_white}{/type}
+{delay:950}
+{id:town_shop_12_002}{pos:19:100}{type:normal}{hi_black}硝子ケースには聖環や護符、細工の細かな装飾品が並び、それぞれの値札までは読むことができる。{/hi_black}{/type}
+{delay:1000}
+{id:town_shop_12_003}{pos:24:99}{type:normal}{hi_black}ただし店主不在のため、今日は購入も注文も受け付けていない。見物だけして引き返す。{/hi_black}{/type}
+{delay:1050}
+{id:town_shop_12_004}{pos:29:108}{type:slow}{cyan}聖環工房は閲覧のみ可能。購入導線はロック中。{/cyan}{/type}
+{delay:1200}
